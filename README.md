@@ -1,4 +1,4 @@
 js-test-tool
 ============
 
-Run JavaScript test suites and collect coverage information
+Run JavaScript test suites and collect coverage information.
