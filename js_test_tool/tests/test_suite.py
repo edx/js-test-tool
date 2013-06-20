@@ -1,19 +1,19 @@
 import unittest
 import mock
-import tempfile
 import os
 import os.path
-import shutil
 from StringIO import StringIO
 import yaml
 from textwrap import dedent
 from lxml import etree
 
+from js_test_tool.tests.helpers import TempWorkspaceTestCase
+
 from js_test_tool.suite import SuiteDescription, SuiteDescriptionError, \
     SuiteRenderer, SuiteRendererError
 
 
-class SuiteDescriptionTest(unittest.TestCase):
+class SuiteDescriptionTest(TempWorkspaceTestCase):
 
     # Temporary directory paths to be created within our root temp dir
     TEMP_DIRS = ['src/subdir', 'spec/subdir', 'lib/subdir',
@@ -33,7 +33,8 @@ class SuiteDescriptionTest(unittest.TestCase):
     IGNORE_FILES = ['src/ignore.txt', 'spec/ignore.txt', 'lib/ignore.txt']
 
     # Valid data used to create the YAML file describing the test suite
-    YAML_DATA = {'lib_dirs': ['lib', 'other_lib'],
+    YAML_DATA = {'name': 'test_suite',
+                 'lib_dirs': ['lib', 'other_lib'],
                  'src_dirs': ['src', 'other_src'],
                  'spec_dirs': ['spec', 'other_spec'],
                  'test_runner': 'jasmine',
@@ -44,8 +45,8 @@ class SuiteDescriptionTest(unittest.TestCase):
         Generate fake JS files in a temporary directory.
         """
 
-        # Create a temporary directory 
-        self.temp_dir = tempfile.mkdtemp()
+        # Call the superclass implementation to create the temp workspace
+        super(SuiteDescriptionTest, self).setUp()
 
         # Create subdirectories for dependency, source, and spec files
         # Because we are using `makedirs()`, the intermediate directories
@@ -61,18 +62,6 @@ class SuiteDescriptionTest(unittest.TestCase):
             full_path = os.path.join(self.temp_dir, file_path)
             with open(full_path, "w") as file_handle:
                 file_handle.write('Test data')
-
-        # Set the working directory to the temp dir, so we can
-        # use relative paths within the directory.
-        self._old_cwd = os.getcwd()
-        os.chdir(self.temp_dir)
-
-    def tearDown(self):
-        """
-        Delete the JS files we created and reset the working dir.
-        """
-        shutil.rmtree(self.temp_dir)
-        os.chdir(self._old_cwd)
 
     def test_valid_description(self):
 

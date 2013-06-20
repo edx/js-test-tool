@@ -4,7 +4,6 @@ Load test suite descriptions and generate test runner files.
 import yaml
 import os
 import os.path
-import pkg_resources
 
 # The template directory should be part of this package
 TEMPLATE_DIRS = (
@@ -54,7 +53,7 @@ class SuiteDescription(object):
         try:
             self._desc_dict = yaml.load(file_handle.read())
 
-        except IOError, ValueError:
+        except (IOError, ValueError):
             raise SuiteDescriptionError("Could not load suite description file")
 
         # Validate that we have all the required data
@@ -141,7 +140,7 @@ class SuiteDescription(object):
             # the root directories.
             inner_js_paths = []
 
-            for root_dir, subdirs, filenames in os.walk(dir_path):
+            for root_dir, _, filenames in os.walk(dir_path):
 
                 # Look for JavaScript files (*.js)
                 for name in filenames:
@@ -184,8 +183,9 @@ class SuiteDescription(object):
                 raise SuiteDescriptionError(msg)
 
         # Check that we are using a valid test runner
-        if not desc_dict['test_runner'] in cls.TEST_RUNNERS:
-            msg = "'{}' is not a supported test runner.".format(browser)
+        test_runner = desc_dict['test_runner']
+        if not test_runner in cls.TEST_RUNNERS:
+            msg = "'{}' is not a supported test runner.".format(test_runner)
             raise SuiteDescriptionError(msg)
 
 

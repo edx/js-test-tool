@@ -1,0 +1,5 @@
+browsers: [chrome, firefox]
+lib_dirs: [lib]
+spec_dirs: [spec]
+src_dirs: [src]
+test_runner: jasmine
