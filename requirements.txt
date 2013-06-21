@@ -2,3 +2,4 @@ django>=1.4.5
 PyYAML>=3.10
 lxml>=3.0.1
 lettuce>=0.2.16
+requests==0.14.2
