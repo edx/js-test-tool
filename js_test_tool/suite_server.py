@@ -5,6 +5,10 @@ Serve test runner pages and included JavaScript files on a local port.
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 import threading
 import re
+import pkg_resources
+import os.path
+from abc import ABCMeta, abstractmethod
+
 
 class SuitePageServer(HTTPServer):
     """
@@ -22,8 +26,8 @@ class SuitePageServer(HTTPServer):
         """
 
         # Store dependencies
-        self._desc_list = suite_desc_list
-        self._renderer = suite_renderer
+        self.desc_list = suite_desc_list
+        self.renderer = suite_renderer
 
         # Using port 0 assigns us an unused port
         address = ('127.0.0.1', 0)
@@ -51,7 +55,7 @@ class SuitePageServer(HTTPServer):
         the JavaScript tests.
         """
         return [self.root_url() + u'suite/{}'.format(suite_num)
-                for suite_num in range(len(self._desc_list))]
+                for suite_num in range(len(self.desc_list))]
 
     def root_url(self):
         """
@@ -61,19 +65,87 @@ class SuitePageServer(HTTPServer):
         host, port = self.server_address
         return u"http://{}:{}/".format(host, port)
 
-    def suite_page(self, suite_num):
-        """
-        Render the suite runner page for the suite description
-        with index `suite_num`.
 
-        Returns a unicode string.  If the suite number is invalid,
-        returns None.
+class BasePageHandler(object):
+    """
+    Abstract base class for page handler.  Checks whether
+    it can handle a given URL path.  If it can, it then generates
+    the page contents.
+    """
+
+    __metaclass__ = ABCMeta
+    
+    # Subclasses override this to provide a regex that matches
+    # URL paths.  Should be a `re` module compiled regex.
+    PATH_REGEX = None
+
+    def page_contents(self, path):
         """
-        # Retrieve the suite description
+        Check whether the handler can load the page at `path` (URL path).
+        If so, return the contents of the page as a unicode string.
+        Otherwise, return None.
+        """
+
+        # Check whether this handler matches the URL path
+        result = self.PATH_REGEX.match(path)
+
+        # If this is not a match, return None
+        if result is None:
+            return None
+
+        # If we do match, attempt to load the page.
+        else:
+            return self.load_page(*result.groups())
+
+    @abstractmethod
+    def load_page(self, *args):
+        """
+        Subclasses override this to load the page.
+        `args` is a list of arguments parsed using the regular expression.
+
+        If the page cannot be loaded (e.g. accessing a file that
+        does not exist), then return None.
+        """
+        pass
+
+
+class SuitePageHandler(BasePageHandler):
+    """
+    Handle requests for paths of the form `/suite/SUITE_NUM`, where
+    `SUITE_NUM` is the index of the test suite description.
+    Serves the suite runner page.
+    """
+
+    PATH_REGEX = re.compile('^/suite/([0-9]+)/?$')
+
+    def __init__(self, renderer, desc_list):
+        """
+        Initialize the `SuitePageHandler` to use `renderer`
+        (a `SuiteRenderer` instance) and `desc_list` (a list
+        of `SuiteDescription` instances).
+        """
+        super(SuitePageHandler, self).__init__()
+        self._renderer = renderer
+        self._desc_list = desc_list
+
+    def load_page(self, *args):
+        """
+        Render the suite runner page.
+        """
+
+        # The only arg should be the suite number
+        try:
+            suite_num = int(args[0])
+
+        except (ValueError, IndexError):
+            return None
+
+
+        # Try to find the suite description
         try:
             suite_desc = self._desc_list[suite_num]
 
-        # If we could not find the suite, return None
+        # If the index is out of range, we can't serve this suite page
         except IndexError:
             return None
 
@@ -81,60 +153,95 @@ class SuitePageServer(HTTPServer):
         else:
             return self._renderer.render_to_string(suite_desc)
 
-    def dependency_contents(self, path):
+
+class RunnerPageHandler(BasePageHandler):
+
+    PATH_REGEX = re.compile('^/runner/(.+)$')
+
+    def load_page(self, *args):
         """
-        Return the contents of the dependency at `path`, if found.
-        Otherwise, return None.
-
-        Returns the contents as a `str` (not `unicode`).
+        Load the runner file from this package's resources.
         """
 
-        # Strip the first forward slash to make it a relative path
-        if path.startswith('/'):
-            path = path[1:]
+        # Only arg should be the relative path
+        rel_path = os.path.join('runner', args[0])
 
-        # Search for the dependency file
-        if self._can_serve_path(path):
+        # Attempt to load the package resource
+        try:
+            content = pkg_resources.resource_string('js_test_tool', rel_path)
+
+        # If we could not load it, return None
+        except BaseException:
+            return None
+
+        # If we successfully loaded it, return a unicode str
+        else:
+            return content.decode()
+
+
+class DependencyPageHandler(BasePageHandler):
+    """
+    Load dependencies required by the test suite description.
+    """
+
+    PATH_REGEX = re.compile('^/suite/include/(.+)$')
+
+    def __init__(self, desc_list):
+        """
+        Initialize the dependency page handler to serve dependencies
+        specified by `desc_list` (a list of `SuiteDescription` instances).
+        """
+        super(DependencyPageHandler, self).__init__()
+        self._desc_list = desc_list
+
+    def load_page(self, *args):
+        """
+        Load the test suite dependency file, using a path relative
+        to the description file.
+        """
+
+        # The only argument should be the relative path
+        rel_path = args[0]
+
+        if self._can_serve_path(rel_path):
 
             # Load the file
             try:
+                with open(rel_path) as file_handle:
+                    contents = file_handle.read()
 
-                with open(path) as js_file:
-                    contents = js_file.read()
-
-            # If we cannot open the file (e.g. because it's not found),
-            # return None
+            # If we cannot load the file (probably because it doesn't exist)
+            # then return None
             except IOError:
                 return None
 
-            # Return the contents (as a byte string)
-            return contents
+            # Successfully loaded the file; return the contents as a unicode str
+            else:
+                return contents.decode()
 
-        # If we can't serve this path (because it's not a 
-        # dependency specified by the test suite),
-        # return None.
+        # If this is not one of our listed dependencies, return None
         else:
             return None
 
     def _can_serve_path(self, path):
         """
-        Search for the dependency path within each test suite.
-        If found, return the (relative) path to the file;
-        otherwise return None.
+        Return True if and only if `path` is listed in the dependencies
+        of the test suite description.
         """
 
-        # Iterate through each suite description
+        # Check that this is a dependency specified in the suite description
         for suite_desc in self._desc_list:
 
+            # Get all dependency paths
             all_paths = (suite_desc.lib_paths() +
-                         suite_desc.src_paths() +
-                         suite_desc.spec_paths())
+                        suite_desc.src_paths() +
+                        suite_desc.spec_paths())
 
-            # If we find the path in the dependencies, we can serve it
+            # If the path is in our listed dependencies, we can serve it
             if path in all_paths:
                 return True
 
-        # Otherwise, we cannot serve this dependency
+        # If we did not find the path, we cannot serve it
         return False
 
 
@@ -145,26 +252,36 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
 
     protocol = "HTTP/1.0"
 
-    SUITE_PAGE_REGEX = re.compile('^/suite/([0-9]+)/?$')
+    def __init__(self, request, client_address, server):
+
+        # Initialize the page handlers
+        self._handlers = [SuitePageHandler(server.renderer, server.desc_list),
+                          RunnerPageHandler(),
+                          DependencyPageHandler(server.desc_list)]
+
+        # Call the superclass implementation
+        # This will immediately call do_GET() if the request is a GET
+        BaseHTTPRequestHandler.__init__(self, request, client_address, server)
 
     def do_GET(self):
         """
         Serve suite runner pages and JavaScript dependencies.
         """
 
-        # Try to retrieve the suite number
-        suite_num = self._parse_suite_num(self.path)
+        for handler in self._handlers:
 
-        # If a suite number is defined, serve the suite page
-        if suite_num is not None:
-            self._serve_suite(suite_num)
+            # Try to retrieve the page
+            content = handler.page_contents(self.path)
 
-        # Otherwise, serve JS dependencies (lib, src, and spec files)
-        else:
-            self._serve_dependency(self.path)
+            # If we got a page, send the contents
+            if content is not None:
+                self._send_response(200, content)
+                return
 
-        self._send_response(200, None)
-    
+        # If we could not retrieve the contents (e.g. because
+        # the file does not exist), send a file not found response
+        self._send_response(404, None)
+
     def _send_response(self, status_code, content):
         """
         Send a response to an HTTP request as UTF-8 encoded HTML.
@@ -177,52 +294,3 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
 
         if content:
             self.wfile.write(content)
-
-    def _serve_suite(self, suite_num):
-        """
-        Serve the suite runner page with index `suite_num`,
-        or file not found if no such suite is defined.
-        """
-
-        page = self.server.suite_page(suite_num)
-
-        # If no page rendered, send a file not found
-        if page is None:
-            self._send_response(404, None)
-
-        # Otherwise, send the page
-        else:
-            self._send_response(200, page)
-
-    def _serve_dependency(self, path):
-        """
-        Serve the JavaScript dependency (lib, src, and spec files),
-        or send a file not found response.
-        """
-        file_contents = self.server.dependency_contents(path)
-
-        # If the file not found, send a file not found
-        if file_contents is None:
-            self._send_response(404, None)
-
-        # Otherwise, send the contents of the file
-        else:
-            self._send_response(200, file_contents)
-
-    @classmethod
-    def _parse_suite_num(cls, path):
-        """
-        Return the suite number of the URL path, if it's valid.
-        Otherwise, return None.
-        """
-
-        # Parse the path to retrieve the suite number
-        result = cls.SUITE_PAGE_REGEX.match(path)
-
-        # If no matches, this is not a valid suite path
-        if result is None:
-            return None
-
-        # If we had a match, return the suite number
-        else:
-            return int(result.groups()[0])

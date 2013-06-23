@@ -7,6 +7,7 @@ import mock
 import re
 import requests
 import os
+import pkg_resources
 from js_test_tool.suite import SuiteDescription, SuiteRenderer
 from js_test_tool.suite_server import SuitePageServer
 
@@ -77,6 +78,17 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         for url in self.server.suite_url_list():
             self._assert_page_equals(url, expected_page)
 
+    def test_serve_runners(self):
+
+        for path in ['jasmine/jasmine.css',
+                     'jasmine/jasmine.js',
+                     'jasmine/jasmine-json.js']:
+
+            pkg_path = 'runner/' + path
+            expected_page = pkg_resources.resource_string('js_test_tool', pkg_path)
+            url = self.server.root_url() + pkg_path
+            self._assert_page_equals(url, expected_page)
+
     def test_serve_lib_js(self):
 
         # Configure the suite description to contain JS dependencies
@@ -90,7 +102,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Expect that the server sends us the files
         for path in lib_paths:
-            url = self.server.root_url() + path
+            url = self.server.root_url() + 'suite/include/' + path
             self._assert_page_equals(url, expected_page)
 
     def test_serve_src_js(self):
@@ -106,7 +118,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Expect that the server sends us the files
         for path in src_paths:
-            url = self.server.root_url() + path
+            url = self.server.root_url() + 'suite/include/' + path
             self._assert_page_equals(url, expected_page)
 
     def test_serve_spec_js(self):
@@ -122,7 +134,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Expect that the server sends us the files
         for path in spec_paths:
-            url = self.server.root_url() + path
+            url = self.server.root_url() + 'suite/include/' + path
             self._assert_page_equals(url, expected_page)
 
     def test_404_pages(self):
@@ -130,6 +142,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         # Try a URL that is not one of the suite urls
         root_url = self.server.root_url()
         bad_url_list = [root_url + 'invalid',
+                        root_url + 'runner/not_found.txt',
                         root_url + 'suite/{}'.format(self.NUM_SUITE_DESC + 1),
                         root_url + 'suite/{}'.format(-1)]
 

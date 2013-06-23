@@ -226,8 +226,8 @@ class SuiteRendererTest(unittest.TestCase):
 
     def test_jasmine_runner(self):
 
-        jasmine_libs = ['lib/jasmine/jasmine.js',
-                        'lib/jasmine/jasmine-html.js']
+        jasmine_libs = ['jasmine/jasmine.js',
+                        'jasmine/jasmine-json.js']
         lib_paths = ['lib1.js', 'lib2.js']
         src_paths = ['src1.js', 'src2.js']
         spec_paths = ['spec1.js', 'spec2.js']
@@ -236,13 +236,13 @@ class SuiteRendererTest(unittest.TestCase):
         desc = self._mock_desc(lib_paths, src_paths, spec_paths, 'jasmine')
 
         # Check that we get the right script includes
-        expected_includes = jasmine_libs + lib_paths + src_paths + spec_paths
-        self._assert_js_includes(expected_includes, desc)
+        suite_includes = lib_paths + src_paths + spec_paths
+        self._assert_js_includes(jasmine_libs, suite_includes, desc)
 
     def test_no_lib_files(self):
 
-        jasmine_libs = ['lib/jasmine/jasmine.js',
-                        'lib/jasmine/jasmine-html.js']
+        jasmine_libs = ['jasmine/jasmine.js',
+                        'jasmine/jasmine-json.js']
         src_paths = ['src.js']
         spec_paths = ['spec.js']
 
@@ -250,8 +250,8 @@ class SuiteRendererTest(unittest.TestCase):
         desc = self._mock_desc([], src_paths, spec_paths, 'jasmine')
 
         # Check that we get the right script includes
-        expected_includes = jasmine_libs + src_paths + spec_paths
-        self._assert_js_includes(expected_includes, desc)
+        suite_includes = src_paths + spec_paths
+        self._assert_js_includes(jasmine_libs, suite_includes, desc)
 
     def test_render_jasmine_runner(self):
 
@@ -302,11 +302,13 @@ class SuiteRendererTest(unittest.TestCase):
             with self.assertRaises(SuiteRendererError):
                 self.renderer.render_to_string(desc)
 
-    def _assert_js_includes(self, expected_includes, suite_desc):
+    def _assert_js_includes(self, runner_includes, suite_includes, suite_desc):
         """
         Render `suite_desc` (a `SuiteDescription` instance or mock) to
         `html`, then asserts that the `html` contains `<script>` tags with
-        `include_paths`, in order.
+        `runner_includes` (files included by default, with a `/runner/` prefix)
+        and `suite_includes` (files included by the test suite,
+        with a `/suite/include` prefix)
         """
         # Render the description as HTML
         html = self.renderer.render_to_string(suite_desc)
@@ -317,11 +319,17 @@ class SuiteRendererTest(unittest.TestCase):
         # Retrieve all <script> inclusions
         script_elems = tree.xpath('/html/head/script')
 
+        # Prepend the runner and suite includes
+        runner_includes = [os.path.join('runner', path) 
+                           for path in runner_includes]
+        suite_includes = [os.path.join('suite', 'include', path)
+                          for path in suite_includes]
+
         # Check that they match the sources we provided, in order
         all_paths = [element.get('src') for element in script_elems
                      if element.get('src') is not None]
 
-        self.assertEqual(all_paths, expected_includes)
+        self.assertEqual(all_paths, runner_includes + suite_includes)
 
     @staticmethod
     def _mock_desc(lib_paths, src_paths, spec_paths, test_runner):
