@@ -4,18 +4,13 @@ Load test suite descriptions and generate test runner files.
 import yaml
 import os
 import os.path
+from jinja2 import Environment, PackageLoader
 
-# The template directory should be part of this package
-TEMPLATE_DIRS = (
-    os.path.join(os.path.dirname(__file__), 'templates'),
-)
 
-# Use Django templates in stand-alone mode
-# See https://docs.djangoproject.com/en/dev/ref/templates/api/#configuring-the-template-system-in-standalone-mode
-from django.conf import settings 
-settings.configure(TEMPLATE_DIRS=TEMPLATE_DIRS)
-
-from django.template.loader import render_to_string
+# Set up the template environment
+TEMPLATE_LOADER = PackageLoader(__package__)
+TEMPLATE_ENV = Environment(loader=TEMPLATE_LOADER,
+                           trim_blocks=True)
 
 
 class SuiteDescriptionError(Exception):
@@ -231,11 +226,20 @@ class SuiteRenderer(object):
                             'src_path_list': suite_desc.src_paths(),
                             'spec_path_list': suite_desc.spec_paths()}
 
-        # Render the template using Django template renderer
+        # Render the template 
         try:
-            html = render_to_string(template_name, template_context)
+            html = self.render_template(template_name, template_context)
         except Exception as ex:
             msg = "Error occurred while rendering test runner page: {}".format(ex)
             raise SuiteRendererError(msg)
 
         return html
+
+    @staticmethod
+    def render_template(template_name, context):
+        """
+        Render `template` (a Jinja2 `Template`) using `context`
+        (a `dict`) and return the resulting unicode string.
+        """
+        template = TEMPLATE_ENV.get_template(template_name)
+        return template.render(context)

@@ -93,14 +93,8 @@ class SuitePageServer(HTTPServer):
         if path.startswith('/'):
             path = path[1:]
 
-        # DEBUG
-        print "checking path: {}".format(path)
-                
         # Search for the dependency file
         if self._can_serve_path(path):
-
-            # DEBUG
-            print "serving path: {}".format(path)
 
             # Load the file
             try:

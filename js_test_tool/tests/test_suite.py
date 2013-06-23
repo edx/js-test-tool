@@ -292,8 +292,8 @@ class SuiteRendererTest(unittest.TestCase):
         # Create a mock test suite description with no includes
         desc = self._mock_desc([], [], [], 'jasmine')
 
-        # Patch Django's `render_to_string()` function
-        with mock.patch('js_test_tool.suite.render_to_string') as render_func:
+        # Patch Jinja2's `render()` function
+        with mock.patch.object(SuiteRenderer, 'render_template') as render_func:
 
             # Have the render function raise an exception
             render_func.side_effect = ValueError()
