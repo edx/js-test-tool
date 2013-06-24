@@ -140,7 +140,6 @@ class SuitePageHandler(BasePageHandler):
         except (ValueError, IndexError):
             return None
 
-
         # Try to find the suite description
         try:
             suite_desc = self._desc_list[suite_num]
@@ -203,11 +202,15 @@ class DependencyPageHandler(BasePageHandler):
         # The only argument should be the relative path
         rel_path = args[0]
 
-        if self._can_serve_path(rel_path):
+        # Retrieve the full path to the dependency, if it exists
+        # and is specified in the test suite description
+        full_path = self._dependency_path(rel_path)
+
+        if full_path is not None:
 
             # Load the file
             try:
-                with open(rel_path) as file_handle:
+                with open(full_path) as file_handle:
                     contents = file_handle.read()
 
             # If we cannot load the file (probably because it doesn't exist)
@@ -223,10 +226,11 @@ class DependencyPageHandler(BasePageHandler):
         else:
             return None
 
-    def _can_serve_path(self, path):
+    def _dependency_path(self, path):
         """
-        Return True if and only if `path` is listed in the dependencies
-        of the test suite description.
+        Return the full filesystem path to the dependency, if it 
+        is specified in the test suite description.  
+        Otherwise, return None.
         """
 
         # Check that this is a dependency specified in the suite description
@@ -239,10 +243,12 @@ class DependencyPageHandler(BasePageHandler):
 
             # If the path is in our listed dependencies, we can serve it
             if path in all_paths:
-                return True
+
+                # Resolve the full filesystem path
+                return os.path.join(suite_desc.root_dir(), path)
 
         # If we did not find the path, we cannot serve it
-        return False
+        return None
 
 
 class SuitePageRequestHandler(BaseHTTPRequestHandler):

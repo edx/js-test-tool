@@ -69,7 +69,10 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         yaml_file = self._yaml_buffer(self.YAML_DATA)
 
         # Create the suite description using the YAML file
-        desc = SuiteDescription(yaml_file)
+        desc = SuiteDescription(yaml_file, self.temp_dir)
+
+        # Check that the root directory is stored
+        self.assertEqual(desc.root_dir(), self.temp_dir)
 
         # Check that we find the files we expect
         self.assertEqual(desc.lib_paths(), self.LIB_FILES)
@@ -77,6 +80,24 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES)
         self.assertEqual(desc.test_runner(), self.YAML_DATA['test_runner'])
         self.assertEqual(desc.browsers(), self.YAML_DATA['browsers'])
+
+    def test_no_such_root_dir(self):
+
+        # Try to create a description with a non-existent root directory
+        yaml_file = self._yaml_buffer(self.YAML_DATA)
+        no_such_dir = os.path.join(self.temp_dir, 'no_such_dir')
+
+        with self.assertRaises(SuiteDescriptionError):
+            SuiteDescription(yaml_file, no_such_dir)
+
+    def test_root_dir_is_file(self):
+
+        # Try to create a description with a file (not directory) root
+        yaml_file = self._yaml_buffer(self.YAML_DATA)
+        file_path = os.path.join(self.temp_dir, self.SRC_FILES[0])
+
+        with self.assertRaises(SuiteDescriptionError):
+            SuiteDescription(yaml_file, file_path)
 
     def test_non_list_data(self):
 
@@ -91,7 +112,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         yaml_file = self._yaml_buffer(yaml_data)
 
         # Create the suite description using the YAML file
-        desc = SuiteDescription(yaml_file)
+        desc = SuiteDescription(yaml_file, self.temp_dir)
 
         # Check that we get the right paths 
         # (exclude files from the directories we left out)
@@ -154,7 +175,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
 
         # Expect an exception when we try to parse the YAML file
         with self.assertRaises(SuiteDescriptionError):
-            SuiteDescription(yaml_file)
+            SuiteDescription(yaml_file, self.temp_dir)
 
     @staticmethod
     def _yaml_buffer(data_dict):

@@ -33,12 +33,15 @@ class SuiteDescription(object):
     BROWSERS = ['chrome', 'firefox', 'phantomjs']
     TEST_RUNNERS = ['jasmine']
 
-    def __init__(self, file_handle):
+    def __init__(self, file_handle, root_dir):
         """
         Load the test suite description from a file.
 
         `file_handle` is a file-like object containing the test suite
         description (YAML format).
+
+        `root_dir` is the directory relative to which paths are specified
+        in the test suite description.  This directory must exist.
 
         Raises a `SuiteDescriptionError` if the YAML file could
         not be loaded or contains invalid data.
@@ -51,9 +54,23 @@ class SuiteDescription(object):
         except (IOError, ValueError):
             raise SuiteDescriptionError("Could not load suite description file")
 
+        # Store the root directory
+        self._root_dir = root_dir
+
         # Validate that we have all the required data
         # Raises a `SuiteDescriptionError` if the required data is not found
         self._validate_description(self._desc_dict)
+
+        # Validate the root directory
+        self._validate_root_dir(self._root_dir)
+
+
+    def root_dir(self):
+        """
+        Return the root directory to which all paths in the suite
+        description are relative.
+        """
+        return self._root_dir
 
     def lib_paths(self):
         """
@@ -181,6 +198,16 @@ class SuiteDescription(object):
         test_runner = desc_dict['test_runner']
         if not test_runner in cls.TEST_RUNNERS:
             msg = "'{}' is not a supported test runner.".format(test_runner)
+            raise SuiteDescriptionError(msg)
+
+    @classmethod
+    def _validate_root_dir(cls, root_dir):
+        """
+        Validate that the root directory exists and is a directory,
+        raising a `SuiteDescriptionError` if this is not the case.
+        """
+        if not os.path.isdir(root_dir):
+            msg = "'{}' is not a valid directory".format(root_dir)
             raise SuiteDescriptionError(msg)
 
 

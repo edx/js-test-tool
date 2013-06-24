@@ -30,6 +30,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
             suite.lib_paths.return_value = []
             suite.src_paths.return_value = []
             suite.spec_paths.return_value = []
+            suite.root_dir.return_value = os.getcwd()
 
         # Create a mock suite renderer
         self.suite_renderer = mock.MagicMock(SuiteRenderer)
@@ -125,7 +126,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Configure the suite description to contain JS spec files
         spec_paths = ['spec/1.js', 'spec/subdir/2.js']
-        self.suite_desc_list[0].src_paths.return_value = spec_paths
+        self.suite_desc_list[0].spec_paths.return_value = spec_paths
 
         # Create fake files to serve
         os.makedirs('spec/subdir')
@@ -133,6 +134,30 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         self._create_fake_files(spec_paths, expected_page)
 
         # Expect that the server sends us the files
+        for path in spec_paths:
+            url = self.server.root_url() + 'suite/include/' + path
+            self._assert_page_equals(url, expected_page)
+
+    def test_different_working_dir(self):
+
+        # Configure the suite description to contain JS dependencies
+        spec_paths = ['spec/1.js']
+        self.suite_desc_list[0].spec_paths.return_value = spec_paths
+
+        # Create fake files to serve
+        os.makedirs('spec/subdir')
+        expected_page = u'test spec file'
+        self._create_fake_files(spec_paths, expected_page)
+
+        # Should be able to change the working directory and still
+        # get the dependencies, because the suite description
+        # contains the root directory for dependency paths.
+        # The superclass `TemplateWorkspaceTestCase` will reset the working
+        # directory on `tearDown()`
+        os.mkdir('different_dir')
+        os.chdir('different_dir')
+
+        # Expect that we still get the files
         for path in spec_paths:
             url = self.server.root_url() + 'suite/include/' + path
             self._assert_page_equals(url, expected_page)
