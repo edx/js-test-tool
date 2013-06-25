@@ -88,9 +88,12 @@ class Browser(object):
 
         else:
             # Try to JSON-decode the contents of the <div>
-            contents = elements.first.text
+            contents = elements.first.html
             try:
-                return json.loads(contents)
+
+                # We use strict=False to allow for control characters
+                # such as newlines.
+                return json.loads(contents, strict=False)
 
             # Raise an error if invalid JSON
             except ValueError:
@@ -309,9 +312,10 @@ class SuiteRunnerFactory(object):
         self._browser_class = browser_class
         self._runner_class = runner_class
 
-    def build(self, suite_path_list, coverage_xml_path, coverage_html_path):
+    def build_runners(self, suite_path_list, coverage_xml_path, coverage_html_path):
         """
-        Configure a `SuiteRunner` instance to:
+        Configure `SuiteRunner` instances for each suite description.
+        Each `SuiteRunner` will:
         
         * Run the test suites described in 
           `suite_path_list` (list of paths to suite description files)
@@ -321,7 +325,13 @@ class SuiteRunnerFactory(object):
 
         If the coverage paths are `None`, that report will not be generated.
 
-        Returns the configured `SuiteRunner` instance.
+        Returns a tuple `(suite_runners, browsers)`
+        
+        * `suite_runners` is a list of configured `SuiteRunner` instances.
+        * `browsers` is a list of browsers used by the runners.
+        
+        It is the caller's responsibility to call `Browser.quit()` for
+        each browser in the list.
         """
 
         # Load the suite descriptions
@@ -333,14 +343,28 @@ class SuiteRunnerFactory(object):
         # Create the coverage reporter
         coverage = self._coverage_class(coverage_html_path, coverage_xml_path)
 
-        # Create the browser
-        browser = self._browser_class()
-
         # Create the suite page server
+        # We re-use the same server across test suites
         server = self._server_class(suite_desc_list, renderer)
 
-        # Create and return the suite runner
-        return self._runner_class(browser, server, coverage)
+        # Create a list of all browsers we will oeed
+        browser_dict = self._build_browsers(suite_desc_list)
+
+        # Create a suite runner for each description
+        suite_runner_list = []
+        for suite_desc in suite_desc_list:
+
+            # Select the browsers needed by the test suite
+            browser_list = [browser for browser_name, browser 
+                            in browser_dict.items()
+                            if browser_name in suite_desc.browsers()]
+
+            # Create the suite runner
+            runner = self._runner_class(browser_list, server, coverage)
+            suite_runner_list.append(runner)
+
+        # Return the list of suite runners and browsers
+        return suite_runner_list, browser_dict.values()
 
     def _build_suite_descriptions(self, suite_path_list):
         """
@@ -360,3 +384,21 @@ class SuiteRunnerFactory(object):
                 desc_list.append(desc)
 
         return desc_list
+
+    def _build_browsers(self, suite_desc_list):
+        """
+        Build all browsers required across test suites.
+
+        Returns a `dict` mapping browser names to `Browser` instances.
+        """
+        browser_dict = dict()
+        for suite_desc in suite_desc_list:
+            
+            for browser_name in suite_desc.browsers():
+
+                # If we haven't already created the browser, do so now
+                if not browser_name in browser_dict:
+                    browser = self._browser_class(browser_name)
+                    browser_dict[browser_name] = browser
+
+        return browser_dict

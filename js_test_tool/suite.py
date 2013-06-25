@@ -228,6 +228,9 @@ class SuiteRenderer(object):
     # templates used to render the test runner page.
     TEMPLATE_DICT = { 'jasmine': 'jasmine_test_runner.html' }
 
+    # The CSS ID of the <div> that will contain the output test results
+    RESULTS_DIV_ID = 'js_test_tool_results'
+
     def render_to_string(self, suite_desc):
         """
         Given a `test_suite_desc` (`TestSuiteDescription` instance),
@@ -251,7 +254,8 @@ class SuiteRenderer(object):
         # Create the context for the template
         template_context = {'lib_path_list': suite_desc.lib_paths(),
                             'src_path_list': suite_desc.src_paths(),
-                            'spec_path_list': suite_desc.spec_paths()}
+                            'spec_path_list': suite_desc.spec_paths(),
+                            'div_id': self.RESULTS_DIV_ID}
 
         # Render the template 
         try:

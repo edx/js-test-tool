@@ -202,13 +202,9 @@ class SuiteRendererTest(unittest.TestCase):
             var jasmineEnv = jasmine.getEnv();
             jasmineEnv.updateInterval = 1000;
 
-            var htmlReporter = new jasmine.HtmlReporter();
+            var jsonReporter = new jasmine.JsonReporter("js_test_tool_results");
 
-            jasmineEnv.addReporter(htmlReporter);
-
-            jasmineEnv.specFilter = function(spec) {
-                return htmlReporter.specFilter(spec);
-            };
+            jasmineEnv.addReporter(jsonReporter);
 
             var currentWindowOnload = window.onload;
 
@@ -284,6 +280,11 @@ class SuiteRendererTest(unittest.TestCase):
 
         # Parse the HTML
         tree = etree.HTML(html)
+
+        # Expect that a <div> exists with the correct ID for the results
+        div_id = SuiteRenderer.RESULTS_DIV_ID
+        elems = tree.xpath('/html/body/div[@id="{}"]'.format(div_id))
+        self.assertEqual(len(elems), 1)
 
         # Retrieve the script elements
         script_elems = tree.xpath('/html/head/script')

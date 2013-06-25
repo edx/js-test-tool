@@ -45,7 +45,8 @@ class BrowserTest(TestCase):
                     'status': 'pass',
                     'details': ''}]
 
-        content = u'<div id="js_test_tool_results">{}</div>'.format(json.dumps(results))
+        content = u'<div id="{}">{}</div>'.format(SuiteRenderer.RESULTS_DIV_ID,
+                                                  json.dumps(results))
         self.stub_server.set_response(200, content)
 
         # Use the browser to load the page and parse the results
@@ -55,9 +56,33 @@ class BrowserTest(TestCase):
         # Expect that we get the results back
         self.assertEqual(results, output_results)
 
+    def test_get_page_results_control_chars(self):
+
+        # Try sending a control char
+        json_data = ('[{"testGroup":"when song has been paused",' +
+                     '"testName":"should indicate that the song is currently paused",' +
+                     '"testStatus":"fail",' +
+                     '"testDetail":"Error: Expected true to be falsy.\n at new jasmine.ExpectationResult"}]')
+
+        content = u'<div id="{}">{}</div>'.format(SuiteRenderer.RESULTS_DIV_ID,
+                                                  json_data)
+        self.stub_server.set_response(200, content)
+
+        # Use the browser to load the page and parse the results
+        server_url = self.stub_server.root_url()
+        output_results = self.browser.get_page_results(server_url)
+
+        # Expect that we get the results back
+        expected_results = [
+            {u"testGroup":u"when song has been paused",
+             u"testName":u"should indicate that the song is currently paused",
+             u"testStatus":u"fail", 
+             u"testDetail":u"Error: Expected true to be falsy.\n at new jasmine.ExpectationResult"}]
+        self.assertEqual(expected_results, output_results)
+
     def test_no_results(self):
         # Configure the stub server to send an empty <div>
-        content = u'<div id="js_test_tool_results">[]</div>'
+        content = u'<div id="{}">[]</div>'.format(SuiteRenderer.RESULTS_DIV_ID)
         self.stub_server.set_response(200, content)
 
         # Use the browser to load the page and parse the results
@@ -69,9 +94,10 @@ class BrowserTest(TestCase):
 
     def test_error_conditions(self):
 
+        div_id = SuiteRenderer.RESULTS_DIV_ID
         error_responses = [(200, u'<div id="wrong_id"></div>'),
                            (200, u''),
-                           (200, u'<div id="js_test_tool_results">Not JSON</div>'),
+                           (200, u'<div id="{}">Not JSON</div>'.format(div_id)),
                            (404, u'Not found'),
                            (500, u'Error occurred')]
 
@@ -597,40 +623,55 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
             runner_class=self.mock_runner_class,
             browser_class=self.mock_browser_class)
 
-    def test_build(self):
+    def test_build_runners(self):
 
-        # Create the test files in our temporary workspace
-        # (guaranteed because we're subclassing `TempWorkspaceTestCase`)
-        num_suite_desc = 5
-        suite_path_list = ['suite_{}.yaml'.format(suite_num)
-                           for suite_num in range(num_suite_desc)]
+        # Build the runners
+        num_suites = 5
+        runners, _ = self._build_runners(num_suites)
 
-        for path in suite_path_list:
-            with open(path, 'w') as file_handle:
-                file_handle.write('test file')
+        # Check that we got a suite runner for each suite description
+        self.assertEqual(len(runners), num_suites)
 
-        # Build the suite runner instance
-        coverage_xml_path = "coverage.xml"
-        coverage_html_path = "coverage.html"
-
-        suite_runner = self.factory.build(suite_path_list, 
-                                          coverage_xml_path, 
-                                          coverage_html_path)
-
+        # Because of the way we configured the mocks, each
+        # suite runner in the list will be identical.
+        # So we examine the first one only.
         # Expect that we get the suite runner instance
-        self.assertEqual(suite_runner, self.mock_runner)
+        self.assertEqual(runners[0], self.mock_runner)
 
-        # Expect that the suite runner is correctly configured
-        self.mock_runner_class.assert_called_with(self.mock_browser,
+    def test_configure_browsers(self):
+
+        # Build a runner and configure it to test using these browsers
+        browser_names = ['chrome', 'firefox', 'phantomjs']
+        runners, browsers = self._build_runners(1, browser_names=browser_names)
+        suite_runner = runners[0]
+
+        # Expect that the suite runner was configured with the correct browsers
+        expected_browsers = [self.mock_browser] * len(browser_names)
+        self.assertEqual(browsers, expected_browsers)
+        self.mock_runner_class.assert_called_with(expected_browsers,
                                                   self.mock_server,
                                                   self.mock_coverage)
+
+    def test_configure_server(self):
+
+        # Build the runners
+        num_suites = 5
+        runners, _ = self._build_runners(num_suites)
 
         # Expect that the suite page server is correctly configured
         # Because of the way we configure the mocks, each suite description
         # should be identical.  Check that we get the right number.
-        suite_desc_list = [self.mock_desc for _ in range(num_suite_desc)]
+        suite_desc_list = [self.mock_desc for _ in range(num_suites)]
         self.mock_server_class.assert_called_with(suite_desc_list,
                                                   self.mock_renderer)
+
+    def test_configure_suite_desc(self):
+
+        # Build the runners
+        # Ignore the return value because we are checking for calls the
+        # factory makes to our mocks.
+        num_suites = 5
+        self._build_runners(num_suites)
 
         # Retrieve all the file paths passed to SuiteDescription constructors
         all_paths = []
@@ -642,7 +683,7 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
 
         # Expect that all the paths we passed to the factory were used
         # to instantiate SuiteDescription instances
-        for suite_path in suite_path_list:
+        for suite_path in self._suite_paths(num_suites):
             self.assertIn(suite_path, all_paths)
 
         # Expect that all the root dirs are the temp directory
@@ -651,6 +692,62 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
             self.assertEqual(os.path.realpath(root_dir), 
                              os.path.realpath(self.temp_dir))
 
+    def test_configure_coverage(self):
+
+        # Build the runners
+        # Ignore the return value because we are checking for calls the
+        # factory makes to our mocks.
+        html_path = 'coverage.html'
+        xml_path = 'coverage.xml'
+        self._build_runners(1, coverage_html_path=html_path,
+                            coverage_xml_path=xml_path)
+
         # Expect that the coverage reporter was configured correctly
-        self.mock_coverage_class.assert_called_with(coverage_html_path,
-                                                    coverage_xml_path)
+        self.mock_coverage_class.assert_called_with(html_path, xml_path)
+
+    @staticmethod
+    def _suite_paths(num_suites):
+        """
+        Return a list of unique suite file paths of length `num_suites`.
+        """
+        return ['suite_{}.yaml'.format(num) for num in range(num_suites)]
+
+    def _build_runners(self, num_suites, 
+                       coverage_xml_path='coverage.xml', 
+                       coverage_html_path='coverage.html',
+                       browser_names=['chrome']):
+        """
+        Build a list of configured `SuiteRunner` instances
+        using the `SuiteRunnerFactory`.
+
+        `num_suites` is the number of suite descriptions to use.
+
+        `coverage_xml_path` and `coverage_html_path` are the paths
+        to the coverage reports to be generated.
+
+        `browser_names` is a list of browser names to use in the
+        suite descriptions.
+
+        Because we are using mock dependencies that always return the same
+        values, each suite runner will be identical, 
+        and they will all use the same browser dependencies.
+
+        Returns a tuple `(suite_runners, browsers)`.  See
+        `SuiteRunnerFactory.build_runners()` for details.
+        """
+
+        # Create fake suite description files
+        suite_path_list = self._suite_paths(num_suites)
+
+        for path in suite_path_list:
+            with open(path, 'w') as file_handle:
+                file_handle.write('test file')
+
+        # Configure the description mocks to always return the
+        # specified browser names.
+        self.mock_desc.browsers.return_value = browser_names
+
+        # Build the suite runner instances
+        return self.factory.build_runners(suite_path_list,
+                                          coverage_xml_path,
+                                          coverage_html_path)

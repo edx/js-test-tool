@@ -4,9 +4,9 @@
 <head>
   <title>Jasmine Spec Runner</title>
 
-  <link rel="stylesheet" type="text/css" href="runner/jasmine/jasmine.css">
-  <script type="text/javascript" src="runner/jasmine/jasmine.js"></script>
-  <script type="text/javascript" src="runner/jasmine/jasmine-json.js"></script>
+  <link rel="stylesheet" type="text/css" href="/runner/jasmine/jasmine.css">
+  <script type="text/javascript" src="/runner/jasmine/jasmine.js"></script>
+  <script type="text/javascript" src="/runner/jasmine/jasmine-json.js"></script>
 
   {% for lib_path in lib_path_list %}
   <script type="text/javascript" src="suite/include/{{ lib_path }}"></script>
@@ -25,13 +25,9 @@
     var jasmineEnv = jasmine.getEnv();
     jasmineEnv.updateInterval = 1000;
 
-    var htmlReporter = new jasmine.HtmlReporter();
+    var jsonReporter = new jasmine.JsonReporter("{{ div_id }}");
 
-    jasmineEnv.addReporter(htmlReporter);
-
-    jasmineEnv.specFilter = function(spec) {
-        return htmlReporter.specFilter(spec);
-    };
+    jasmineEnv.addReporter(jsonReporter);
 
     var currentWindowOnload = window.onload;
 
@@ -52,5 +48,6 @@
 </head>
 
 <body>
+    <div id="{{ div_id }}"></div>
 </body>
 </html>

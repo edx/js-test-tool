@@ -9,7 +9,7 @@ import os
 import os.path
 import shutil
 import tempfile
-from nose.tools import assert_equal
+from nose.tools import assert_equal, assert_false, assert_true
 from js_test_tool import tool
 
 
@@ -91,11 +91,33 @@ def compare_files_at_paths(actual_filename, expected_filename):
     Assert that the contents of the fixture files
     at `actual_filename` and `expected_filename` are equal.
     """
+    
+    # Check that both files exist (to print a better error message)
+    world.assert_file_exists(actual_filename)
+    world.assert_file_exists(expected_filename)
 
     # Open both files and compare the contents
     with open(actual_filename) as actual_file:
         with open(expected_filename) as expected_file:
             assert_equal(actual_file.read(), expected_file.read())
+
+
+@world.absorb
+def assert_file_exists(path):
+    """
+    Assert that a file exists at `path`.
+    """
+    msg = "File '{}' does not exist.".format(path)
+    assert_true(os.path.isfile(path), msg=msg)
+
+
+@world.absorb
+def assert_no_file(path):
+    """
+    Assert that no file exists at `path`.
+    """
+    msg = "'{}' should NOT exist".format(path)
+    assert_false(os.path.isfile(path), msg=msg)
 
 
 @world.absorb
@@ -130,3 +152,19 @@ def set_jscover(enabled):
     else:
         if JSCOVER_ENV in os.environ:
             del os.environ[JSCOVER_ENV]
+
+
+@world.absorb
+def assert_exit_code(expected_code):
+    """
+    Assert that `sys.exit()` was called with `expected_code`.
+    """
+
+    # Assume that if mock_sys.exit() is not called, the tool
+    # exited with status 0
+    if world.mock_sys.exit.call_count == 0:
+        assert_equal(0, int(expected_code))
+
+    else:
+        args, kwargs = world.mock_sys.exit.call_args
+        assert_equal(args, [int(expected_code)])

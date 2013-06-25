@@ -17,13 +17,13 @@ def parse_args(argv):
     Parse command line arguments, returning a dict of valid options.
 
         {
-            'test_suite_desc': TEST_SUITE_DESCRIPTION,
+            'test_suite_paths': TEST_SUITE_PATHS,
             'coverage_xml': COVERAGE_XML,
             'coverage_html': COVERAGE_HTML
         }
 
-    `TEST_SUITE_DESCRIPTION` is a file handle describing the test suite to run
-    (source files, spec files, dependencies, browser to use, etc.)
+    `TEST_SUITE_PATHS` is a list of paths to files describing the test
+    suite to run (source files, spec files, dependencies, browser to use, etc.)
 
     `COVERAGE_XML` is the name of the coverage XML report to generate.
     `COVERAGE_HTML` is the name of the coverage HTML report to generate.
@@ -35,30 +35,44 @@ def parse_args(argv):
     Raises a `SystemExit` exception if arguments are otherwise invalid.
     """
     parser = argparse.ArgumentParser(description=DESCRIPTION)
-    parser.add_argument('test_suite_desc', type=file, help=TEST_SUITE_HELP)
+    parser.add_argument('test_suite_paths', type=str, nargs='+', 
+                        help=TEST_SUITE_HELP)
     parser.add_argument('--coverage-xml', type=str, help=COVERAGE_XML_HELP)
     parser.add_argument('--coverage-html', type=str, help=COVERAGE_HTML_HELP)
 
     return vars(parser.parse_args(argv))
 
 
-def generate_reports(suite_runner, output_file):
+def generate_reports(suite_runner_list, output_file):
     """
-    Use `suite_runner` (a `SuiteRunner` instance) to generate
-    test and coverage reports.  Write the test report
+    Use `suite_runner_list` (a list of `SuiteRunner` instances) 
+    to generate test and coverage reports.  Write the test report
     to `output_file` (an open file-like object).
+
+    Returns a boolean indicating whether all the tests passed.
     """
 
-    # Generate the test results report
-    test_report = suite_runner.test_report()
+    all_passed = True
 
-    # Generate the coverage reports
-    # (may do nothing if dependencies not installed 
-    # or report paths not specified)
-    suite_runner.write_coverage_reports()
+    for suite_runner in suite_runner_list:
 
-    # Print test results to the output file (may be stdout)
-    output_file.write(test_report)
+        # Generate the test results report
+        passed, test_report = suite_runner.run()
+
+        # Generate the coverage reports
+        # (may do nothing if dependencies not installed 
+        # or report paths not specified)
+        suite_runner.write_coverage_reports()
+
+        # Print test results to the output file (may be stdout)
+        output_file.write(test_report)
+
+        # Remember that we had a test that failed
+        if not passed:
+            all_passed = False
+
+    # Return whether all the tests passed
+    return all_passed
 
 
 def main():
@@ -68,13 +82,25 @@ def main():
     args_dict = parse_args(sys.argv)
 
     # Configure a test suite runner
-    suite_runner = SuiteRunnerFactory().build(args_dict.get('test_suite_desc'),
-                                              args_dict.get('coverage_xml'),
-                                              args_dict.get('coverage_html'))
+    factory = SuiteRunnerFactory()
+    suite_runner_list, browser_list = \
+        factory.build_runners(args_dict.get('test_suite_paths'),
+                              args_dict.get('coverage_xml'),
+                              args_dict.get('coverage_html'))
 
-    # Generate the reports and write test results to stdout
-    generate_reports(suite_runner, sys.stdout)
+    try:
+        # Generate the reports and write test results to stdout
+        all_passed = generate_reports(suite_runner_list, sys.stdout)
 
+    finally:
+
+        # Quit out of the browsers we created
+        for browser in browser_list:
+            browser.quit()
+
+    # If any test failed, exit with non-zero status code
+    if not all_passed:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

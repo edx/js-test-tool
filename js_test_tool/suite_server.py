@@ -89,6 +89,7 @@ class BasePageHandler(object):
         # Check whether this handler matches the URL path
         result = self.PATH_REGEX.match(path)
 
+
         # If this is not a match, return None
         if result is None:
             return None
