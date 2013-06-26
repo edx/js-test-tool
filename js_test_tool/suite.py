@@ -192,7 +192,7 @@ class SuiteDescription(object):
 
         # Convert keys that can have multiple values to lists
         for key in ['lib_dirs', 'src_dirs', 'spec_dirs', 'browsers']:
-            if not isinstance(desc_dict[key], list):
+            if key in desc_dict and not isinstance(desc_dict[key], list):
                 desc_dict[key] = [desc_dict[key]]
 
         # Check that we are using a valid browser

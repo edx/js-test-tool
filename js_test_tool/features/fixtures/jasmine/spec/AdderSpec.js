@@ -28,4 +28,4 @@ describe("Adder", function() {
 
         expect($('#adder_output').html()).toEqual('3');
     });
-})
+});

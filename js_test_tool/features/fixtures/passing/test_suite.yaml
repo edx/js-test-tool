@@ -1,5 +1,5 @@
-browsers: [chrome, firefox]
-lib_dirs: [lib]
+browsers: [chrome, firefox, phantomjs]
+lib_dirs: []
 spec_dirs: [spec]
 src_dirs: [src]
 test_runner: jasmine

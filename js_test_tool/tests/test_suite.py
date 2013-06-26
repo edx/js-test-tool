@@ -121,6 +121,21 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES[0:3])
         self.assertEqual(desc.browsers(), ['chrome'])
 
+    def test_no_lib_specified(self):
+
+        # 'lib_dirs' is an optional key
+        yaml_data = self.YAML_DATA.copy()
+        del yaml_data['lib_dirs']
+
+        # Create an in-memory YAML file from the data
+        yaml_file = self._yaml_buffer(yaml_data)
+
+        # Create the suite description using the YAML file
+        desc = SuiteDescription(yaml_file, self.temp_dir)
+
+        # Check that we get an empty list of lib paths
+        self.assertEqual(desc.lib_paths(), [])
+
     def test_missing_required_data(self):
 
         for key in ['src_dirs', 'spec_dirs', 'test_runner', 'browsers']:

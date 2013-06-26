@@ -167,4 +167,4 @@ def assert_exit_code(expected_code):
 
     else:
         args, kwargs = world.mock_sys.exit.call_args
-        assert_equal(args, [int(expected_code)])
+        assert_equal(args[0], int(expected_code))

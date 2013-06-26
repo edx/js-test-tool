@@ -99,7 +99,7 @@ jasmine.JsonReporter.prototype._getTestDetail = function(spec) {
 
         // If this is a failed expectation, store the message
         if (result.type == "expect" && result.passed && !result.passed()) {
-            detailList.push(result.trace.stack);
+            detailList.push(result.message)
         }
     }
 
