@@ -236,7 +236,7 @@ class SuiteRendererTest(unittest.TestCase):
                                'jasmine')
 
         # Render the description as HTML
-        html = self.renderer.render_to_string(desc)
+        html = self.renderer.render_to_string(0, desc)
 
         # Expect that we get a `unicode` string
         self.assertTrue(isinstance(html, unicode))
@@ -276,7 +276,7 @@ class SuiteRendererTest(unittest.TestCase):
         desc = self._mock_desc([], [], [], 'jasmine')
 
         # Render the description to HTML
-        html = self.renderer.render_to_string(desc)
+        html = self.renderer.render_to_string(0, desc)
 
         # Parse the HTML
         tree = etree.HTML(html)
@@ -307,7 +307,7 @@ class SuiteRendererTest(unittest.TestCase):
 
         # Should get an exception that the template could not be found
         with self.assertRaises(SuiteRendererError):
-            self.renderer.render_to_string(desc)
+            self.renderer.render_to_string(0, desc)
 
     def test_template_render_error(self):
 
@@ -322,7 +322,7 @@ class SuiteRendererTest(unittest.TestCase):
 
             # Expect that we get a `SuiteRendererError`
             with self.assertRaises(SuiteRendererError):
-                self.renderer.render_to_string(desc)
+                self.renderer.render_to_string(0, desc)
 
     def _assert_js_includes(self, runner_includes, suite_includes, suite_desc):
         """
@@ -333,7 +333,7 @@ class SuiteRendererTest(unittest.TestCase):
         with a `/suite/include` prefix)
         """
         # Render the description as HTML
-        html = self.renderer.render_to_string(suite_desc)
+        html = self.renderer.render_to_string(0, suite_desc)
 
         # Parse the HTML
         tree = etree.HTML(html)
@@ -342,9 +342,9 @@ class SuiteRendererTest(unittest.TestCase):
         script_elems = tree.xpath('/html/head/script')
 
         # Prepend the runner and suite includes
-        runner_includes = [os.path.join('runner', path) 
+        runner_includes = [os.path.join('/runner', path) 
                            for path in runner_includes]
-        suite_includes = [os.path.join('suite', 'include', path)
+        suite_includes = [os.path.join('/suite', '0', 'include', path)
                           for path in suite_includes]
 
         # Check that they match the sources we provided, in order

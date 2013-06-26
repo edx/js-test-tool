@@ -103,7 +103,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Expect that the server sends us the files
         for path in lib_paths:
-            url = self.server.root_url() + 'suite/include/' + path
+            url = self.server.root_url() + 'suite/0/include/' + path
             self._assert_page_equals(url, expected_page)
 
     def test_serve_src_js(self):
@@ -119,7 +119,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Expect that the server sends us the files
         for path in src_paths:
-            url = self.server.root_url() + 'suite/include/' + path
+            url = self.server.root_url() + 'suite/0/include/' + path
             self._assert_page_equals(url, expected_page)
 
     def test_serve_spec_js(self):
@@ -135,7 +135,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Expect that the server sends us the files
         for path in spec_paths:
-            url = self.server.root_url() + 'suite/include/' + path
+            url = self.server.root_url() + 'suite/0/include/' + path
             self._assert_page_equals(url, expected_page)
 
     def test_different_working_dir(self):
@@ -159,7 +159,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Expect that we still get the files
         for path in spec_paths:
-            url = self.server.root_url() + 'suite/include/' + path
+            url = self.server.root_url() + 'suite/0/include/' + path
             self._assert_page_equals(url, expected_page)
 
     def test_404_pages(self):

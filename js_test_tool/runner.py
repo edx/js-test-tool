@@ -60,7 +60,7 @@ class Browser(object):
             {'test_group': TEST_GROUP_NAME,
              'test_name': TEST_NAME,
              'status': pass | fail | error | skip,
-             'details': DETAILS}
+             'detail': DETAILS}
         """
 
         # Load the URL in the browser
@@ -89,11 +89,9 @@ class Browser(object):
         else:
             # Try to JSON-decode the contents of the <div>
             contents = elements.first.html
-            try:
 
-                # We use strict=False to allow for control characters
-                # such as newlines.
-                return json.loads(contents, strict=False)
+            try:
+                return self._parse_runner_output(contents)
 
             # Raise an error if invalid JSON
             except ValueError:
@@ -112,6 +110,46 @@ class Browser(object):
         the browser's resources.
         """
         self._splinter_browser.quit()
+
+    def _parse_runner_output(self, output):
+        """
+        Parse the output of the test runner in the rendered page.
+
+        Expect `output` to be a JSON-encoded string representing
+        a list of dictionaries with keys
+        'testGroup', 'testName', 'testStatus', and 'testDetail'
+
+        Returns a list of dictonaries with keys `test_group`, `test_name`,
+        `status` and `detail`.
+
+        If the test runner output does not have the expected keys,
+        raises a `BrowserError`.
+        """
+
+        # We use strict=False to allow for control characters
+        # such as newlines.
+        results_list = json.loads(output, strict=False)
+
+        final_list = []
+        for result_dict in results_list:
+
+            # Munge the keys to make them more Pythonic
+            modified_dict = {'test_group': result_dict.get('testGroup'),
+                             'test_name': result_dict.get('testName'),
+                             'status': result_dict.get('testStatus'),
+                             'detail': result_dict.get('testDetail')}
+
+            # Verify that we got all the keys we expected
+            for key, value in modified_dict.items():
+                if value is None:
+                    msg = "Test result is missing required key '{}'".format(key)
+                    raise BrowserError(msg)
+
+            # Add the modified dict to the list
+            final_list.append(modified_dict)
+
+        return final_list
+        
 
 class SuiteRunner(object):
     """

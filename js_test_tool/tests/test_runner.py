@@ -32,18 +32,18 @@ class BrowserTest(TestCase):
     def test_get_page_results(self):
 
         # Configure the stub server to send a valid test results page
-        results = [{'test_group': 'Adder tests',
-                    'test_name': 'it should start at zero',
-                    'status': 'pass',
-                    'details': ''},
-                   {'test_group': 'Adder tests',
-                    'test_name': 'it should add to the sum',
-                    'status': 'fail',
-                    'details': 'Stack trace'},
-                   {'test_group': 'Multiplier test',
-                    'test_name': 'it should multiply',
-                    'status': 'pass',
-                    'details': ''}]
+        results = [{'testGroup': 'Adder tests',
+                    'testName': 'it should start at zero',
+                    'testStatus': 'pass',
+                    'testDetail': ''},
+                   {'testGroup': 'Adder tests',
+                    'testName': 'it should add to the sum',
+                    'testStatus': 'fail',
+                    'testDetail': 'Stack trace'},
+                   {'testGroup': 'Multiplier test',
+                    'testName': 'it should multiply',
+                    'testStatus': 'pass',
+                    'testDetail': ''}]
 
         content = u'<div id="{}">{}</div>'.format(SuiteRenderer.RESULTS_DIV_ID,
                                                   json.dumps(results))
@@ -53,8 +53,22 @@ class BrowserTest(TestCase):
         server_url = self.stub_server.root_url()
         output_results = self.browser.get_page_results(server_url)
 
-        # Expect that we get the results back
-        self.assertEqual(results, output_results)
+        # Check the results
+        # Keys should be munged into Python-style var names
+        expected_results = [{'test_group': 'Adder tests',
+                             'test_name': 'it should start at zero',
+                             'status': 'pass',
+                             'detail': ''},
+                            {'test_group': 'Adder tests',
+                             'test_name': 'it should add to the sum',
+                             'status': 'fail',
+                             'detail': 'Stack trace'},
+                            {'test_group': 'Multiplier test',
+                             'test_name': 'it should multiply',
+                             'status': 'pass',
+                             'detail': ''}]
+
+        self.assertEqual(expected_results, output_results)
 
     def test_get_page_results_control_chars(self):
 
@@ -74,10 +88,11 @@ class BrowserTest(TestCase):
 
         # Expect that we get the results back
         expected_results = [
-            {u"testGroup":u"when song has been paused",
-             u"testName":u"should indicate that the song is currently paused",
-             u"testStatus":u"fail", 
-             u"testDetail":u"Error: Expected true to be falsy.\n at new jasmine.ExpectationResult"}]
+            {u'test_group': u"when song has been paused",
+             u'test_name': u"should indicate that the song is currently paused",
+             u'status': u"fail", 
+             u'detail': u"Error: Expected true to be falsy.\n at new jasmine.ExpectationResult"}]
+
         self.assertEqual(expected_results, output_results)
 
     def test_no_results(self):
@@ -98,6 +113,7 @@ class BrowserTest(TestCase):
         error_responses = [(200, u'<div id="wrong_id"></div>'),
                            (200, u''),
                            (200, u'<div id="{}">Not JSON</div>'.format(div_id)),
+                           (200, u'<div id="{}">[{"missing_keys":"val"}]</div>'),
                            (404, u'Not found'),
                            (500, u'Error occurred')]
 
@@ -569,7 +585,7 @@ class SuiteRunnerTest(TestCase):
         """
         self.mock_page_server.suite_url_list.return_value = url_list
 
-    def _add_browser_result(self, mock_browser, group_name, test_name, status, details):
+    def _add_browser_result(self, mock_browser, group_name, test_name, status, detail):
         """
         Configure `mock_browser` (a `Browser mock) to return the test result:
 
@@ -577,7 +593,7 @@ class SuiteRunnerTest(TestCase):
         `test_name`: name of the specific test case 
                      (e.g. 'it should start at zero')
         `status`: pass | fail | skip
-        `details`: details of the test case (e.g. a stack trace)
+        `detail`: details of the test case (e.g. a stack trace)
         """
 
         # Retrieve the current results dict
@@ -587,7 +603,7 @@ class SuiteRunnerTest(TestCase):
         results.append({'test_group': group_name,
                         'test_name': test_name,
                         'status': status,
-                        'details': details})
+                        'detail': detail})
 
 
 class SuiteRunnerFactoryTest(TempWorkspaceTestCase):

@@ -5,8 +5,8 @@ Browser: {{ browser_name }}
 {% if results %}
 {% for result_dict in results %}
 {{ result_dict.test_group }}: {{ result_dict.test_name }} [{{ result_dict.status }}]
-{% if result_dict.details %}
-{{ result_dict.details|indent(4, true) }}
+{% if result_dict.detail %}
+{{ result_dict.detail|indent(4, true) }}
 
 {% endif %}
 {% endfor %}

@@ -127,8 +127,7 @@ class SuiteDescription(object):
         # so the key is guaranteed to exist
         return self._desc_dict['browsers']
 
-    @staticmethod
-    def _js_paths(dir_path_list):
+    def _js_paths(self, dir_path_list):
         """
         Recursively search the directories at `dir_path_list` (list of paths)
         for *.js files.  
@@ -152,7 +151,10 @@ class SuiteDescription(object):
             # the root directories.
             inner_js_paths = []
 
-            for root_dir, _, filenames in os.walk(dir_path):
+            # We use the full path here so that we actually find
+            # the files we're looking for
+            full_dir_path = os.path.join(self._root_dir, dir_path)
+            for root_dir, _, filenames in os.walk(full_dir_path):
 
                 # Look for JavaScript files (*.js)
                 for name in filenames:
@@ -165,8 +167,13 @@ class SuiteDescription(object):
             # then add them to the final list.
             js_paths.extend(sorted(inner_js_paths, key=str.lower))
 
-        return js_paths
-
+        # Now that we've found the files we're looking for, we
+        # want to return relative paths to our root
+        # (for use in URLs)
+        rel_paths = [os.path.relpath(path, self._root_dir) 
+                     for path in js_paths]
+        
+        return rel_paths
 
     @classmethod
     def _validate_description(cls, desc_dict):
@@ -231,11 +238,14 @@ class SuiteRenderer(object):
     # The CSS ID of the <div> that will contain the output test results
     RESULTS_DIV_ID = 'js_test_tool_results'
 
-    def render_to_string(self, suite_desc):
+    def render_to_string(self, suite_num, suite_desc):
         """
         Given a `test_suite_desc` (`TestSuiteDescription` instance),
         render a test runner page.  When loaded, this page will
         execute the JavaScript tests in the suite.
+
+        `suite_num` is the index of the suite, used to generate
+        links to that suite's dependencies.
 
         Returns a unicode string.
 
@@ -252,7 +262,8 @@ class SuiteRenderer(object):
             raise SuiteRendererError(msg)
 
         # Create the context for the template
-        template_context = {'lib_path_list': suite_desc.lib_paths(),
+        template_context = {'suite_num': suite_num,
+                            'lib_path_list': suite_desc.lib_paths(),
                             'src_path_list': suite_desc.src_paths(),
                             'spec_path_list': suite_desc.spec_paths(),
                             'div_id': self.RESULTS_DIV_ID}

@@ -151,7 +151,7 @@ class SuitePageHandler(BasePageHandler):
 
         # Otherwise, render the page
         else:
-            return self._renderer.render_to_string(suite_desc)
+            return self._renderer.render_to_string(suite_num, suite_desc)
 
 
 class RunnerPageHandler(BasePageHandler):
@@ -184,7 +184,7 @@ class DependencyPageHandler(BasePageHandler):
     Load dependencies required by the test suite description.
     """
 
-    PATH_REGEX = re.compile('^/suite/include/(.+)$')
+    PATH_REGEX = re.compile('^/suite/([0-9]+)/include/(.+)$')
 
     def __init__(self, desc_list):
         """
@@ -200,12 +200,19 @@ class DependencyPageHandler(BasePageHandler):
         to the description file.
         """
 
-        # The only argument should be the relative path
-        rel_path = args[0]
+        # Interpret the arguments (from the regex)
+        suite_num, rel_path = args
+
+        # Try to parse the suite number
+        try:
+            suite_num = int(suite_num)
+
+        except ValueError:
+            return None
 
         # Retrieve the full path to the dependency, if it exists
         # and is specified in the test suite description
-        full_path = self._dependency_path(rel_path)
+        full_path = self._dependency_path(suite_num, rel_path)
 
         if full_path is not None:
 
@@ -227,29 +234,36 @@ class DependencyPageHandler(BasePageHandler):
         else:
             return None
 
-    def _dependency_path(self, path):
+    def _dependency_path(self, suite_num, path):
         """
         Return the full filesystem path to the dependency, if it 
-        is specified in the test suite description.  
+        is specified in the test suite description with index `suite_num`.  
         Otherwise, return None.
         """
 
-        # Check that this is a dependency specified in the suite description
-        for suite_desc in self._desc_list:
+        # Try to find the suite description with `suite_num`
+        try:
+            suite_desc = self._desc_list[suite_num]
 
-            # Get all dependency paths
-            all_paths = (suite_desc.lib_paths() +
-                        suite_desc.src_paths() +
-                        suite_desc.spec_paths())
+        except IndexError:
+            return None
 
-            # If the path is in our listed dependencies, we can serve it
-            if path in all_paths:
 
-                # Resolve the full filesystem path
-                return os.path.join(suite_desc.root_dir(), path)
+        # Get all dependency paths
+        all_paths = (suite_desc.lib_paths() +
+                     suite_desc.src_paths() +
+                     suite_desc.spec_paths())
 
-        # If we did not find the path, we cannot serve it
-        return None
+        # If the path is in our listed dependencies, we can serve it
+        if path in all_paths:
+
+            # Resolve the full filesystem path
+            return os.path.join(suite_desc.root_dir(), path)
+
+        else:
+
+            # If we did not find the path, we cannot serve it
+            return None
 
 
 class SuitePageRequestHandler(BaseHTTPRequestHandler):
