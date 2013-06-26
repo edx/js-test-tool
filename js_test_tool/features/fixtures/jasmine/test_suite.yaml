@@ -1,4 +1,4 @@
-browsers: [chrome, firefox]
+browsers: [chrome, firefox, phantomjs]
 lib_dirs: [lib]
 spec_dirs: [spec]
 src_dirs: [src]

@@ -133,7 +133,7 @@ def assert_tool_stdout(expected_filename):
     # Open the file containing the expected report
     # and check that it matches the stdout captured by the tool
     with open(expected_filename) as expected_file:
-        assert_equal(captured_stdout, expected_file.read())
+        assert_equal(captured_stdout, expected_file.read().strip())
 
 
 @world.absorb
