@@ -7,4 +7,4 @@ describe("Passer", function() {
     it('should have anoter test that passes', function() {
         expect(2 + 2).toEqual(4);
     });
-};
+});
