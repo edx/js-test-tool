@@ -1,151 +1,13 @@
 from unittest import TestCase
 import mock
 from textwrap import dedent
-import json
 import os.path
-from js_test_tool.runner import SuiteRunner, SuiteRunnerFactory, \
-    Browser, BrowserError
+from js_test_tool.runner import SuiteRunner, SuiteRunnerFactory
+from js_test_tool.browser import Browser
 from js_test_tool.suite import SuiteDescription, SuiteRenderer
 from js_test_tool.suite_server import SuitePageServer
 from js_test_tool.coverage import CoverageReporter
-from js_test_tool.tests.helpers import TempWorkspaceTestCase, StubServer
-
-
-class BrowserTest(TestCase):
-
-    def setUp(self):
-
-        # Create a stub server on a local port
-        self.stub_server = StubServer()
-
-        # Create the browser (use PhantomJS)
-        self.browser = Browser('phantomjs')
-
-    def tearDown(self):
-
-        # Stop the server and free the port
-        self.stub_server.stop()
-
-        # Stop the browser
-        self.browser.quit()
-
-    def test_get_page_results(self):
-
-        # Configure the stub server to send a valid test results page
-        results = [{'testGroup': 'Adder tests',
-                    'testName': 'it should start at zero',
-                    'testStatus': 'pass',
-                    'testDetail': ''},
-                   {'testGroup': 'Adder tests',
-                    'testName': 'it should add to the sum',
-                    'testStatus': 'fail',
-                    'testDetail': 'Stack trace'},
-                   {'testGroup': 'Multiplier test',
-                    'testName': 'it should multiply',
-                    'testStatus': 'pass',
-                    'testDetail': ''}]
-
-        content = u'<div id="{}">{}</div>'.format(SuiteRenderer.RESULTS_DIV_ID,
-                                                  json.dumps(results))
-        self.stub_server.set_response(200, content)
-
-        # Use the browser to load the page and parse the results
-        server_url = self.stub_server.root_url()
-        output_results = self.browser.get_page_results(server_url)
-
-        # Check the results
-        # Keys should be munged into Python-style var names
-        expected_results = [{'test_group': 'Adder tests',
-                             'test_name': 'it should start at zero',
-                             'status': 'pass',
-                             'detail': ''},
-                            {'test_group': 'Adder tests',
-                             'test_name': 'it should add to the sum',
-                             'status': 'fail',
-                             'detail': 'Stack trace'},
-                            {'test_group': 'Multiplier test',
-                             'test_name': 'it should multiply',
-                             'status': 'pass',
-                             'detail': ''}]
-
-        self.assertEqual(expected_results, output_results)
-
-    def test_get_page_results_control_chars(self):
-
-        # Try sending a control char
-        json_data = ('[{"testGroup":"when song has been paused",' +
-                     '"testName":"should indicate that the song is currently paused",' +
-                     '"testStatus":"fail",' +
-                     '"testDetail":"Error: Expected true to be falsy.\n at new jasmine.ExpectationResult"}]')
-
-        content = u'<div id="{}">{}</div>'.format(SuiteRenderer.RESULTS_DIV_ID,
-                                                  json_data)
-        self.stub_server.set_response(200, content)
-
-        # Use the browser to load the page and parse the results
-        server_url = self.stub_server.root_url()
-        output_results = self.browser.get_page_results(server_url)
-
-        # Expect that we get the results back
-        expected_results = [
-            {u'test_group': u"when song has been paused",
-             u'test_name': u"should indicate that the song is currently paused",
-             u'status': u"fail", 
-             u'detail': u"Error: Expected true to be falsy.\n at new jasmine.ExpectationResult"}]
-
-        self.assertEqual(expected_results, output_results)
-
-    def test_no_results(self):
-        # Configure the stub server to send an empty <div>
-        content = u'<div id="{}">[]</div>'.format(SuiteRenderer.RESULTS_DIV_ID)
-        self.stub_server.set_response(200, content)
-
-        # Use the browser to load the page and parse the results
-        server_url = self.stub_server.root_url()
-        output_results = self.browser.get_page_results(server_url)
-
-        # Expect we get an empty list back
-        self.assertEqual(output_results, [])
-
-    def test_error_conditions(self):
-
-        div_id = SuiteRenderer.RESULTS_DIV_ID
-        error_responses = [(200, u'<div id="wrong_id"></div>'),
-                           (200, u''),
-                           (200, u'<div id="{}">Not JSON</div>'.format(div_id)),
-                           (200, u'<div id="{}">[{"missing_keys":"val"}]</div>'),
-                           (404, u'Not found'),
-                           (500, u'Error occurred')]
-
-        server_url = self.stub_server.root_url()
-
-        for (status_code, content) in error_responses:
-
-            # Configure the stub server to send an invalid response
-            self.stub_server.set_response(status_code, content)
-
-            # Expect an exception
-            with self.assertRaises(BrowserError):
-                self.browser.get_page_results(server_url)
-
-    def test_no_response(self):
-
-        # Configure the server to ignore requests
-        self.stub_server.set_ignore_requests(True)
-
-        server_url = self.stub_server.root_url()
-
-        # Configure the Browser to timeout quickly
-        old_timeout = Browser.TIMEOUT
-        def cleanup():
-            Browser.TIMEOUT = old_timeout
-        self.addCleanup(cleanup)
-
-        Browser.TIMEOUT = 0.2
-
-        # Expect the Browser to give an error when it times out
-        with self.assertRaises(BrowserError):
-            self.browser.get_page_results(server_url)
+from js_test_tool.tests.helpers import TempWorkspaceTestCase
 
 
 class SuiteRunnerTest(TestCase):
@@ -643,23 +505,16 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
 
         # Build the runners
         num_suites = 5
-        runners, _ = self._build_runners(num_suites)
+        runner, _ = self._build_runner(num_suites)
 
-        # Check that we got a suite runner for each suite description
-        self.assertEqual(len(runners), num_suites)
-
-        # Because of the way we configured the mocks, each
-        # suite runner in the list will be identical.
-        # So we examine the first one only.
         # Expect that we get the suite runner instance
-        self.assertEqual(runners[0], self.mock_runner)
+        self.assertEqual(runner, self.mock_runner)
 
     def test_configure_browsers(self):
 
         # Build a runner and configure it to test using these browsers
         browser_names = ['chrome', 'firefox', 'phantomjs']
-        runners, browsers = self._build_runners(1, browser_names=browser_names)
-        suite_runner = runners[0]
+        _, browsers = self._build_runner(1, browser_names=browser_names)
 
         # Expect that the suite runner was configured with the correct browsers
         expected_browsers = [self.mock_browser] * len(browser_names)
@@ -672,7 +527,7 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
 
         # Build the runners
         num_suites = 5
-        runners, _ = self._build_runners(num_suites)
+        self._build_runner(num_suites)
 
         # Expect that the suite page server is correctly configured
         # Because of the way we configure the mocks, each suite description
@@ -687,7 +542,7 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         # Ignore the return value because we are checking for calls the
         # factory makes to our mocks.
         num_suites = 5
-        self._build_runners(num_suites)
+        self._build_runner(num_suites)
 
         # Retrieve all the file paths passed to SuiteDescription constructors
         all_paths = []
@@ -715,7 +570,7 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         # factory makes to our mocks.
         html_path = 'coverage.html'
         xml_path = 'coverage.xml'
-        self._build_runners(1, coverage_html_path=html_path,
+        self._build_runner(1, coverage_html_path=html_path,
                             coverage_xml_path=xml_path)
 
         # Expect that the coverage reporter was configured correctly
@@ -728,12 +583,12 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         """
         return ['suite_{}.yaml'.format(num) for num in range(num_suites)]
 
-    def _build_runners(self, num_suites, 
+    def _build_runner(self, num_suites, 
                        coverage_xml_path='coverage.xml', 
                        coverage_html_path='coverage.html',
-                       browser_names=['chrome']):
+                       browser_names=None):
         """
-        Build a list of configured `SuiteRunner` instances
+        Build a configured `SuiteRunner` instance
         using the `SuiteRunnerFactory`.
 
         `num_suites` is the number of suite descriptions to use.
@@ -748,9 +603,13 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         values, each suite runner will be identical, 
         and they will all use the same browser dependencies.
 
-        Returns a tuple `(suite_runners, browsers)`.  See
+        Returns a tuple `(suite_runner, browsers)`.  See
         `SuiteRunnerFactory.build_runners()` for details.
         """
+
+        # Supply default browser names
+        if browser_names is None:
+            browser_names = ['chrome']
 
         # Create fake suite description files
         suite_path_list = self._suite_paths(num_suites)
@@ -760,7 +619,7 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
                 file_handle.write('test file')
 
         # Build the suite runner instances
-        return self.factory.build_runners(suite_path_list,
+        return self.factory.build_runner(suite_path_list,
                                           browser_names,
                                           coverage_xml_path,
                                           coverage_html_path)

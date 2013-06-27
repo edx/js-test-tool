@@ -70,36 +70,27 @@ def parse_args(argv):
     return vars(parser.parse_args(argv))
 
 
-def generate_reports(suite_runner_list, output_file):
+def generate_reports(suite_runner, output_file):
     """
-    Use `suite_runner_list` (a list of `SuiteRunner` instances) 
+    Use `suite_runner` (a `SuiteRunner` instance) 
     to generate test and coverage reports.  Write the test report
     to `output_file` (an open file-like object).
 
     Returns a boolean indicating whether all the tests passed.
     """
 
-    all_passed = True
+    # Generate the test results report
+    passed, test_report = suite_runner.run()
 
-    for suite_runner in suite_runner_list:
+    # Generate the coverage reports
+    # (may do nothing if dependencies not installed 
+    # or report paths not specified)
+    suite_runner.write_coverage_reports()
 
-        # Generate the test results report
-        passed, test_report = suite_runner.run()
+    # Print test results to the output file (may be stdout)
+    output_file.write(test_report)
 
-        # Generate the coverage reports
-        # (may do nothing if dependencies not installed 
-        # or report paths not specified)
-        suite_runner.write_coverage_reports()
-
-        # Print test results to the output file (may be stdout)
-        output_file.write(test_report)
-
-        # Remember that we had a test that failed
-        if not passed:
-            all_passed = False
-
-    # Return whether all the tests passed
-    return all_passed
+    return passed
 
 
 def main():
@@ -110,15 +101,15 @@ def main():
 
     # Configure a test suite runner
     factory = SuiteRunnerFactory()
-    suite_runner_list, browser_list = \
-        factory.build_runners(args_dict.get('test_suite_paths'),
+    suite_runner, browser_list = \
+        factory.build_runner(args_dict.get('test_suite_paths'),
                               args_dict.get('browser_names'),
                               args_dict.get('coverage_xml'),
                               args_dict.get('coverage_html'))
 
     try:
         # Generate the reports and write test results to stdout
-        all_passed = generate_reports(suite_runner_list, sys.stdout)
+        all_passed = generate_reports(suite_runner, sys.stdout)
 
     finally:
 
