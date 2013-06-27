@@ -15,6 +15,8 @@ class SuitePageServer(HTTPServer):
     Serve test suite pages and included JavaScript files.
     """
 
+    protocol_version = 'HTTP/1.1'
+
     def __init__(self, suite_desc_list, suite_renderer):
         """
         Initialize the server to serve test runner pages
