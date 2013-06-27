@@ -75,23 +75,25 @@ class SuiteRunnerTest(TestCase):
 
         # Check that we get the expected report
         expected_report = dedent("""
-        -----------------------
+        =======================
         JavaScript test results
+        =======================
         Browser: chrome
         -----------------------
         Adder test: it should start at zero [pass]
         Adder test: it should add to the sum [pass]
         Multiplier test: it should multiply [pass]
+
         -----------------------
         Failed:  0
         Error:   0
         Skipped: 0
         Passed:  3
-        -----------------------
-        """).strip()
+        =======================
+        """)
 
         self.assertTrue(passed)
-        self.assertEqual(report, expected_report)
+        self._assert_reports_equal(report, expected_report)
 
     def test_some_results_fail(self):
 
@@ -111,8 +113,9 @@ class SuiteRunnerTest(TestCase):
 
         # Check that we get the expected report
         expected_report = dedent("""
-        -----------------------
+        =======================
         JavaScript test results
+        =======================
         Browser: chrome
         -----------------------
         Adder test: it should start at zero [pass]
@@ -121,16 +124,17 @@ class SuiteRunnerTest(TestCase):
             Can go here
 
         Multiplier test: it should multiply [pass]
+
         -----------------------
         Failed:  1
         Error:   0
         Skipped: 0
         Passed:  2
-        -----------------------
-        """).strip()
+        =======================
+        """)
 
         self.assertFalse(passed)
-        self.assertEqual(report, expected_report)
+        self._assert_reports_equal(report, expected_report)
 
     def test_all_results_fail(self):
 
@@ -150,8 +154,9 @@ class SuiteRunnerTest(TestCase):
 
         # Check that we get the expected report
         expected_report = dedent("""
-        -----------------------
+        =======================
         JavaScript test results
+        =======================
         Browser: chrome
         -----------------------
         Adder test: it should start at zero [fail]
@@ -163,16 +168,17 @@ class SuiteRunnerTest(TestCase):
         Multiplier test: it should multiply [fail]
             Desc
 
+
         -----------------------
         Failed:  3
         Error:   0
         Skipped: 0
         Passed:  0
-        -----------------------
-        """).strip()
+        =======================
+        """)
 
         self.assertFalse(passed)
-        self.assertEqual(report, expected_report)
+        self._assert_reports_equal(report, expected_report)
 
     def test_results_error(self):
 
@@ -192,8 +198,9 @@ class SuiteRunnerTest(TestCase):
 
         # Check that we get the expected report
         expected_report = dedent("""
-        -----------------------
+        =======================
         JavaScript test results
+        =======================
         Browser: chrome
         -----------------------
         Adder test: it should start at zero [pass]
@@ -201,16 +208,17 @@ class SuiteRunnerTest(TestCase):
             Desc
 
         Multiplier test: it should multiply [pass]
+
         -----------------------
         Failed:  0
         Error:   1
         Skipped: 0
         Passed:  2
-        -----------------------
-        """).strip()
+        =======================
+        """)
 
         self.assertFalse(passed)
-        self.assertEqual(report, expected_report)
+        self._assert_reports_equal(report, expected_report)
 
 
     def test_results_skip(self):
@@ -231,8 +239,9 @@ class SuiteRunnerTest(TestCase):
 
         # Check that we get the expected report
         expected_report = dedent("""
-        -----------------------
+        =======================
         JavaScript test results
+        =======================
         Browser: chrome
         -----------------------
         Adder test: it should start at zero [pass]
@@ -240,16 +249,17 @@ class SuiteRunnerTest(TestCase):
             Desc
 
         Multiplier test: it should multiply [pass]
+
         -----------------------
         Failed:  0
         Error:   0
         Skipped: 1
         Passed:  2
-        -----------------------
-        """).strip()
+        =======================
+        """)
 
         self.assertTrue(passed)
-        self.assertEqual(report, expected_report)
+        self._assert_reports_equal(report, expected_report)
 
     def test_multiple_suites(self):
 
@@ -272,22 +282,24 @@ class SuiteRunnerTest(TestCase):
         # loaded will report the same test result.  So we expect
         # that we get duplicate results, one for each URL.
         expected_report = dedent("""
-        -----------------------
+        =======================
         JavaScript test results
+        =======================
         Browser: chrome
         -----------------------
         Adder test: it should start at zero [pass]
         Adder test: it should start at zero [pass]
+
         -----------------------
         Failed:  0
         Error:   0
         Skipped: 0
         Passed:  2
-        -----------------------
-        """).strip()
+        =======================
+        """)
 
         self.assertTrue(passed)
-        self.assertEqual(report, expected_report)
+        self._assert_reports_equal(report, expected_report)
 
     def test_no_results(self):
 
@@ -300,15 +312,16 @@ class SuiteRunnerTest(TestCase):
 
         # Special message in the report
         expected_report = dedent("""
-        -----------------------
+        =======================
         JavaScript test results
+        =======================
         Browser: chrome
         -----------------------
         Warning: No test results reported.
-        -----------------------
-        """).strip()
+        =======================
+        """)
 
-        self.assertEqual(report, expected_report)
+        self._assert_reports_equal(report, expected_report)
 
     def test_multiple_browsers_all_pass(self):
 
@@ -343,36 +356,36 @@ class SuiteRunnerTest(TestCase):
         # loaded will report the same test result.  So we expect
         # that we get duplicate results, one for each URL.
         expected_report = dedent("""
-        -----------------------
+        =======================
         JavaScript test results
+        =======================
         Browser: chrome
         -----------------------
         Adder test: it should start at zero [pass]
         Adder test: it should add to the sum [pass]
+
         -----------------------
         Failed:  0
         Error:   0
         Skipped: 0
         Passed:  2
-        -----------------------
-
-
-        -----------------------
-        JavaScript test results
+        =======================
+        =======================
         Browser: firefox
         -----------------------
         Adder test: it should start at zero [pass]
         Adder test: it should add to the sum [pass]
+
         -----------------------
         Failed:  0
         Error:   0
         Skipped: 0
         Passed:  2
-        -----------------------
-        """).strip()
+        =======================
+        """)
 
         self.assertTrue(passed)
-        self.assertEqual(report, expected_report)
+        self._assert_reports_equal(report, expected_report)
 
     def test_multiple_browsers_some_fail(self):
 
@@ -407,38 +420,38 @@ class SuiteRunnerTest(TestCase):
         # loaded will report the same test result.  So we expect
         # that we get duplicate results, one for each URL.
         expected_report = dedent("""
-        -----------------------
+        =======================
         JavaScript test results
+        =======================
         Browser: chrome
         -----------------------
         Adder test: it should start at zero [pass]
         Adder test: it should add to the sum [pass]
+
         -----------------------
         Failed:  0
         Error:   0
         Skipped: 0
         Passed:  2
-        -----------------------
-
-
-        -----------------------
-        JavaScript test results
+        =======================
+        =======================
         Browser: firefox
         -----------------------
         Adder test: it should start at zero [fail]
             Desc
 
         Adder test: it should add to the sum [pass]
+
         -----------------------
         Failed:  1
         Error:   0
         Skipped: 0
         Passed:  1
-        -----------------------
-        """).strip()
+        =======================
+        """)
 
         self.assertFalse(passed)
-        self.assertEqual(report, expected_report)
+        self._assert_reports_equal(report, expected_report)
 
     def _set_suite_urls(self, url_list):
         """
@@ -466,6 +479,19 @@ class SuiteRunnerTest(TestCase):
                         'test_name': test_name,
                         'status': status,
                         'detail': detail})
+
+    def _assert_reports_equal(self, report, expected_report):
+        """
+        Asserts that two console reports are equal, with
+        some extra debugging logging.
+
+        Strips the strings to avoid failures due to starting/ending
+        newline issues.
+        """
+        if report.strip() != expected_report.strip():
+            print "Expected: \n\n" + expected_report.strip() + "\n\n"
+            print "Actual: \n\n" + report.strip() + "\n\n"
+            self.assertEqual(report, expected_report)
 
 
 class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
@@ -623,3 +649,4 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
                                           browser_names,
                                           coverage_xml_path,
                                           coverage_html_path)
+

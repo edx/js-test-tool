@@ -21,7 +21,7 @@ class SuiteRunner(object):
     """
 
     # Name of the template used to render the report
-    REPORT_TEMPLATE_NAME = 'test_results_report.txt'
+    REPORT_TEMPLATE_NAME = 'console_report.txt'
 
     def __init__(self, browser_list, suite_page_server, coverage_reporter):
         """
@@ -52,22 +52,22 @@ class SuiteRunner(object):
         # Start the suite page server running on a local port
         self._suite_page_server.start()
 
-        all_reports = []
-        all_passed = True
+        # Create a dictionary to store context passed to the template
+        context_dict = {'browser_results': [],
+                        'all_passed': True}
 
         try:
 
             for browser in self._browser_list:
 
                 # Run the test suite with one of our browsers
-                passed, report_str = self._run_with_browser(browser)
+                browser_results = self._run_with_browser(browser)
+                context_dict['browser_results'].append(browser_results)
 
-                # If any tests failed, then report that we had failures
-                if not passed:
-                    all_passed = False
-
-                # Store the report string
-                all_reports.append(report_str)
+                # Check whether any of the tests failed
+                stats = browser_results['stats']
+                if (stats['num_failed'] + stats['num_error']) > 0:
+                    context_dict['all_passed'] = False
 
         # Re-raise any exceptions that occur
         except:
@@ -77,8 +77,12 @@ class SuiteRunner(object):
         finally:
             self._suite_page_server.stop()
 
-        # Return whether everything passed and all reports
-        return all_passed, '\n\n\n'.join(all_reports)
+
+        # Render the console report
+        template = TEMPLATE_ENV.get_template(self.REPORT_TEMPLATE_NAME)
+        report_str = template.render(context_dict)
+
+        return (context_dict['all_passed'], report_str)
 
     def write_coverage_reports(self):
         """
@@ -94,9 +98,26 @@ class SuiteRunner(object):
     def _run_with_browser(self, browser):
         """
         Load all test suite pages in `browser` (a `Browser` instance)
-        and return a tuple `(passed, report)` where
-        `passed` is a bool indicating whether all tests passed,
-        and `report` is a unicode string describing the test results.
+        and return a dictionary describing the results.
+
+        The returned dictionary has the following form:
+
+            {
+                'browser_name': BROWSER_NAME,
+
+                'test_results': [ {'test_group': TEST_GROUP,
+                                   'test_name': TEST_NAME,
+                                   'status': "pass" | "fail" | "skip" | "error",
+                                   'detail': DETAILS }, ...],
+
+                'stats': {'num_failed': NUM_FAILED,
+                          'num_error': NUM_ERROR,
+                          'num_skipped': NUM_SKIPPED,
+                          'num_passed': NUM_PASSED}
+            }
+
+        If an error occurs when retrieving or parsing the page,
+        raises a `BrowserError`.
         """
 
         all_results = []
@@ -110,41 +131,13 @@ class SuiteRunner(object):
             # Store the results and keep loading pages
             all_results.extend(suite_results)
 
-        # Render the report
+        # Calculate statistics
         stats = self._result_stats(all_results)
-        report_str = self._render_report(browser.name(), all_results, stats)
 
-        # Check whether the tests passed or failed overall
-        passed = (stats['num_failed'] + stats['num_error']) == 0
-
-        # Return results
-        return passed, report_str
-
-    def _render_report(self, browser_name, suite_result_list, stats_dict):
-        """
-        Return a unicode string representing the result of running
-        the test suite.
-
-        `browser_name` is the name of the browser used to run the tests
-
-        `suite_result_list` is a list of result dictionaries.  See
-        `Browser.get_page_results()` for the format of the dictionary items.
-
-        `stats_dict` is a dictionary with keys `num_failed`, `num_error`,
-        `num_skipped`, and `num_passed`.
-        """
-
-        # Create the template context
-        context = {'browser_name': browser_name,
-                   'results': suite_result_list,
-                   'num_failed': stats_dict['num_failed'],
-                   'num_error': stats_dict['num_error'],
-                   'num_skipped': stats_dict['num_skipped'],
-                   'num_passed': stats_dict['num_passed']}
-
-        # Use a template to render the report string
-        template = TEMPLATE_ENV.get_template(self.REPORT_TEMPLATE_NAME)
-        return template.render(context)
+        # Construct the context dict
+        return {'browser_name': browser.name(),
+                'test_results': all_results,
+                'stats': stats}
 
     def _result_stats(self, all_results):
         """
