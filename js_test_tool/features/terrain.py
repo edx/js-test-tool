@@ -20,6 +20,8 @@ FIXTURE_DIR = os.path.join(os.path.dirname(__file__), 'fixtures')
 JSCOVER_ENV = 'JSCOVER_JAR'
 JSCOVER_JAR = 'jscover.jar'
 
+BROWSER_ARGS = ['--use-chrome', '--use-firefox', '--use-phantomjs']
+
 
 @before.all
 def setup_all():
@@ -79,7 +81,7 @@ def run_tool_with_args(arg_list):
     """
 
     # Install the arguments
-    world.mock_sys.argv = arg_list
+    world.mock_sys.argv = arg_list + BROWSER_ARGS
 
     # Run the tool
     tool.main()

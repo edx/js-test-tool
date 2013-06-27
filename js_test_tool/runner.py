@@ -350,10 +350,15 @@ class SuiteRunnerFactory(object):
         self._browser_class = browser_class
         self._runner_class = runner_class
 
-    def build_runners(self, suite_path_list, coverage_xml_path, coverage_html_path):
+    def build_runners(self, suite_path_list, browser_names, 
+                      coverage_xml_path, coverage_html_path):
         """
         Configure `SuiteRunner` instances for each suite description.
         Each `SuiteRunner` will:
+
+        * Start instances of each browser listed in `browser_names`.
+        `browser_names` is a list of browser names such as "chrome",
+        "firefox", and "phantomjs".
         
         * Run the test suites described in 
           `suite_path_list` (list of paths to suite description files)
@@ -385,24 +390,19 @@ class SuiteRunnerFactory(object):
         # We re-use the same server across test suites
         server = self._server_class(suite_desc_list, renderer)
 
-        # Create a list of all browsers we will oeed
-        browser_dict = self._build_browsers(suite_desc_list)
+        # Create a list of all browsers we will need
+        browsers = [self._browser_class(name) for name in browser_names]
 
         # Create a suite runner for each description
         suite_runner_list = []
         for suite_desc in suite_desc_list:
 
-            # Select the browsers needed by the test suite
-            browser_list = [browser for browser_name, browser 
-                            in browser_dict.items()
-                            if browser_name in suite_desc.browsers()]
-
             # Create the suite runner
-            runner = self._runner_class(browser_list, server, coverage)
+            runner = self._runner_class(browsers, server, coverage)
             suite_runner_list.append(runner)
 
         # Return the list of suite runners and browsers
-        return suite_runner_list, browser_dict.values()
+        return suite_runner_list, browsers
 
     def _build_suite_descriptions(self, suite_path_list):
         """
@@ -422,21 +422,3 @@ class SuiteRunnerFactory(object):
                 desc_list.append(desc)
 
         return desc_list
-
-    def _build_browsers(self, suite_desc_list):
-        """
-        Build all browsers required across test suites.
-
-        Returns a `dict` mapping browser names to `Browser` instances.
-        """
-        browser_dict = dict()
-        for suite_desc in suite_desc_list:
-            
-            for browser_name in suite_desc.browsers():
-
-                # If we haven't already created the browser, do so now
-                if not browser_name in browser_dict:
-                    browser = self._browser_class(browser_name)
-                    browser_dict[browser_name] = browser
-
-        return browser_dict

@@ -10,6 +10,13 @@ DESCRIPTION = "Run JavaScript test suites and collect coverage information."
 TEST_SUITE_HELP = "Test suite description file."
 COVERAGE_XML_HELP = "Generated XML coverage report."
 COVERAGE_HTML_HELP = "Generated HTML coverage report."
+PHANTOMJS_HELP = "Run the tests using the PhantomJS browser."
+CHROME_HELP = "Run the tests using the Chrome browser."
+FIREFOX_HELP = "Run the tests using the Firefox browser."
+
+BROWSER_ARGS = [('--use-phantomjs', 'phantomjs', PHANTOMJS_HELP),
+                ('--use-chrome', 'chrome', CHROME_HELP),
+                ('--use-firefox', 'firefox', FIREFOX_HELP)]
 
 
 def parse_args(argv):
@@ -20,6 +27,7 @@ def parse_args(argv):
             'test_suite_paths': TEST_SUITE_PATHS,
             'coverage_xml': COVERAGE_XML,
             'coverage_html': COVERAGE_HTML
+            'browser_names': BROWSER_NAMES
         }
 
     `TEST_SUITE_PATHS` is a list of paths to files describing the test
@@ -31,14 +39,33 @@ def parse_args(argv):
     `coverage_xml` and `coverage_html` are optional; if not specified,
     the dictionary will not contain those keys.
 
+    `BROWSER_NAMES` is the list of browsers under which to run the tests.
+
     Raises an `IOError` if the test suite description does not exist.
     Raises a `SystemExit` exception if arguments are otherwise invalid.
     """
     parser = argparse.ArgumentParser(description=DESCRIPTION)
+
+    # Test suite description files
     parser.add_argument('test_suite_paths', type=str, nargs='+', 
                         help=TEST_SUITE_HELP)
+
+    # Coverage output files
     parser.add_argument('--coverage-xml', type=str, help=COVERAGE_XML_HELP)
     parser.add_argument('--coverage-html', type=str, help=COVERAGE_HTML_HELP)
+
+    # Browsers
+    for (browser_arg, browser_name, browser_help) in BROWSER_ARGS:
+        parser.add_argument(browser_arg, dest='browser_names', 
+                            action='append_const', const=browser_name,
+                            help=browser_help)
+
+    # Parse the arguments
+    arg_dict = vars(parser.parse_args(argv))
+
+    # Check that we have at least one browser specified
+    if not arg_dict.get('browser_names'):
+        raise SystemExit('You must specify at least one browser.')
 
     return vars(parser.parse_args(argv))
 
@@ -85,6 +112,7 @@ def main():
     factory = SuiteRunnerFactory()
     suite_runner_list, browser_list = \
         factory.build_runners(args_dict.get('test_suite_paths'),
+                              args_dict.get('browser_names'),
                               args_dict.get('coverage_xml'),
                               args_dict.get('coverage_html'))
 

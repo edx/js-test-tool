@@ -27,10 +27,9 @@ class SuiteDescription(object):
     Description of a JavaScript test suite loaded from a file.
     """
 
-    REQUIRED_KEYS = ['src_dirs', 'spec_dirs', 'test_runner', 'browsers']
+    REQUIRED_KEYS = ['src_dirs', 'spec_dirs', 'test_runner']
 
-    # Supported browsers and test runners
-    BROWSERS = ['chrome', 'firefox', 'phantomjs']
+    # Supported test runners
     TEST_RUNNERS = ['jasmine']
 
     def __init__(self, file_handle, root_dir):
@@ -118,15 +117,6 @@ class SuiteDescription(object):
         # so the key is guaranteed to exist
         return self._desc_dict['test_runner']
 
-    def browsers(self):
-        """
-        Return a list of browsers under which to run the tests.
-        """
-
-        # We validated data in the constructor, 
-        # so the key is guaranteed to exist
-        return self._desc_dict['browsers']
-
     def _js_paths(self, dir_path_list):
         """
         Recursively search the directories at `dir_path_list` (list of paths)
@@ -191,15 +181,9 @@ class SuiteDescription(object):
                 raise SuiteDescriptionError(msg)
 
         # Convert keys that can have multiple values to lists
-        for key in ['lib_dirs', 'src_dirs', 'spec_dirs', 'browsers']:
+        for key in ['lib_dirs', 'src_dirs', 'spec_dirs']:
             if key in desc_dict and not isinstance(desc_dict[key], list):
                 desc_dict[key] = [desc_dict[key]]
-
-        # Check that we are using a valid browser
-        for browser in desc_dict['browsers']:
-            if not browser in cls.BROWSERS:
-                msg = "'{}' is not a supported browser.".format(browser)
-                raise SuiteDescriptionError(msg)
 
         # Check that we are using a valid test runner
         test_runner = desc_dict['test_runner']

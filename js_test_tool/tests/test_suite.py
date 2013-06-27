@@ -37,8 +37,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
                  'lib_dirs': ['lib', 'other_lib'],
                  'src_dirs': ['src', 'other_src'],
                  'spec_dirs': ['spec', 'other_spec'],
-                 'test_runner': 'jasmine',
-                 'browsers': ['chrome', 'firefox']}
+                 'test_runner': 'jasmine'}
 
     def setUp(self):
         """
@@ -79,7 +78,6 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.src_paths(), self.SRC_FILES)
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES)
         self.assertEqual(desc.test_runner(), self.YAML_DATA['test_runner'])
-        self.assertEqual(desc.browsers(), self.YAML_DATA['browsers'])
 
     def test_no_such_root_dir(self):
 
@@ -106,7 +104,6 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         yaml_data['lib_dirs'] = 'lib'
         yaml_data['src_dirs'] = 'src'
         yaml_data['spec_dirs'] = 'spec'
-        yaml_data['browsers'] = 'chrome'
 
         # Create an in-memory YAML file from the data
         yaml_file = self._yaml_buffer(yaml_data)
@@ -119,7 +116,6 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.lib_paths(), self.LIB_FILES[0:3])
         self.assertEqual(desc.src_paths(), self.SRC_FILES[0:3])
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES[0:3])
-        self.assertEqual(desc.browsers(), ['chrome'])
 
     def test_no_lib_specified(self):
 
@@ -138,7 +134,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
 
     def test_missing_required_data(self):
 
-        for key in ['src_dirs', 'spec_dirs', 'test_runner', 'browsers']:
+        for key in ['src_dirs', 'spec_dirs', 'test_runner']:
 
             # Delete the required key from the description
             yaml_data = self.YAML_DATA.copy()
@@ -152,7 +148,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
 
     def test_empty_required_list(self):
 
-        for key in ['src_dirs', 'spec_dirs', 'browsers']:
+        for key in ['src_dirs', 'spec_dirs']:
 
             # Replace the key with an empty list
             yaml_data = self.YAML_DATA.copy()
@@ -163,14 +159,6 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
 
             # Check that we get an exception
             self._assert_invalid_desc(yaml_data)
-
-    def test_invalid_browser(self):
-
-        yaml_data = self.YAML_DATA.copy()
-        yaml_data['browsers'] = ['invalid_browser']
-
-        # Check that we get an exception
-        self._assert_invalid_desc(yaml_data)
 
     def test_invalid_test_runner(self):
         yaml_data = self.YAML_DATA.copy()

@@ -759,11 +759,8 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
             with open(path, 'w') as file_handle:
                 file_handle.write('test file')
 
-        # Configure the description mocks to always return the
-        # specified browser names.
-        self.mock_desc.browsers.return_value = browser_names
-
         # Build the suite runner instances
         return self.factory.build_runners(suite_path_list,
+                                          browser_names,
                                           coverage_xml_path,
                                           coverage_html_path)
