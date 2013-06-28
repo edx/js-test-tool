@@ -215,7 +215,13 @@ class SuiteRendererTest(unittest.TestCase):
                 if (currentWindowOnload) {
                     currentWindowOnload();
                 }
+
                 execJasmine();
+
+                // Trigger JSCover to POST coverage data to server
+                if (window.jscoverage_report) {
+                    jscoverage_report();
+                }
             };
 
             function execJasmine() {

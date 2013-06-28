@@ -2,11 +2,13 @@ from unittest import TestCase
 import mock
 from textwrap import dedent
 import os.path
-from js_test_tool.runner import SuiteRunner, SuiteRunnerFactory
+from js_test_tool.runner import SuiteRunner, SuiteRunnerFactory, \
+    UnknownBrowserError
 from js_test_tool.browser import Browser
 from js_test_tool.suite import SuiteDescription, SuiteRenderer
 from js_test_tool.suite_server import SuitePageServer
-from js_test_tool.coverage import CoverageReporter
+from js_test_tool.coverage import CoverageData, \
+    HtmlCoverageReporter, XmlCoverageReporter
 from js_test_tool.tests.helpers import TempWorkspaceTestCase
 
 
@@ -17,10 +19,15 @@ class SuiteRunnerTest(TestCase):
         # Create mock dependencies
         self.mock_browser = mock.MagicMock(Browser)
         self.mock_page_server = mock.MagicMock(SuitePageServer)
-        self.mock_coverage = mock.MagicMock(CoverageReporter)
+        self.mock_coverage_reporters = [mock.MagicMock(HtmlCoverageReporter),
+                                        mock.MagicMock(XmlCoverageReporter)]
 
         # Configure the page server to provide a suite page URL
         self._set_suite_urls(['http://127.0.0.1:8080/suite/0'])
+
+        # Configure the page server to provide coverage data
+        self.mock_coverage_data = mock.MagicMock(CoverageData)
+        self.mock_page_server.all_coverage_data.return_value = self.mock_coverage_data
 
         # Start with no test results
         self.mock_browser.get_page_results.return_value = []
@@ -29,7 +36,7 @@ class SuiteRunnerTest(TestCase):
         # Create a SuiteRunner instance
         self.runner = SuiteRunner([self.mock_browser], 
                                   self.mock_page_server, 
-                                  self.mock_coverage)
+                                  self.mock_coverage_reporters)
 
     def test_page_server_started_and_stopped(self):
 
@@ -331,7 +338,7 @@ class SuiteRunnerTest(TestCase):
         other_browser.get_page_results.return_value = []
         self.runner = SuiteRunner([self.mock_browser, other_browser], 
                                   self.mock_page_server, 
-                                  self.mock_coverage)
+                                  self.mock_coverage_reporters)
 
         # Add test results for the Chrome browser
         self._add_browser_result(self.mock_browser, 
@@ -395,7 +402,7 @@ class SuiteRunnerTest(TestCase):
         other_browser.get_page_results.return_value = []
         self.runner = SuiteRunner([self.mock_browser, other_browser], 
                                   self.mock_page_server, 
-                                  self.mock_coverage)
+                                  self.mock_coverage_reporters)
 
         # Add test results for the Chrome browser
         self._add_browser_result(self.mock_browser, 
@@ -453,6 +460,16 @@ class SuiteRunnerTest(TestCase):
         self.assertFalse(passed)
         self._assert_reports_equal(report, expected_report)
 
+    def test_write_coverage_reports(self):
+
+        # Trigger the runner to write coverage reports to an output file
+        self.runner.write_coverage_reports()
+
+        # Expect that each of the coverage reporters was called
+        # with the data returned by the suite page server.
+        for reporter in self.mock_coverage_reporters:
+            reporter.write_reports.assert_called_with(self.mock_coverage_data)
+
     def _set_suite_urls(self, url_list):
         """
         Configure the suite page server to use each url in `url_list`
@@ -506,7 +523,8 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         self.mock_desc = mock.MagicMock(SuiteDescription)
         self.mock_renderer = mock.MagicMock(SuiteRenderer)
         self.mock_server = mock.MagicMock(SuitePageServer)
-        self.mock_coverage = mock.MagicMock(CoverageReporter)
+        self.mock_html_coverage = mock.MagicMock(HtmlCoverageReporter)
+        self.mock_xml_coverage = mock.MagicMock(XmlCoverageReporter)
         self.mock_browser = mock.MagicMock(Browser)
         self.mock_runner = mock.MagicMock(SuiteRunner)
 
@@ -514,7 +532,8 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         self.mock_desc_class = mock.MagicMock(return_value=self.mock_desc)
         self.mock_renderer_class = mock.MagicMock(return_value=self.mock_renderer)
         self.mock_server_class = mock.MagicMock(return_value=self.mock_server)
-        self.mock_coverage_class = mock.MagicMock(return_value=self.mock_coverage)
+        self.mock_html_coverage_class = mock.MagicMock(return_value=self.mock_html_coverage)
+        self.mock_xml_coverage_class = mock.MagicMock(return_value=self.mock_xml_coverage)
         self.mock_browser_class = mock.MagicMock(return_value=self.mock_browser)
         self.mock_runner_class = mock.MagicMock(return_value=self.mock_runner)
 
@@ -523,13 +542,14 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
             desc_class=self.mock_desc_class,
             renderer_class=self.mock_renderer_class,
             server_class=self.mock_server_class,
-            coverage_class=self.mock_coverage_class,
+            html_coverage_class=self.mock_html_coverage_class,
+            xml_coverage_class=self.mock_xml_coverage_class,
             runner_class=self.mock_runner_class,
             browser_class=self.mock_browser_class)
 
-    def test_build_runners(self):
+    def test_build_runner(self):
 
-        # Build the runners
+        # Build the runner
         num_suites = 5
         runner, _ = self._build_runner(num_suites)
 
@@ -545,13 +565,15 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         # Expect that the suite runner was configured with the correct browsers
         expected_browsers = [self.mock_browser] * len(browser_names)
         self.assertEqual(browsers, expected_browsers)
+        
+        expected_reporters = [self.mock_html_coverage, self.mock_xml_coverage]
         self.mock_runner_class.assert_called_with(expected_browsers,
                                                   self.mock_server,
-                                                  self.mock_coverage)
+                                                  expected_reporters)
 
     def test_configure_server(self):
 
-        # Build the runners
+        # Build the runner
         num_suites = 5
         self._build_runner(num_suites)
 
@@ -564,7 +586,7 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
 
     def test_configure_suite_desc(self):
 
-        # Build the runners
+        # Build the runner
         # Ignore the return value because we are checking for calls the
         # factory makes to our mocks.
         num_suites = 5
@@ -591,7 +613,7 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
 
     def test_configure_coverage(self):
 
-        # Build the runners
+        # Build the runner
         # Ignore the return value because we are checking for calls the
         # factory makes to our mocks.
         html_path = 'coverage.html'
@@ -599,8 +621,20 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         self._build_runner(1, coverage_html_path=html_path,
                             coverage_xml_path=xml_path)
 
-        # Expect that the coverage reporter was configured correctly
-        self.mock_coverage_class.assert_called_with(html_path, xml_path)
+        # Expect that the coverage reporters were configured correctly
+        self.mock_html_coverage_class.assert_called_with(html_path)
+        self.mock_xml_coverage_class.assert_called_with(xml_path)
+
+    def test_invalid_browser_names(self):
+
+        with self.assertRaises(UnknownBrowserError):
+            self._build_runner(1, browser_names=['chrome', 'invalid'])
+
+    def test_empty_browser_name_list(self):
+
+        with self.assertRaises(ValueError):
+            self._build_runner(1, browser_names=[])
+
 
     @staticmethod
     def _suite_paths(num_suites):
@@ -630,7 +664,7 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         and they will all use the same browser dependencies.
 
         Returns a tuple `(suite_runner, browsers)`.  See
-        `SuiteRunnerFactory.build_runners()` for details.
+        `SuiteRunnerFactory.build_runner()` for details.
         """
 
         # Supply default browser names
@@ -649,4 +683,3 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
                                           browser_names,
                                           coverage_xml_path,
                                           coverage_html_path)
-

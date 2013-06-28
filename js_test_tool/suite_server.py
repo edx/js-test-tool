@@ -7,7 +7,21 @@ import threading
 import re
 import pkg_resources
 import os.path
+import logging
+import json
+import time
 from abc import ABCMeta, abstractmethod
+from js_test_tool.coverage import SrcInstrumenter, SrcInstrumenterError, CoverageData
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+class TimeoutError(Exception):
+    """
+    The server timed out while waiting.
+    """
+    pass
 
 
 class SuitePageServer(HTTPServer):
@@ -17,11 +31,27 @@ class SuitePageServer(HTTPServer):
 
     protocol_version = 'HTTP/1.1'
 
-    def __init__(self, suite_desc_list, suite_renderer):
+    # Amount of time to wait for clients to POST coverage info
+    # back to the server before timing out.
+    COVERAGE_TIMEOUT = 2.0
+
+    # Amount of time to wait between checks that the we
+    # have all the coverage info
+    COVERAGE_WAIT_TIME = 0.1
+
+    # Returns the `CoverageData` instance used by the server
+    # to store coverage data received from the test suites.
+    # Since `CoverageData` is thread-safe, it is okay for
+    # other processes to write to it asynchronously.
+    coverage_data = None
+
+    def __init__(self, suite_desc_list, suite_renderer, jscover_path=None):
         """
         Initialize the server to serve test runner pages
         and dependencies described by `suite_desc_list`
         (list of `SuiteDescription` instances).
+
+        `jscover_path` is the path to the JSCover JAR file.
 
         Use `suite_renderer` (a `SuiteRenderer` instance) to
         render the test suite pages.
@@ -30,7 +60,12 @@ class SuitePageServer(HTTPServer):
         # Store dependencies
         self.desc_list = suite_desc_list
         self.renderer = suite_renderer
+        self._jscover_path = jscover_path
 
+        # Create a list for source instrumenter services
+        # (One for each suite description)
+        self._instr_list = []
+        
         # Using port 0 assigns us an unused port
         address = ('127.0.0.1', 0)
         HTTPServer.__init__(self, address, SuitePageRequestHandler)
@@ -43,10 +78,39 @@ class SuitePageServer(HTTPServer):
         server_thread.daemon = True
         server_thread.start()
 
+        # If we're collecting coverage information
+        if self._jscover_path is not None:
+
+            # Create an object to store coverage data we receive
+            self.coverage_data = CoverageData()
+
+            # Start each SrcInstrumenter instance if we know where JSCover is
+            for desc in self.desc_list:
+
+                # Create an instrumenter serving files 
+                # in the suite description root directory
+                instr = SrcInstrumenter(desc.root_dir(), 
+                                        tool_path=self._jscover_path)
+
+                # Start the instrumenter service
+                instr.start()
+
+                # Associate the instrumenter with its suite description
+                self._instr_list.append(instr)
+
+        else:
+            self._instr_list = []
+
     def stop(self):
         """
         Stop the server and free the port.
         """
+
+        # Stop each instrumenter service that we started
+        for instr in self._instr_list:
+            instr.stop()
+
+        # Stop the page server and free the port
         self.shutdown()
         self.socket.close()
 
@@ -67,6 +131,65 @@ class SuitePageServer(HTTPServer):
         host, port = self.server_address
         return u"http://{}:{}/".format(host, port)
 
+    def src_instrumenter_list(self):
+        """
+        Return the list of `SrcInstrumenter` instances.
+        The instrumenters are indexed by suite number.
+
+        This is used to instrument JavaScript source files
+        to collect coverage information.
+        """
+        return self._instr_list
+
+    def all_coverage_data(self):
+        """
+        Returns a `CoverageData` instance containing all coverage data 
+        received from running the tests.
+
+        Blocks until all suites have reported coverage data.  If it
+        times out waiting for all data, raises a `TimeoutException`.
+
+        If we are not collecting coverage, returns None.
+        """
+        if self.coverage_data is not None:
+            self._block_until(self._has_all_coverage)
+            return self.coverage_data
+
+        else:
+            return None
+
+    def _block_until(self, success_func):
+        """
+        Block until `success_func` returns True.
+        `success_func` should be a lambda with no argument.
+        """
+
+        # Remember when we started
+        start_time = time.time()
+
+        # Until we are successful
+        while not success_func():
+
+            # See if we've timed out
+            if time.time() - start_time > self.COVERAGE_TIMEOUT:
+                raise TimeoutError()
+
+            # Wait a little bit before checking again
+            time.sleep(self.COVERAGE_WAIT_TIME)
+
+    def _has_all_coverage(self):
+        """
+        Returns True if and only if every suite 
+        has coverage information.
+        """
+        # Retrieve the indices of each suite for which coverage
+        # information was reported.
+        suite_num_list = self.coverage_data.suite_num_list()
+
+        # Check that we have an index for every suite
+        # (This is not the most efficient way to do this --
+        # if it becomes a bottleneck, we can revisit.)
+        return (suite_num_list == [x for x in range(len(self.desc_list))])
 
 class BasePageHandler(object):
     """
@@ -76,38 +199,53 @@ class BasePageHandler(object):
     """
 
     __metaclass__ = ABCMeta
+
+    # HTTP methods handled by this class
+    # The default is to handle only GET methods
+    HTTP_METHODS = ["GET"]
     
     # Subclasses override this to provide a regex that matches
     # URL paths.  Should be a `re` module compiled regex.
     PATH_REGEX = None
 
-    def page_contents(self, path):
+    def page_contents(self, path, method, content):
         """
         Check whether the handler can load the page at `path` (URL path).
         If so, return the contents of the page as a unicode string.
         Otherwise, return None.
+
+        `method` is the HTTP method used to load the page (e.g. "GET" or "POST")
+        `content` is the content of the HTTP request.
         """
 
-        # Check whether this handler matches the URL path
-        result = self.PATH_REGEX.match(path)
+        # Check that we handle this kind of request
+        if method in self.HTTP_METHODS:
 
+            # Check whether this handler matches the URL path
+            result = self.PATH_REGEX.match(path)
 
-        # If this is not a match, return None
-        if result is None:
+            # If this is not a match, return None
+            if result is None:
+                return None
+
+            # If we do match, attempt to load the page.
+            else:
+                return self.load_page(method, content, *result.groups())
+
+        else:
             return None
 
-        # If we do match, attempt to load the page.
-        else:
-            return self.load_page(*result.groups())
-
     @abstractmethod
-    def load_page(self, *args):
+    def load_page(self, method, content, *args):
         """
         Subclasses override this to load the page.
         `args` is a list of arguments parsed using the regular expression.
 
         If the page cannot be loaded (e.g. accessing a file that
         does not exist), then return None.
+
+        `method` is the HTTP method used to load the page (e.g. "GET" or "POST")
+        `content` is the content of the HTTP request.
         """
         pass
 
@@ -131,7 +269,7 @@ class SuitePageHandler(BasePageHandler):
         self._renderer = renderer
         self._desc_list = desc_list
 
-    def load_page(self, *args):
+    def load_page(self, method, content, *args):
         """
         Render the suite runner page.
         """
@@ -160,7 +298,7 @@ class RunnerPageHandler(BasePageHandler):
 
     PATH_REGEX = re.compile('^/runner/(.+)$')
 
-    def load_page(self, *args):
+    def load_page(self, method, content, *args):
         """
         Load the runner file from this package's resources.
         """
@@ -196,7 +334,7 @@ class DependencyPageHandler(BasePageHandler):
         super(DependencyPageHandler, self).__init__()
         self._desc_list = desc_list
 
-    def load_page(self, *args):
+    def load_page(self, method, content, *args):
         """
         Load the test suite dependency file, using a path relative
         to the description file.
@@ -268,19 +406,180 @@ class DependencyPageHandler(BasePageHandler):
             return None
 
 
+class InstrumentedSrcPageHandler(BasePageHandler):
+    """
+    Instrument the JavaScript source file to collect coverage information.
+    """
+
+    PATH_REGEX = re.compile('^/suite/([0-9]+)/include/(.+)$')
+
+    # Handle both GET and POST methods
+    HTTP_METHODS = ["GET", "POST"]
+
+    def __init__(self, desc_list, instr_list, coverage_data):
+        """
+        Initialize the dependency page handler to serve dependencies
+        specified by `desc_list` (a list of `SuiteDescription` instances).
+
+        `instr_list` is a list of `SrcInstrumenter` instances,
+        one for each suite description.
+
+        `coverage_data` is the `CoverageData` instance to send
+        any received coverage data to.
+        """
+        super(InstrumentedSrcPageHandler, self).__init__()
+        self._desc_list = desc_list
+        self._instr_list = instr_list
+        self._coverage_data = coverage_data
+
+    def load_page(self, method, content, *args):
+        """
+        GET request: Load an instrumented version of the JS source file.
+        POST request: Send the coverage information to the server.
+        """
+
+        # Interpret the arguments (from the regex)
+        suite_num, rel_path = args
+
+        # Try to parse the suite number
+        try:
+            suite_num = int(suite_num)
+
+        except ValueError:
+            return None
+
+        # Handle GET and POST methods separately
+        if method == "GET":
+            return self._send_instrumented_src(suite_num, rel_path)
+
+        elif method == "POST":
+            return self._store_coverage_data(suite_num, rel_path, content)
+
+    def _send_instrumented_src(self, suite_num, rel_path):
+        """
+        Return an instrumented version of the JS source file at `rel_path`
+        for the suite numbered `suite_num`, or None if the source
+        could not be loaded.
+        """
+
+        try:
+            # This performs a synchronous call to the instrumenter
+            # service, raising an exception if it cannot retrieve
+            # the instrumented version of the source.
+            return self._instr_list[suite_num].instrumented_src(rel_path)
+
+        # If we cannot get the instrumented source,
+        # return None.  This should cause the un-instrumented
+        # version of the source to be served (when another
+        # handler matches the URL regex)
+        except SrcInstrumenterError:
+            msg = "Could not retrieve instrumented version of '{}'".format(rel_path)
+            LOGGER.warning(msg)
+            return None
+
+    def _store_coverage_data(self, suite_num, rel_path, request_content):
+        """
+        Store received coverage data for the JS source file at `rel_path`
+        in the suite numbered `suite_num`.
+
+        `request_content` is the content of the HTTP POST request.
+
+        Returns None if any errors occur; returns a success method if successful.
+        """
+
+        # Record that we got a coverage report for this suite
+        self._coverage_data.add_suite_num(suite_num)
+
+        # Retrieve the root directory for this suite
+        try:
+            suite_desc = self._desc_list[suite_num]
+
+        except IndexError:
+            return None
+
+        try:
+            # Parse the request content as JSON
+            coverage_dict = json.loads(request_content)
+
+            if not isinstance(coverage_dict, dict):
+                raise ValueError()
+
+            # Parse URLs to determine the filesystem path to the JS source
+            # If the URL could not be parsed, the key will be None
+            coverage_dict = {self._url_to_file_path(key): value
+                             for key, value in coverage_dict.iteritems()}
+
+            # Exclude any invalid keys
+            if None in coverage_dict:
+                del coverage_dict[None]
+            
+            # `CoverageData.load_from_dict()` is thread-safe, so it
+            # is okay to write to this, even if the request handler
+            # is running asynchronously.
+            self._coverage_data.load_from_dict(suite_desc.root_dir(), coverage_dict)
+
+        except ValueError:
+            msg = ("Could not interpret coverage data in POST request " +
+                   "to suite {} for '{}': {}".format(suite_num, rel_path, request_content))
+            LOGGER.warning(msg)
+            return None
+
+        else:
+            return "Success: coverage data received"
+
+    def _url_to_file_path(self, url):
+        """
+        Translate a URL in the suite includes to
+        a relative file path.
+
+        This just takes the end of the URL:
+
+        /suite/0/include/path/to/file --> path/to/file
+
+        If `url` cannot be parsed, logs a warning and returns None.
+        """
+        result = self.PATH_REGEX.match(url)
+
+        if result is not None:
+            _, rel_path = result.groups()
+            return rel_path
+
+        else:
+            LOGGER.warning("Invalid URL used in coverage data: {}".format(url))
+            return 
+
+
 class SuitePageRequestHandler(BaseHTTPRequestHandler):
     """
-    Handle HTTP requests to the `SuitePageServer`.
+    Handle HTTP requsts to the `SuitePageServer`.
     """
 
     protocol = "HTTP/1.0"
 
     def __init__(self, request, client_address, server):
 
+        # Retrieve the list of source instrumenter services from the server
+        src_instr_list = server.src_instrumenter_list()
+
         # Initialize the page handlers
-        self._handlers = [SuitePageHandler(server.renderer, server.desc_list),
-                          RunnerPageHandler(),
-                          DependencyPageHandler(server.desc_list)]
+        # We always handle suite runner pages, and
+        # the runner dependencies (e.g. jasmine.js)
+        self._page_handlers = [SuitePageHandler(server.renderer, server.desc_list),
+                          RunnerPageHandler()]
+
+        # If we are configured for coverage, add another handler
+        # to serve instrumented versions of the source files.
+        if len(src_instr_list) > 0:
+            instr_src_handler = InstrumentedSrcPageHandler(server.desc_list, 
+                                                           src_instr_list,
+                                                           server.coverage_data)
+            self._page_handlers.append(instr_src_handler)
+
+        # We always serve dependencies.  If running with coverage, 
+        # the instrumented src handler will intercept source files.
+        # Serving the un-instrumented version is the fallback, and
+        # will still be used for library/spec dependencies.
+        self._page_handlers.append(DependencyPageHandler(server.desc_list))
 
         # Call the superclass implementation
         # This will immediately call do_GET() if the request is a GET
@@ -290,11 +589,26 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         """
         Serve suite runner pages and JavaScript dependencies.
         """
+        self._handle_request("GET")
 
-        for handler in self._handlers:
+    def do_POST(self):
+        """
+        Respond to POST requests providing coverage information.
+        """
+        self._handle_request("POST")
+
+    def _handle_request(self, method):
+        """
+        Handle an HTTP request of type `method` (e.g. "GET" or "POST")
+        """
+
+        # Get the request content
+        request_content = self._content()
+
+        for handler in self._page_handlers:
 
             # Try to retrieve the page
-            content = handler.page_contents(self.path)
+            content = handler.page_contents(self.path, method, request_content)
 
             # If we got a page, send the contents
             if content is not None:
@@ -302,7 +616,7 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
                 return
 
         # If we could not retrieve the contents (e.g. because
-        # the file does not exist), send a file not found response
+        # the file does not exist), send an error response
         self._send_response(404, None)
 
     def _send_response(self, status_code, content):
@@ -317,3 +631,14 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
 
         if content:
             self.wfile.write(content)
+
+    def _content(self):
+        """
+        Retrieve the content of the request.
+        """
+        try:
+            length = int(self.headers.getheader('content-length'))
+        except (TypeError, ValueError):
+            return ""
+        else:
+            return self.rfile.read(length)

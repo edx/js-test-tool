@@ -3,7 +3,7 @@ Run test suites and generate coverage reports.
 """
 from js_test_tool.suite import SuiteDescription, SuiteRenderer
 from js_test_tool.suite_server import SuitePageServer
-from js_test_tool.coverage import CoverageReporter
+from js_test_tool.coverage import HtmlCoverageReporter, XmlCoverageReporter
 from js_test_tool.browser import Browser
 import os.path
 from jinja2 import Environment, PackageLoader
@@ -15,6 +15,13 @@ TEMPLATE_ENV = Environment(loader=TEMPLATE_LOADER,
                            trim_blocks=True)
 
 
+class UnknownBrowserError(Exception):
+    """
+    The suite runner encountered an unknown browser name.
+    """
+    pass
+
+
 class SuiteRunner(object):
     """
     Run test suites and generate coverage reports.
@@ -23,12 +30,12 @@ class SuiteRunner(object):
     # Name of the template used to render the report
     REPORT_TEMPLATE_NAME = 'console_report.txt'
 
-    def __init__(self, browser_list, suite_page_server, coverage_reporter):
+    def __init__(self, browser_list, suite_page_server, coverage_reporters):
         """
         Configure the suite runner to retrieve test suite pages
         from `suite_page_server` (`SuitePageServer` instance)
-        and collect coverage info using `coverage_reporter`
-        (`CoverageReporter` instance).
+        and generate coverage reports using `coverage_reporters`
+        (a list of `CoverageReporter` instances).
 
         Uses each `Browser` instance in `browser_list` to load the test
         suite pages.
@@ -37,7 +44,7 @@ class SuiteRunner(object):
         # Store dependencies
         self._browser_list = browser_list
         self._suite_page_server = suite_page_server
-        self._coverage_reporter = coverage_reporter
+        self._coverage_reporters = coverage_reporters
 
     def run(self):
         """
@@ -77,7 +84,6 @@ class SuiteRunner(object):
         finally:
             self._suite_page_server.stop()
 
-
         # Render the console report
         template = TEMPLATE_ENV.get_template(self.REPORT_TEMPLATE_NAME)
         report_str = template.render(context_dict)
@@ -93,7 +99,9 @@ class SuiteRunner(object):
         Note: this may not create any reports if JSCover is not configured
         or no report paths were specified.
         """
-        pass
+        data = self._suite_page_server.all_coverage_data()
+        for reporter in self._coverage_reporters:
+            reporter.write_reports(data)
 
     def _run_with_browser(self, browser):
         """
@@ -189,11 +197,15 @@ class SuiteRunnerFactory(object):
     Configure `SuiteRunner` instances.
     """
 
+    # Supported browser names
+    SUPPORTED_BROWSERS = ['chrome', 'firefox', 'phantomjs']
+
     def __init__(self, 
                  desc_class=SuiteDescription, 
                  renderer_class=SuiteRenderer,
                  server_class=SuitePageServer, 
-                 coverage_class=CoverageReporter, 
+                 html_coverage_class=HtmlCoverageReporter, 
+                 xml_coverage_class=XmlCoverageReporter,
                  browser_class=Browser,
                  runner_class=SuiteRunner):
         """
@@ -203,7 +215,8 @@ class SuiteRunnerFactory(object):
         self._desc_class = desc_class
         self._renderer_class = renderer_class
         self._server_class = server_class
-        self._coverage_class = coverage_class
+        self._html_coverage_class = html_coverage_class
+        self._xml_coverage_class = xml_coverage_class
         self._browser_class = browser_class
         self._runner_class = runner_class
 
@@ -232,7 +245,14 @@ class SuiteRunnerFactory(object):
         
         It is the caller's responsibility to call `Browser.quit()` for
         each browser in the list.
+
+        Raises an `UnknownBrowserError` if an invalid browser name is provided.
+        Raises a `ValueError` if no browser names are provided.
         """
+
+        # Validate the list of browser names
+        # Can raise an exception if the list is invalid
+        self._validate_browser_names(browser_names)
 
         # Load the suite descriptions
         suite_desc_list = self._build_suite_descriptions(suite_path_list)
@@ -240,8 +260,9 @@ class SuiteRunnerFactory(object):
         # Create a renderer
         renderer = self._renderer_class()
 
-        # Create the coverage reporter
-        coverage = self._coverage_class(coverage_html_path, coverage_xml_path)
+        # Create the coverage reporters
+        html_coverage = self._html_coverage_class(coverage_html_path)
+        xml_coverage = self._xml_coverage_class(coverage_xml_path)
 
         # Create the suite page server
         # We re-use the same server across test suites
@@ -251,7 +272,8 @@ class SuiteRunnerFactory(object):
         browsers = [self._browser_class(name) for name in browser_names]
 
         # Create a suite runner for each description
-        runner = self._runner_class(browsers, server, coverage)
+        runner = self._runner_class(browsers, server,
+                                    [html_coverage, xml_coverage])
 
         # Return the list of suite runner and browsers
         return runner, browsers
@@ -274,3 +296,23 @@ class SuiteRunnerFactory(object):
                 desc_list.append(desc)
 
         return desc_list
+
+    @classmethod
+    def _validate_browser_names(cls, browser_list):
+        """
+        Validate the list of browser names in `browser_list`.
+        If it encounters unknown browser names, raises a `UnknownBrowserError`.
+        If the list is empty, it raises a `ValueError`.
+        """
+
+        # Empty list
+        if len(browser_list) == 0:
+            raise ValueError("No browser names specified.")
+
+        # Validate the list of browser names
+        unknown_browsers = [name for name in browser_list
+                            if not name in cls.SUPPORTED_BROWSERS]
+
+        if len(unknown_browsers) > 0:
+            msg = "Unknown browsers: {}".format(', '.join(unknown_browsers))
+            raise UnknownBrowserError(msg)

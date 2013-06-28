@@ -2,14 +2,17 @@
 Tests for the suite page server.
 """
 
+import unittest
 from js_test_tool.tests.helpers import TempWorkspaceTestCase
 import mock
 import re
 import requests
 import os
 import pkg_resources
+import json
 from js_test_tool.suite import SuiteDescription, SuiteRenderer
-from js_test_tool.suite_server import SuitePageServer
+from js_test_tool.suite_server import SuitePageServer, TimeoutError
+from js_test_tool.coverage import SrcInstrumenter
 
 
 class SuitePageServerTest(TempWorkspaceTestCase):
@@ -217,3 +220,152 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         for path in path_list:
             with open(path, 'w') as fake_file:
                 fake_file.write(contents)
+
+
+class SuiteServerCoverageTest(unittest.TestCase):
+    """
+    Test that the suite page server correctly collects
+    coverage info for JS source files.
+    """
+
+    JSCOVER_PATH = '/usr/local/jscover.jar'
+
+    def setUp(self):
+
+        # Configure the server to timeout quickly, to keep the test suite fast
+        self._old_timeout = SuitePageServer.COVERAGE_TIMEOUT
+        SuitePageServer.COVERAGE_TIMEOUT = 0.01
+
+    def tearDown(self):
+
+        # Restore the old timeout
+        SuitePageServer.COVERAGE_TIMEOUT = self._old_timeout
+
+    @mock.patch('js_test_tool.suite_server.SrcInstrumenter')
+    def test_creates_instrumenters_for_suites(self, instrumenter_cls):
+
+        # Configure the instrumenter class to return mocks
+        instr_mocks = [mock.MagicMock(SrcInstrumenter), 
+                       mock.MagicMock(SrcInstrumenter)]
+        instrumenter_cls.side_effect = instr_mocks
+
+        # Set up the descriptions
+        mock_desc_list = [self._mock_suite_desc('/root_1', ['src1.js', 'src2.js']),
+                          self._mock_suite_desc('/root_2', ['src3.js', 'src4.js'])]
+
+        # Create a suite page server for those descriptions
+        server = SuitePageServer(mock_desc_list, 
+                                 mock.MagicMock(SuiteRenderer),
+                                 jscover_path=self.JSCOVER_PATH)
+
+        # Start the server
+        server.start()
+        self.addCleanup(server.stop)
+
+        # Expect that there is a SrcInstrumenter for each suite,
+        # and it has been started.
+        instr_list = server.src_instrumenter_list()
+        self.assertEqual(len(instr_list), len(mock_desc_list))
+
+        for instr in instr_list:
+            instr.start.assert_called_once_with()
+
+        # Stop the server
+        # Expect that all the instrumenters are also stopped
+        server.stop()
+        for instr in instr_mocks:
+            instr.stop.assert_called_once_with()
+
+    @mock.patch('js_test_tool.suite_server.SrcInstrumenter')
+    def test_serves_instrumented_source_files(self, instrumenter_cls):
+
+        # Configure the instrumenter class to return a mock
+        instr_mock = mock.MagicMock(SrcInstrumenter)
+        instrumenter_cls.return_value = instr_mock
+
+        # Configure the instrumenter to always return fake output
+        fake_src = u"instrumented src output"
+        instr_mock.instrumented_src.return_value = fake_src
+
+        # Create a mock description with one source file
+        mock_desc = self._mock_suite_desc('/root', ['src.js'])
+
+        # Create a suite page server for those descriptions
+        server = SuitePageServer([mock_desc], 
+                                 mock.MagicMock(SuiteRenderer),
+                                 jscover_path=self.JSCOVER_PATH)
+
+        # Start the server
+        server.start()
+        self.addCleanup(server.stop)
+
+        # Access the page, expecting to get the instrumented source
+        url = server.root_url() + "suite/0/include/src.js"
+        response = requests.get(url, timeout=0.1)
+
+        self.assertEqual(response.text, fake_src)
+
+    def test_collects_POST_coverage_info(self):
+
+        # Start the page server
+        server = SuitePageServer([self._mock_suite_desc('/root', ['src.js'])],
+                                 mock.MagicMock(SuiteRenderer),
+                                 jscover_path=self.JSCOVER_PATH)
+        server.start()
+        self.addCleanup(server.stop)
+
+        # POST some coverage data to the src page
+        # This test does NOT mock the CoverageData class created internally,
+        # so we need to pass valid JSON data.
+        # (Since CoverageData involves no network or file access, mocking
+        # it is not worth the effort).
+        coverage_data = {'/suite/0/include/src.js': 
+                            {'lineData': [1, 0, None, 2, 1, None, 0]}}
+
+        requests.post(server.root_url() + "suite/0/include/src.js",
+                      data=json.dumps(coverage_data),
+                      timeout=0.1)
+
+        # Get the results immediately from the server.
+        # It's the server's responsibility to block until all results are received.
+        result_data = server.all_coverage_data()
+
+        # Check the result
+        self.assertEqual(result_data.src_list(), ['/root/src.js'])
+        self.assertEqual(result_data.coverage_for_src('/root/src.js'),
+                         {0: True, 1: False, 3: True, 4: True, 6: False})
+
+    def test_timeout_if_missing_coverage(self):
+
+        # Start the page server with multiple descriptions
+        mock_desc_list = [self._mock_suite_desc('/root_1', ['src1.js', 'src2.js']),
+                          self._mock_suite_desc('/root_2', ['src.js'])]
+
+        server = SuitePageServer(mock_desc_list, mock.MagicMock(SuiteRenderer),
+                                 jscover_path=self.JSCOVER_PATH)
+        server.start()
+        self.addCleanup(server.stop)
+
+        # POST coverage data to one of the sources, but not the other
+        coverage_data = {'/suite/0/include/src1.js': {'lineData': [1]}}
+        requests.post(server.root_url() + "suite/0/include/src.js",
+                      data=json.dumps(coverage_data),
+                      timeout=0.1)
+
+        # Try to get the coverage data; expect it to timeout
+        # We configured the timeout to be short in our setup method
+        # so this should return quickly.
+        with self.assertRaises(TimeoutError):
+            server.all_coverage_data()
+
+    @staticmethod
+    def _mock_suite_desc(root_dir, src_paths):
+        """
+        Configure a mock `SuiteDescription` to have `root_dir` as its
+        base directory and to list `src_paths` as its JavaScript
+        sources.  The mocks will list no JS lib or spec dependencies.
+        """
+        mock_desc = mock.MagicMock(SuiteDescription)
+        mock_desc.root_dir.return_value = root_dir
+        mock_desc.src_paths.return_value = src_paths
+        return mock_desc
