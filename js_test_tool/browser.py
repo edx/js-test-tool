@@ -58,7 +58,18 @@ class Browser(object):
             self._splinter_browser.visit(url)
 
         except:
-            raise BrowserError("Could not load page at '{}'".format(url))
+            # Phantom JS will refuse to load the page if any of the
+            # included files are invalid JavaScript.  It gives a really
+            # cryptic error message (TimeoutException)
+            # We give a more helpful one.
+            if self.name() == 'phantomjs':
+                msg = ("PhantomJS could not load the suite page and " +
+                       "dependencies.  This can occur when dependency " +
+                       "pages are invalid JavaScript.")
+                raise BrowserError(msg)
+
+            else:
+                raise BrowserError("Could not load page at '{}'".format(url))
 
         # Check that we successfully loaded the page
         if not self._splinter_browser.status_code.is_success():
