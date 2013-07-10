@@ -305,7 +305,6 @@ class CoverageData(object):
 
         `root_dir` is the root directory relative to which
         source paths in `cover_dict` are interpreted.
-
         """
 
         # Check that we got a dict (not a list)
@@ -367,14 +366,71 @@ class CoverageData(object):
         """
         return sorted(self._src_dict.keys())
 
-    def coverage_for_src(self, full_src_path):
+    def line_dict_for_src(self, full_src_path):
         """
-        Returns a dictionary describing the coverage information
+        Returns a dictionary describing the line coverage
         for the JS src file located at `full_src_path`.
+
+        The dictionary uses line numbers as keys
+        and True/False as values, where True indicates
+        that the line is covered.
 
         If no such source file, return None.
         """
         return self._src_dict.get(full_src_path, None)
+
+    def total_coverage(self):
+        """
+        Return a decimal in the range [0.0, 1.0] indicating
+        the total coverage across source files.
+
+        If no coverage information available, returns None.
+        """
+        lines_covered = 0
+        lines_measured = 0
+
+        for src_path in self.src_list():
+
+            # `line_dict` has keys that are line numbers
+            # and values that are True/False indicating
+            # whether that line is covered.
+            line_dict = self.line_dict_for_src(src_path)
+            lines_covered += sum([1 if is_covered else 0
+                                  for is_covered in line_dict.values()])
+            lines_measured += len(line_dict.items())
+
+        if lines_measured > 0:
+            return float(lines_covered) / lines_measured
+
+        else:
+            return None
+
+    def coverage_for_src(self, full_src_path):
+        """
+        Return a decimal in the range [0.0, 1.0] indicating
+        the line coverage for the source file at `full_src_path`.
+
+        Returns `None` if no coverage information available
+        for `full_src_path`.
+        """
+        line_dict = self.line_dict_for_src(full_src_path)
+
+        # DEBUG
+        print str(line_dict)
+
+        if line_dict is None:
+            return None
+
+        else:
+            lines_covered = sum([1 if is_covered else 0
+                                 for is_covered in line_dict.values()])
+
+            # DEBUG
+            print "lines_covered = {}".format(lines_covered)
+            print "lines_measured = {}".format(len(line_dict))
+
+            return float(lines_covered) / len(line_dict)
+
 
     def suite_num_list(self):
         """
@@ -382,53 +438,3 @@ class CoverageData(object):
         which we have coverage information.
         """
         return sorted([num for num in self._suite_num_set])
-
-
-class BaseCoverageReporter(object):
-    """
-    Generate coverage reports for JavaScript.
-    """
-
-    __metaclass__ = ABCMeta
-
-    def __init__(self, output_path):
-        """
-        Initialize the reporter to write reports to `output_path`.
-        """
-        pass
-
-    def write_reports(self, coverage_data):
-        """
-        Write the report to the path specified in the constructor.
-        Overwrites files if they already exist.
-
-        `coverage_data` is a `CoverageData` instance.
-
-        Delegates to the concrete subclass's `generate_report()` method.
-        """
-        pass
-
-    @abstractmethod
-    def generate_report(self, coverage_data):
-        """
-        Return a unicode string report for `coverage_data`.
-        """
-        pass
-
-
-class HtmlCoverageReporter(BaseCoverageReporter):
-    """
-    Generate an HTML coverage report.
-    """
-
-    def generate_report(self, coverage_data):
-        pass
-
-
-class XmlCoverageReporter(BaseCoverageReporter):
-    """
-    Generate an XML coverage report.
-    """
-
-    def generate_report(self, coverage_data):
-        pass

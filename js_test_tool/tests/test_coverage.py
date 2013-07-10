@@ -5,8 +5,7 @@ import re
 import json
 from textwrap import dedent
 from js_test_tool.tests.helpers import TempWorkspaceTestCase
-from js_test_tool.coverage import SrcInstrumenter, SrcInstrumenterError, \
-    CoverageData, HtmlCoverageReporter, XmlCoverageReporter
+from js_test_tool.coverage import SrcInstrumenter, SrcInstrumenterError, CoverageData
 
 
 class SrcInstrumenterTest(unittest.TestCase):
@@ -310,10 +309,10 @@ class CoverageDataTest(unittest.TestCase):
         self.assertEqual(coverage_data.src_list(),
                          [u'/root_dir/src1.js', u'/root_dir/subdir/src2.js'])
 
-        self.assertEqual(coverage_data.coverage_for_src('/root_dir/src1.js'),
+        self.assertEqual(coverage_data.line_dict_for_src('/root_dir/src1.js'),
                 {0: True, 2: True, 3: False, 5: True})
 
-        self.assertEqual(coverage_data.coverage_for_src('/root_dir/subdir/src2.js'),
+        self.assertEqual(coverage_data.line_dict_for_src('/root_dir/subdir/src2.js'),
                 {0: True, 1: True, 2: True, 3: False})
 
     def test_multiple_load_from_dict(self):
@@ -329,7 +328,7 @@ class CoverageDataTest(unittest.TestCase):
 
         # Check that the two sources are combined correctly
         expected = {0: True, 1: True, 2: True, 3: True, 4: True, 5: True}
-        self.assertEqual(coverage_data.coverage_for_src('/root_dir/src1.js'), 
+        self.assertEqual(coverage_data.line_dict_for_src('/root_dir/src1.js'), 
                          expected)
 
     def test_different_root_dirs(self):
@@ -346,9 +345,9 @@ class CoverageDataTest(unittest.TestCase):
 
         # But the data in each should be the same
         expected = {0: True, 2: True, 3: False, 5: True}
-        self.assertEqual(coverage_data.coverage_for_src('/root_1/src1.js'),
+        self.assertEqual(coverage_data.line_dict_for_src('/root_1/src1.js'),
                          expected)
-        self.assertEqual(coverage_data.coverage_for_src('/root_2/src1.js'),
+        self.assertEqual(coverage_data.line_dict_for_src('/root_2/src1.js'),
                          expected)
 
     def test_suite_num_list(self):
@@ -378,13 +377,18 @@ class CoverageDataTest(unittest.TestCase):
 
         # Expect that no coverage information is loaded
         self.assertEqual(coverage_data.src_list(), [])
-        self.assertIs(coverage_data.coverage_for_src('root_dir/src1'), None)
+        self.assertIs(coverage_data.line_dict_for_src('root_dir/src1'), None)
 
+    def test_coverage_for_src(self):
+        coverage_data = CoverageData()
+        coverage_data.load_from_dict('root_dir', self.TEST_COVERAGE_DICT)
 
+        # The coverage for root_dir/src1.js is 3/4 = 0.75
+        self.assertEqual(coverage_data.coverage_for_src('root_dir/src1.js'), 0.75)
 
-class HtmlCoverageReporterTest(TempWorkspaceTestCase):
-    pass
+    def test_total_coverage(self):
+        coverage_data = CoverageData()
+        coverage_data.load_from_dict('root_dir', self.TEST_COVERAGE_DICT)
 
-
-class XmlCoverageReporterTest(TempWorkspaceTestCase):
-    pass
+        # Total coverage is 6/8 = 0.75
+        self.assertEqual(coverage_data.total_coverage(), 0.75)

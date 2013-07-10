@@ -332,7 +332,7 @@ class SuiteServerCoverageTest(unittest.TestCase):
 
         # Check the result
         self.assertEqual(result_data.src_list(), ['/root/src.js'])
-        self.assertEqual(result_data.coverage_for_src('/root/src.js'),
+        self.assertEqual(result_data.line_dict_for_src('/root/src.js'),
                          {0: True, 1: False, 3: True, 4: True, 6: False})
 
     def test_timeout_if_missing_coverage(self):

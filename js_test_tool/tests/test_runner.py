@@ -7,8 +7,8 @@ from js_test_tool.runner import SuiteRunner, SuiteRunnerFactory, \
 from js_test_tool.browser import Browser
 from js_test_tool.suite import SuiteDescription, SuiteRenderer
 from js_test_tool.suite_server import SuitePageServer
-from js_test_tool.coverage import CoverageData, \
-    HtmlCoverageReporter, XmlCoverageReporter
+from js_test_tool.coverage import CoverageData
+from js_test_tool.coverage_report import HtmlCoverageReporter, XmlCoverageReporter
 from js_test_tool.tests.helpers import TempWorkspaceTestCase
 
 
@@ -468,7 +468,7 @@ class SuiteRunnerTest(TestCase):
         # Expect that each of the coverage reporters was called
         # with the data returned by the suite page server.
         for reporter in self.mock_coverage_reporters:
-            reporter.write_reports.assert_called_with(self.mock_coverage_data)
+            reporter.write_report.assert_called_with(self.mock_coverage_data)
 
     def _set_suite_urls(self, url_list):
         """

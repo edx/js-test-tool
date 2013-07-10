@@ -3,7 +3,7 @@ Run test suites and generate coverage reports.
 """
 from js_test_tool.suite import SuiteDescription, SuiteRenderer
 from js_test_tool.suite_server import SuitePageServer
-from js_test_tool.coverage import HtmlCoverageReporter, XmlCoverageReporter
+from js_test_tool.coverage_report import HtmlCoverageReporter, XmlCoverageReporter
 from js_test_tool.browser import Browser
 import os.path
 from jinja2 import Environment, PackageLoader
@@ -101,7 +101,7 @@ class SuiteRunner(object):
         """
         data = self._suite_page_server.all_coverage_data()
         for reporter in self._coverage_reporters:
-            reporter.write_reports(data)
+            reporter.write_report(data)
 
     def _run_with_browser(self, browser):
         """
