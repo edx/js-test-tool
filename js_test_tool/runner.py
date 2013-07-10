@@ -267,8 +267,14 @@ class SuiteRunnerFactory(object):
         renderer = self._renderer_class()
 
         # Create the coverage reporters
-        html_coverage = self._html_coverage_class(coverage_html_path)
-        xml_coverage = self._xml_coverage_class(coverage_xml_path)
+        coverage_reporters = []
+        if coverage_xml_path is not None:
+            xml_coverage = self._xml_coverage_class(coverage_xml_path)
+            coverage_reporters.append(xml_coverage)
+
+        if coverage_html_path is not None:
+            html_coverage = self._html_coverage_class(coverage_html_path)
+            coverage_reporters.append(html_coverage)
 
         # Create the suite page server
         # We re-use the same server across test suites
@@ -279,8 +285,7 @@ class SuiteRunnerFactory(object):
         browsers = [self._browser_class(name) for name in browser_names]
 
         # Create a suite runner for each description
-        runner = self._runner_class(browsers, server,
-                                    [html_coverage, xml_coverage])
+        runner = self._runner_class(browsers, server, coverage_reporters)
 
         # Return the list of suite runner and browsers
         return runner, browsers

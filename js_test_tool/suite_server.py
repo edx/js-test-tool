@@ -502,7 +502,7 @@ class StoreCoveragePageHandler(BasePageHandler):
             return None
 
         # Store the coverage data
-        self._store_coverage_data(suite_num, content)
+        return self._store_coverage_data(suite_num, content)
 
 
     def _store_coverage_data(self, suite_num, request_content):
@@ -532,15 +532,6 @@ class StoreCoveragePageHandler(BasePageHandler):
             if not isinstance(coverage_dict, dict):
                 raise ValueError()
 
-            # Parse URLs to determine the filesystem path to the JS source
-            # If the URL could not be parsed, the key will be None
-            coverage_dict = {self._url_to_file_path(key): value
-                             for key, value in coverage_dict.iteritems()}
-
-            # Exclude any invalid keys
-            if None in coverage_dict:
-                del coverage_dict[None]
-            
             # `CoverageData.load_from_dict()` is thread-safe, so it
             # is okay to write to this, even if the request handler
             # is running asynchronously.
@@ -554,27 +545,6 @@ class StoreCoveragePageHandler(BasePageHandler):
 
         else:
             return "Success: coverage data received"
-
-    def _url_to_file_path(self, url):
-        """
-        Translate a URL in the suite includes to
-        a relative file path.
-
-        This just takes the end of the URL:
-
-        /suite/0/include/path/to/file --> path/to/file
-
-        If `url` cannot be parsed, logs a warning and returns None.
-        """
-        result = InstrumentedSrcPageHandler.PATH_REGEX.match(url)
-
-        if result is not None:
-            _, rel_path = result.groups()
-            return rel_path
-
-        else:
-            LOGGER.warning("Invalid URL used in coverage data: {}".format(url))
-            return 
 
 
 class SuitePageRequestHandler(BaseHTTPRequestHandler):

@@ -566,7 +566,7 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         expected_browsers = [self.mock_browser] * len(browser_names)
         self.assertEqual(browsers, expected_browsers)
         
-        expected_reporters = [self.mock_html_coverage, self.mock_xml_coverage]
+        expected_reporters = [self.mock_xml_coverage, self.mock_html_coverage]
         self.mock_runner_class.assert_called_with(expected_browsers,
                                                   self.mock_server,
                                                   expected_reporters)

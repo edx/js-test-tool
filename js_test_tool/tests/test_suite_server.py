@@ -319,8 +319,7 @@ class SuiteServerCoverageTest(unittest.TestCase):
         # so we need to pass valid JSON data.
         # (Since CoverageData involves no network or file access, mocking
         # it is not worth the effort).
-        coverage_data = {'/suite/0/include/src.js': 
-                            {'lineData': [1, 0, None, 2, 1, None, 0]}}
+        coverage_data = {'/src.js': {'lineData': [1, 0, None, 2, 1, None, 0]}}
 
         requests.post(server.root_url() + "jscoverage-store/0",
                       data=json.dumps(coverage_data),
