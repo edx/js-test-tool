@@ -305,6 +305,38 @@ class SuiteServerCoverageTest(unittest.TestCase):
 
         self.assertEqual(response.text, fake_src)
 
+    @mock.patch('js_test_tool.suite_server.SrcInstrumenter')
+    def test_does_not_instrument_lib_or_spec_files(self, instrumenter_cls):
+
+        # Configure the instrumenter class to return a mock
+        instr_mock = mock.MagicMock(SrcInstrumenter)
+        instrumenter_cls.return_value = instr_mock
+
+        # Create a mock description with lib and spec files
+        mock_desc = self._mock_suite_desc('/root', ['src.js'],
+                                          lib_paths=['lib.js'],
+                                          spec_paths=['spec.js'])
+
+        # Create a suite page server for the description
+        server = SuitePageServer([mock_desc],
+                                 mock.MagicMock(SuiteRenderer),
+                                 jscover_path=self.JSCOVER_PATH)
+
+        # Start the server
+        server.start()
+        self.addCleanup(server.stop)
+
+        # Access the lib and spec pages
+        url_list = [server.root_url() + "suite/0/include/lib.js",
+                server.root_url() + "suite/0/include/spec.js"]
+
+        for url in url_list:
+            requests.get(url, timeout=0.1)
+
+        # Ensure that the instrumenter was NOT invoked,
+        # since these are not source files
+        self.assertFalse(instr_mock.instrumented_src.called)
+
     def test_collects_POST_coverage_info(self):
 
         # Start the page server
@@ -358,13 +390,27 @@ class SuiteServerCoverageTest(unittest.TestCase):
             server.all_coverage_data()
 
     @staticmethod
-    def _mock_suite_desc(root_dir, src_paths):
+    def _mock_suite_desc(root_dir, src_paths, lib_paths=None, spec_paths=None):
         """
         Configure a mock `SuiteDescription` to have `root_dir` as its
         base directory and to list `src_paths` as its JavaScript
-        sources.  The mocks will list no JS lib or spec dependencies.
+        sources.
+
+        If `lib_paths` or `spec_paths` (lists of paths) are used,
+        configure the description to use those lib and spec file paths.
         """
         mock_desc = mock.MagicMock(SuiteDescription)
         mock_desc.root_dir.return_value = root_dir
         mock_desc.src_paths.return_value = src_paths
+
+        if lib_paths is not None:
+            mock_desc.lib_paths.return_value = lib_paths
+        else:
+            mock_desc.lib_paths.return_value = []
+
+        if spec_paths is not None:
+            mock_desc.spec_paths.return_value = spec_paths
+        else:
+            mock_desc.spec_paths.return_value = []
+
         return mock_desc

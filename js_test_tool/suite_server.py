@@ -414,7 +414,7 @@ class InstrumentedSrcPageHandler(BasePageHandler):
 
     PATH_REGEX = re.compile('^/suite/([0-9]+)/include/(.+)$')
 
-    def __init__(self, instr_list):
+    def __init__(self, desc_list, instr_list):
         """
         Initialize the dependency page handler to serve dependencies
         specified by `desc_list` (a list of `SuiteDescription` instances).
@@ -423,6 +423,7 @@ class InstrumentedSrcPageHandler(BasePageHandler):
         one for each suite description.
         """
         super(InstrumentedSrcPageHandler, self).__init__()
+        self._desc_list = desc_list
         self._instr_list = instr_list
 
     def load_page(self, method, content, *args):
@@ -440,8 +441,17 @@ class InstrumentedSrcPageHandler(BasePageHandler):
         except ValueError:
             return None
 
-        # Send the instrumented source (delegating to JSCover)
-        return self._send_instrumented_src(suite_num, rel_path)
+        # Check that this is a source file (not a lib or spec)
+        if self._is_src_file(suite_num, rel_path):
+
+            # Send the instrumented source (delegating to JSCover)
+            return self._send_instrumented_src(suite_num, rel_path)
+
+        # If not a source file, do not handle it.
+        # Expect the non-instrumenting page handler to serve
+        # the page instead
+        else:
+            return None
 
     def _send_instrumented_src(self, suite_num, rel_path):
         """
@@ -464,6 +474,20 @@ class InstrumentedSrcPageHandler(BasePageHandler):
             msg = "Could not retrieve instrumented version of '{}': {}".format(rel_path, err)
             LOGGER.warning(msg)
             return None
+
+    def _is_src_file(self, suite_num, rel_path):
+        """
+        Returns True only if the file at `rel_path` is a source file
+        in the suite `suite_num`.
+        """
+
+        try:
+            suite_desc = self._desc_list[suite_num]
+
+        except KeyError:
+            return False
+
+        return (rel_path in suite_desc.src_paths())
 
 
 class StoreCoveragePageHandler(BasePageHandler):
@@ -570,7 +594,8 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         if len(src_instr_list) > 0:
 
             # Create the handler to serve instrumented JS pages
-            instr_src_handler = InstrumentedSrcPageHandler(src_instr_list)
+            instr_src_handler = InstrumentedSrcPageHandler(server.desc_list,
+                                                           src_instr_list)
             self._page_handlers.append(instr_src_handler)
 
             # Create a handler to store coverage data POSTed back
