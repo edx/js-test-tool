@@ -392,3 +392,23 @@ class CoverageDataTest(unittest.TestCase):
 
         # Total coverage is 6/8 = 0.75
         self.assertEqual(coverage_data.total_coverage(), 0.75)
+
+    def test_get_relative_src_path(self):
+
+        # Load the data
+        coverage_data = CoverageData()
+        coverage_data.load_from_dict('/root_dir', self.TEST_COVERAGE_DICT)
+
+        # Check that we can retrieve the relative source path
+        self.assertEqual(coverage_data.rel_src_path(u'/root_dir/src1.js'), 'src1.js')
+        self.assertEqual(coverage_data.rel_src_path(u'/root_dir/subdir/src2.js'), 'subdir/src2.js')
+
+    def test_get_relative_unknown_path(self):
+
+        # Load the data
+        coverage_data = CoverageData()
+        coverage_data.load_from_dict('/root_dir', self.TEST_COVERAGE_DICT)
+
+        # Unknown path returns None, even if in the root dir
+        self.assertIs(coverage_data.rel_src_path('unknown'), None)
+        self.assertIs(coverage_data.rel_src_path('/root_dir/unknown'), None)

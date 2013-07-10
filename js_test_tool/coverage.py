@@ -263,6 +263,10 @@ class CoverageData(object):
         # indicating whether the line is covered.
         self._src_dict = dict()
 
+        # Create a dict mapping absolute source paths
+        # to the path relative to the test suite root directory
+        self._rel_path_dict = dict()
+
         # Create a set to store the suite numbers we encounter
         self._suite_num_set = set()
 
@@ -321,6 +325,9 @@ class CoverageData(object):
             # Get the full path to the source file from the root dir
             full_path = os.path.join(root_dir, rel_src)
 
+            # Store the relative path
+            self._rel_path_dict[full_path] = rel_src
+
             # Retrieve the line data (list in which None indicates
             # that the line is not executable and an integer indicates
             # the number of times the line was executed).
@@ -362,6 +369,8 @@ class CoverageData(object):
         """
         Return the list of source files for which we have coverage
         information.
+
+        Each source in the list is an absolute path.
         """
         return sorted(self._src_dict.keys())
 
@@ -377,6 +386,16 @@ class CoverageData(object):
         If no such source file, return None.
         """
         return self._src_dict.get(full_src_path, None)
+
+    def rel_src_path(self, full_src_path):
+        """
+        Convert a full source path back to its path relative
+        to the test suite root.
+
+        This is useful for displaying a shorter identifier
+        for the source file.
+        """
+        return self._rel_path_dict.get(full_src_path)
 
     def total_coverage(self):
         """

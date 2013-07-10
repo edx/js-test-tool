@@ -187,7 +187,7 @@ class XmlCoverageReporterTest(TempWorkspaceTestCase):
         # Since this involves no network or filesystem access
         # we don't bother mocking it.
         data = CoverageData()
-        data.load_from_dict('', coverage_dict)
+        data.load_from_dict('root_dir', coverage_dict)
 
         # Write the report to the output file in the temp directory
         self.reporter.write_report(data)

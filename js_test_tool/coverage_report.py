@@ -98,10 +98,10 @@ class TemplateCoverageReporter(BaseCoverageReporter):
         return {
             'total_coverage': coverage_data.total_coverage(),
             'sources': {
-                src_path: {
-                   'src_coverage': coverage_data.coverage_for_src(src_path),
-                   'lines': coverage_data.line_dict_for_src(src_path)
-                } for src_path in coverage_data.src_list()
+                coverage_data.rel_src_path(full_path): {
+                   'src_coverage': coverage_data.coverage_for_src(full_path),
+                   'lines': coverage_data.line_dict_for_src(full_path)
+                } for full_path in coverage_data.src_list()
             }
         }
 
