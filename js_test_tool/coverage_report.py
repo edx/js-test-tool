@@ -69,9 +69,6 @@ class TemplateCoverageReporter(BaseCoverageReporter):
             # Create the context for the template
             template_context = self._build_context(coverage_data)
 
-            # DEBUG
-            print str(template_context)
-
             # Render the template
             template = TEMPLATE_ENV.get_template(self.TEMPLATE_NAME)
             return template.render(template_context)

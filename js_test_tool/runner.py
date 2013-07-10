@@ -100,8 +100,10 @@ class SuiteRunner(object):
         or no report paths were specified.
         """
         data = self._suite_page_server.all_coverage_data()
-        for reporter in self._coverage_reporters:
-            reporter.write_report(data)
+
+        if data is not None:
+            for reporter in self._coverage_reporters:
+                reporter.write_report(data)
 
     def _run_with_browser(self, browser):
         """
@@ -246,6 +248,10 @@ class SuiteRunnerFactory(object):
         It is the caller's responsibility to call `Browser.quit()` for
         each browser in the list.
 
+        Uses the environment variable `JSCOVER_JAR` to configure
+        the server to instrument JavaScript sources for coverage.
+        `JSCOVER_JAR` should be a path to the JSCover JAR file.
+
         Raises an `UnknownBrowserError` if an invalid browser name is provided.
         Raises a `ValueError` if no browser names are provided.
         """
@@ -266,7 +272,8 @@ class SuiteRunnerFactory(object):
 
         # Create the suite page server
         # We re-use the same server across test suites
-        server = self._server_class(suite_desc_list, renderer)
+        server = self._server_class(suite_desc_list, renderer,
+                                    jscover_path=os.environ.get('JSCOVER_JAR'))
 
         # Create a list of all browsers we will need
         browsers = [self._browser_class(name) for name in browser_names]

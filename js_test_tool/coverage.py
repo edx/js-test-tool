@@ -221,8 +221,7 @@ class SrcInstrumenter(object):
 
             # Raise an exception.  If this is being run in a `_retry` call,
             # then it will wait and retry on a different port.
-            msg = ("Could not start JSCover: '{}'".format(stderr) +
-                   " This is likely due to port conflicts.")
+            msg = "Could not start JSCover: '{}'".format(stderr)
             raise SrcInstrumenterError('Could not start JSCover: {}')
 
         # Return the process information
@@ -415,19 +414,12 @@ class CoverageData(object):
         """
         line_dict = self.line_dict_for_src(full_src_path)
 
-        # DEBUG
-        print str(line_dict)
-
         if line_dict is None:
             return None
 
         else:
             lines_covered = sum([1 if is_covered else 0
                                  for is_covered in line_dict.values()])
-
-            # DEBUG
-            print "lines_covered = {}".format(lines_covered)
-            print "lines_measured = {}".format(len(line_dict))
 
             return float(lines_covered) / len(line_dict)
 

@@ -181,7 +181,7 @@ class XmlCoverageReporterTest(TempWorkspaceTestCase):
 
         # Munge the dict into the right format
         coverage_dict = {src_path: {'lineData': line_data}
-                      for src_path, line_data in coverage_dict.items()}
+                         for src_path, line_data in coverage_dict.items()}
 
         # Create a `CoverageData` instance.
         # Since this involves no network or filesystem access
@@ -192,12 +192,11 @@ class XmlCoverageReporterTest(TempWorkspaceTestCase):
         # Write the report to the output file in the temp directory
         self.reporter.write_report(data)
 
+        # Read the data back in from the output file
         with open(self.OUTPUT_FILE_NAME) as output_file:
-
-            # Read the data back in from the output file
             output_str = output_file.read()
 
-        # Run it through the XML parser to normalize format
+        # Run the reports through the XML parser to normalize format
         output_str = etree.tostring(etree.fromstring(output_str))
         expected_output = etree.tostring(etree.fromstring(expected_output))
 

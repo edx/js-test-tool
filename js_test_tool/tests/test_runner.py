@@ -582,7 +582,8 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         # should be identical.  Check that we get the right number.
         suite_desc_list = [self.mock_desc for _ in range(num_suites)]
         self.mock_server_class.assert_called_with(suite_desc_list,
-                                                  self.mock_renderer)
+                                                  self.mock_renderer,
+                                                  jscover_path=None)
 
     def test_configure_suite_desc(self):
 
@@ -624,6 +625,18 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         # Expect that the coverage reporters were configured correctly
         self.mock_html_coverage_class.assert_called_with(html_path)
         self.mock_xml_coverage_class.assert_called_with(xml_path)
+
+    def test_configure_jscover(self):
+
+        # Set the environment variable to configure
+        # JSCover (used by the server to instrument
+        # the JavaScript sources for coverage)
+        with mock.patch.dict('os.environ', JSCOVER_JAR='jscover.jar'):
+            self._build_runner(1, coverage_xml_path='coverage.xml')
+
+        # Expect that the server was configured with the JSCover JAR path
+        _, kwargs = self.mock_server_class.call_args
+        self.assertEqual(kwargs.get('jscover_path'), 'jscover.jar')
 
     def test_invalid_browser_names(self):
 

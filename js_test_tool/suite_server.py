@@ -51,7 +51,8 @@ class SuitePageServer(HTTPServer):
         and dependencies described by `suite_desc_list`
         (list of `SuiteDescription` instances).
 
-        `jscover_path` is the path to the JSCover JAR file.
+        `jscover_path` is the path to the JSCover JAR file.  If not
+        specified, no coverage information will be collected.
 
         Use `suite_renderer` (a `SuiteRenderer` instance) to
         render the test suite pages.
@@ -472,8 +473,8 @@ class InstrumentedSrcPageHandler(BasePageHandler):
         # return None.  This should cause the un-instrumented
         # version of the source to be served (when another
         # handler matches the URL regex)
-        except SrcInstrumenterError:
-            msg = "Could not retrieve instrumented version of '{}'".format(rel_path)
+        except SrcInstrumenterError as err:
+            msg = "Could not retrieve instrumented version of '{}': {}".format(rel_path, err)
             LOGGER.warning(msg)
             return None
 
