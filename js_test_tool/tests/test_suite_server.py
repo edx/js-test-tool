@@ -322,7 +322,7 @@ class SuiteServerCoverageTest(unittest.TestCase):
         coverage_data = {'/suite/0/include/src.js': 
                             {'lineData': [1, 0, None, 2, 1, None, 0]}}
 
-        requests.post(server.root_url() + "suite/0/include/src.js",
+        requests.post(server.root_url() + "jscoverage-store/0",
                       data=json.dumps(coverage_data),
                       timeout=0.1)
 
@@ -348,7 +348,7 @@ class SuiteServerCoverageTest(unittest.TestCase):
 
         # POST coverage data to one of the sources, but not the other
         coverage_data = {'/suite/0/include/src1.js': {'lineData': [1]}}
-        requests.post(server.root_url() + "suite/0/include/src.js",
+        requests.post(server.root_url() + "jscoverage-store/0",
                       data=json.dumps(coverage_data),
                       timeout=0.1)
 

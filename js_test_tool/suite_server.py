@@ -414,29 +414,20 @@ class InstrumentedSrcPageHandler(BasePageHandler):
 
     PATH_REGEX = re.compile('^/suite/([0-9]+)/include/(.+)$')
 
-    # Handle both GET and POST methods
-    HTTP_METHODS = ["GET", "POST"]
-
-    def __init__(self, desc_list, instr_list, coverage_data):
+    def __init__(self, instr_list):
         """
         Initialize the dependency page handler to serve dependencies
         specified by `desc_list` (a list of `SuiteDescription` instances).
 
         `instr_list` is a list of `SrcInstrumenter` instances,
         one for each suite description.
-
-        `coverage_data` is the `CoverageData` instance to send
-        any received coverage data to.
         """
         super(InstrumentedSrcPageHandler, self).__init__()
-        self._desc_list = desc_list
         self._instr_list = instr_list
-        self._coverage_data = coverage_data
 
     def load_page(self, method, content, *args):
         """
-        GET request: Load an instrumented version of the JS source file.
-        POST request: Send the coverage information to the server.
+        Load an instrumented version of the JS source file.
         """
 
         # Interpret the arguments (from the regex)
@@ -449,12 +440,8 @@ class InstrumentedSrcPageHandler(BasePageHandler):
         except ValueError:
             return None
 
-        # Handle GET and POST methods separately
-        if method == "GET":
-            return self._send_instrumented_src(suite_num, rel_path)
-
-        elif method == "POST":
-            return self._store_coverage_data(suite_num, rel_path, content)
+        # Send the instrumented source (delegating to JSCover)
+        return self._send_instrumented_src(suite_num, rel_path)
 
     def _send_instrumented_src(self, suite_num, rel_path):
         """
@@ -478,9 +465,49 @@ class InstrumentedSrcPageHandler(BasePageHandler):
             LOGGER.warning(msg)
             return None
 
-    def _store_coverage_data(self, suite_num, rel_path, request_content):
+
+class StoreCoveragePageHandler(BasePageHandler):
+    """
+    Store coverage reports POSTed back to the server
+    by clients running instrumented JavaScript sources.
+    """
+
+    PATH_REGEX = re.compile('^/jscoverage-store/([0-9]+)/?$')
+
+    # Handle only POST 
+    HTTP_METHODS = ["POST"]
+
+    def __init__(self, desc_list, coverage_data):
         """
-        Store received coverage data for the JS source file at `rel_path`
+        Initialize the dependency page handler to serve dependencies
+        specified by `desc_list` (a list of `SuiteDescription` instances).
+
+        `coverage_data` is the `CoverageData` instance to send
+        any received coverage data to.
+        """
+        super(StoreCoveragePageHandler, self).__init__()
+        self._desc_list = desc_list
+        self._coverage_data = coverage_data
+
+    def load_page(self, method, content, *args):
+        """
+        Send the coverage information to the server.
+        """
+
+        # Retrieve the suite number from the URL
+        try:
+            suite_num = int(args[0])
+
+        except ValueError:
+            return None
+
+        # Store the coverage data
+        self._store_coverage_data(suite_num, content)
+
+
+    def _store_coverage_data(self, suite_num, request_content):
+        """
+        Store received coverage data for the JS source file 
         in the suite numbered `suite_num`.
 
         `request_content` is the content of the HTTP POST request.
@@ -521,7 +548,7 @@ class InstrumentedSrcPageHandler(BasePageHandler):
 
         except ValueError:
             msg = ("Could not interpret coverage data in POST request " +
-                   "to suite {} for '{}': {}".format(suite_num, rel_path, request_content))
+                   "to suite {}: {}".format(suite_num, request_content))
             LOGGER.warning(msg)
             return None
 
@@ -539,7 +566,7 @@ class InstrumentedSrcPageHandler(BasePageHandler):
 
         If `url` cannot be parsed, logs a warning and returns None.
         """
-        result = self.PATH_REGEX.match(url)
+        result = InstrumentedSrcPageHandler.PATH_REGEX.match(url)
 
         if result is not None:
             _, rel_path = result.groups()
@@ -571,10 +598,16 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         # If we are configured for coverage, add another handler
         # to serve instrumented versions of the source files.
         if len(src_instr_list) > 0:
-            instr_src_handler = InstrumentedSrcPageHandler(server.desc_list, 
-                                                           src_instr_list,
-                                                           server.coverage_data)
+
+            # Create the handler to serve instrumented JS pages
+            instr_src_handler = InstrumentedSrcPageHandler(src_instr_list)
             self._page_handlers.append(instr_src_handler)
+
+            # Create a handler to store coverage data POSTed back
+            # to the server from the client.
+            store_coverage_handler = StoreCoveragePageHandler(server.desc_list, 
+                                                              server.coverage_data)
+            self._page_handlers.append(store_coverage_handler)
 
         # We always serve dependencies.  If running with coverage, 
         # the instrumented src handler will intercept source files.

@@ -219,8 +219,10 @@ class SuiteRendererTest(unittest.TestCase):
                 execJasmine();
 
                 // Trigger JSCover to POST coverage data to server
+                // at /jscoverage-store/{suite_num}
+                // where {suite_num} is the argument to jscoverage_report.
                 if (window.jscoverage_report) {
-                    jscoverage_report();
+                    jscoverage_report("0");
                 }
             };
 
