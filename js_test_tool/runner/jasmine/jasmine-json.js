@@ -7,11 +7,14 @@
 /*
  * Public Jasmine interface methods.
  */
-jasmine.JsonReporter = function(divId) {
+jasmine.JsonReporter = function(divId, suiteNum) {
     // Create a JsonReporter
     // `divId` is the CSS ID selector in which to output JSON
     // test results.
+    // `suiteNum` is the suite number, used to report back
+    // coverage information to the server (if JSCover is configured).
     this._divId = divId;
+    this._suiteNum = suiteNum;
 
     // Create a list to hold test results
     this._testResultList = [];
@@ -49,6 +52,13 @@ jasmine.JsonReporter.prototype.reportRunnerResults = function(runner) {
     // If we could not find the <div>, throw an error.
     else {
         throw "No element with CSS selector ID '" + this._divId + "' found";
+    }
+
+    // Trigger JSCover to POST coverage data to server
+    // at /jscoverage-store/{suite_num}
+    // where {suite_num} is the argument to jscoverage_report.
+    if (window.jscoverage_report) {
+        jscoverage_report(this._suiteNum)
     }
 };
 

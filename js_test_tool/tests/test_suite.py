@@ -205,7 +205,7 @@ class SuiteRendererTest(unittest.TestCase):
             var jasmineEnv = jasmine.getEnv();
             jasmineEnv.updateInterval = 1000;
 
-            var jsonReporter = new jasmine.JsonReporter("js_test_tool_results");
+            var jsonReporter = new jasmine.JsonReporter("js_test_tool_results", "0");
 
             jasmineEnv.addReporter(jsonReporter);
 
@@ -217,13 +217,6 @@ class SuiteRendererTest(unittest.TestCase):
                 }
 
                 execJasmine();
-
-                // Trigger JSCover to POST coverage data to server
-                // at /jscoverage-store/{suite_num}
-                // where {suite_num} is the argument to jscoverage_report.
-                if (window.jscoverage_report) {
-                    jscoverage_report("0");
-                }
             };
 
             function execJasmine() {
