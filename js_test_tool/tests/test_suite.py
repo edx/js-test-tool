@@ -111,7 +111,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         # Create the suite description using the YAML file
         desc = SuiteDescription(yaml_file, self.temp_dir)
 
-        # Check that we get the right paths 
+        # Check that we get the right paths
         # (exclude files from the directories we left out)
         self.assertEqual(desc.lib_paths(), self.LIB_FILES[0:3])
         self.assertEqual(desc.src_paths(), self.SRC_FILES[0:3])
@@ -346,7 +346,7 @@ class SuiteRendererTest(unittest.TestCase):
         script_elems = tree.xpath('/html/head/script')
 
         # Prepend the runner and suite includes
-        runner_includes = [os.path.join('/runner', path) 
+        runner_includes = [os.path.join('/runner', path)
                            for path in runner_includes]
         suite_includes = [os.path.join('/suite', '0', 'include', path)
                           for path in suite_includes]

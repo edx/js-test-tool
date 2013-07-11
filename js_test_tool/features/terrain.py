@@ -93,7 +93,7 @@ def compare_files_at_paths(actual_filename, expected_filename):
     Assert that the contents of the fixture files
     at `actual_filename` and `expected_filename` are equal.
     """
-    
+
     # Check that both files exist (to print a better error message)
     world.assert_file_exists(actual_filename)
     world.assert_file_exists(expected_filename)
@@ -101,7 +101,7 @@ def compare_files_at_paths(actual_filename, expected_filename):
     # Open both files and compare the contents
     with open(actual_filename) as actual_file:
         with open(expected_filename) as expected_file:
-            assert_equal(actual_file.read().strip(), 
+            assert_equal(actual_file.read().strip(),
                          expected_file.read().strip())
 
 

@@ -2,13 +2,11 @@
 Report coverage information for JavaScript.
 """
 
-from abc import ABCMeta, abstractmethod
 import subprocess
 import requests
 import logging
 import random
 import time
-import json
 import os.path
 
 LOGGER = logging.getLogger(__name__)
@@ -41,7 +39,7 @@ class SrcInstrumenter(object):
     # Keep track of used ports across classes
     used_ports = []
 
-    def __init__(self, root_dir, tool_path=None, 
+    def __init__(self, root_dir, tool_path=None,
                  subprocess_module=subprocess, requests_module=requests):
         """
         Initialize the instrumenter to use the tool (JSCover) at
@@ -77,10 +75,9 @@ class SrcInstrumenter(object):
         if self._jscover is None:
 
             try:
-                self._port_num, self._jscover = self._retry(
-                                                    self._start_jscover, 
-                                                    self.MAX_START_ATTEMPTS,
-                                                    fail_fast_errors=[OSError])
+                self._port_num, self._jscover = self._retry(self._start_jscover,
+                                                            self.MAX_START_ATTEMPTS,
+                                                            fail_fast_errors=[OSError])
             except OSError:
                 msg = "Could not find JSCover JAR file at '{}'".format(self._tool_path)
                 raise SrcInstrumenterError(msg)
@@ -112,7 +109,6 @@ class SrcInstrumenter(object):
         root URL (configured in the constructor).
 
         If the source could not be retrieved, raises a `SrcInstrumenterError`.
-        
         If the service has not yet been started, this will start it.
         """
 
@@ -215,21 +211,21 @@ class SrcInstrumenter(object):
         # If JSCover has a port conflict, it will exit immediately
         # Check that this hasn't happened
         if process.poll() is not None:
-            
+
             # Get the stderr
             _, stderr = process.communicate()
 
             # Raise an exception.  If this is being run in a `_retry` call,
             # then it will wait and retry on a different port.
             msg = "Could not start JSCover: '{}'".format(stderr)
-            raise SrcInstrumenterError('Could not start JSCover: {}')
+            raise SrcInstrumenterError(msg)
 
         # Return the process information
         return (port_num, process)
 
     def _get_src_from_jscover(self, rel_path):
         """
-        Retrieve the instrumented JS source file at `rel_path` 
+        Retrieve the instrumented JS source file at `rel_path`
         from the JSCover server.
 
         The result is a `unicode` string.
@@ -272,20 +268,20 @@ class CoverageData(object):
 
     def add_suite_num(self, suite_num):
         """
-        Record that we received information from the suite 
+        Record that we received information from the suite
         with index `suite_num`.
 
-        This is used to check whether we have gotten 
+        This is used to check whether we have gotten
         coverage data for every test suite.
         """
         self._suite_num_set.add(int(suite_num))
 
-    def load_from_dict(self, root_dir, cover_dict, suite_num=None):
+    def load_from_dict(self, root_dir, cover_dict):
         """
         Load coverage data from `cover_dict`, which is in
         the format used by JSCover:
 
-            {SRC_PATH: 
+            {SRC_PATH:
                 {"lineData": [LINE_DATA, ...],
                  "functionData": [NOT_USED, ...],
                  "branchData": [NOT_USED, ...]}, ...}
@@ -298,7 +294,7 @@ class CoverageData(object):
 
         `LINE_DATA` is a list of values indicating the coverage info
         for the line at that index in the list:
-            
+
             * null: No coverage information (e.g. a comment)
             * integer: Number of times the line was executed.
 
@@ -313,7 +309,7 @@ class CoverageData(object):
         # Check that we got a dict (not a list)
         if not isinstance(cover_dict, dict):
             raise ValueError("Cover data must be a dictionary")
-        
+
         # For each source file
         for rel_src, cover_dict in cover_dict.iteritems():
 
@@ -343,7 +339,7 @@ class CoverageData(object):
                 # that are line numbers and values that are True/False
                 # indicating whether the line is covered.
                 # Ignore `None` values, since these are not executed.
-                cover_dict = {num: line_list[num] > 0 
+                cover_dict = {num: line_list[num] > 0
                               for num in range(len(line_list))
                               if line_list[num] is not None}
 
@@ -441,7 +437,6 @@ class CoverageData(object):
                                  for is_covered in line_dict.values()])
 
             return float(lines_covered) / len(line_dict)
-
 
     def suite_num_list(self):
         """

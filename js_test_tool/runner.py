@@ -49,8 +49,8 @@ class SuiteRunner(object):
     def run(self):
         """
         Execute each available test suite page and record whether
-        each test passed/failed.  
-        
+        each test passed/failed.
+
         Returns a tuple `(passed, report)` where `passed` is a boolean
         indicating whether all tests passed and `report` is a unicode
         string report of test results.
@@ -202,11 +202,11 @@ class SuiteRunnerFactory(object):
     # Supported browser names
     SUPPORTED_BROWSERS = ['chrome', 'firefox', 'phantomjs']
 
-    def __init__(self, 
-                 desc_class=SuiteDescription, 
+    def __init__(self,
+                 desc_class=SuiteDescription,
                  renderer_class=SuiteRenderer,
-                 server_class=SuitePageServer, 
-                 html_coverage_class=HtmlCoverageReporter, 
+                 server_class=SuitePageServer,
+                 html_coverage_class=HtmlCoverageReporter,
                  xml_coverage_class=XmlCoverageReporter,
                  browser_class=Browser,
                  runner_class=SuiteRunner):
@@ -222,8 +222,8 @@ class SuiteRunnerFactory(object):
         self._browser_class = browser_class
         self._runner_class = runner_class
 
-    def build_runner(self, suite_path_list, browser_names, 
-                      coverage_xml_path, coverage_html_path):
+    def build_runner(self, suite_path_list, browser_names,
+                     coverage_xml_path, coverage_html_path):
         """
         Configure `SuiteRunner` instances for each suite description.
         Each `SuiteRunner` will:
@@ -231,8 +231,8 @@ class SuiteRunnerFactory(object):
         * Start instances of each browser listed in `browser_names`.
         `browser_names` is a list of browser names such as "chrome",
         "firefox", and "phantomjs".
-        
-        * Run the test suites described in 
+
+        * Run the test suites described in
           `suite_path_list` (list of paths to suite description files)
 
         * Write coverage reports to `coverage_xml_path` (Cobertura XML format)
@@ -241,10 +241,10 @@ class SuiteRunnerFactory(object):
         If the coverage paths are `None`, that report will not be generated.
 
         Returns a tuple `(suite_runners, browsers)`
-        
+
         * `suite_runner` is a configured `SuiteRunner` instance.
         * `browsers` is a list of browsers used by the runners.
-        
+
         It is the caller's responsibility to call `Browser.quit()` for
         each browser in the list.
 

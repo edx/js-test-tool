@@ -4,6 +4,7 @@ from js_test_tool.browser import Browser, BrowserError
 from js_test_tool.suite import SuiteRenderer
 from js_test_tool.tests.helpers import StubServer
 
+
 class BrowserTest(TestCase):
 
     def setUp(self):
@@ -83,7 +84,7 @@ class BrowserTest(TestCase):
         expected_results = [
             {u'test_group': u"when song has been paused",
              u'test_name': u"should indicate that the song is currently paused",
-             u'status': u"fail", 
+             u'status': u"fail",
              u'detail': u"Error: Expected true to be falsy.\n at new jasmine.ExpectationResult"}]
 
         self.assertEqual(expected_results, output_results)
@@ -130,6 +131,7 @@ class BrowserTest(TestCase):
 
         # Configure the Browser to timeout quickly
         old_timeout = Browser.TIMEOUT
+
         def cleanup():
             Browser.TIMEOUT = old_timeout
         self.addCleanup(cleanup)
@@ -139,5 +141,3 @@ class BrowserTest(TestCase):
         # Expect the Browser to give an error when it times out
         with self.assertRaises(BrowserError):
             self.browser.get_page_results(server_url)
-
-

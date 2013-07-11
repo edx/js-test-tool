@@ -52,7 +52,7 @@ def parse_args(argv):
     parser = argparse.ArgumentParser(description=DESCRIPTION)
 
     # Test suite description files
-    parser.add_argument('test_suite_paths', type=str, nargs='+', 
+    parser.add_argument('test_suite_paths', type=str, nargs='+',
                         help=TEST_SUITE_HELP)
 
     # Coverage output files
@@ -61,7 +61,7 @@ def parse_args(argv):
 
     # Browsers
     for (browser_arg, browser_name, browser_help) in BROWSER_ARGS:
-        parser.add_argument(browser_arg, dest='browser_names', 
+        parser.add_argument(browser_arg, dest='browser_names',
                             action='append_const', const=browser_name,
                             help=browser_help)
 
@@ -77,7 +77,7 @@ def parse_args(argv):
 
 def generate_reports(suite_runner, output_file):
     """
-    Use `suite_runner` (a `SuiteRunner` instance) 
+    Use `suite_runner` (a `SuiteRunner` instance)
     to generate test and coverage reports.  Write the test report
     to `output_file` (an open file-like object).
 
@@ -88,7 +88,7 @@ def generate_reports(suite_runner, output_file):
     passed, test_report = suite_runner.run()
 
     # Generate the coverage reports
-    # (may do nothing if dependencies not installed 
+    # (may do nothing if dependencies not installed
     # or report paths not specified)
     suite_runner.write_coverage_reports()
 
@@ -108,9 +108,9 @@ def main():
     factory = SuiteRunnerFactory()
     suite_runner, browser_list = \
         factory.build_runner(args_dict.get('test_suite_paths'),
-                              args_dict.get('browser_names'),
-                              args_dict.get('coverage_xml'),
-                              args_dict.get('coverage_html'))
+                             args_dict.get('browser_names'),
+                             args_dict.get('coverage_xml'),
+                             args_dict.get('coverage_html'))
 
     try:
         # Generate the reports and write test results to stdout

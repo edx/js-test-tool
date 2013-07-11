@@ -25,7 +25,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         super(SuitePageServerTest, self).setUp()
 
         # Create mock suite descriptions
-        self.suite_desc_list = [mock.MagicMock(SuiteDescription) 
+        self.suite_desc_list = [mock.MagicMock(SuiteDescription)
                                 for _ in range(self.NUM_SUITE_DESC)]
 
         # Configure the mock suite descriptions to have no dependencies
@@ -56,7 +56,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         url_regex = re.compile('^http://127.0.0.1:[0-9]+/$')
         url = self.server.root_url()
         result = url_regex.match(url)
-        self.assertIsNot(result, None, 
+        self.assertIsNot(result, None,
                          msg="URL has incorrect format: '{}'".format(url))
 
     def test_suite_url_list(self):
@@ -177,7 +177,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         # Expect that we get a page not found status
         for bad_url in bad_url_list:
             response = requests.get(bad_url)
-            self.assertEqual(response.status_code, 
+            self.assertEqual(response.status_code,
                              requests.codes.not_found,
                              msg=bad_url)
 
@@ -186,7 +186,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         # Configure the suite description to contain a file
         self.suite_desc_list[0].src_paths.return_value = ['not_found.txt']
 
-        # The file does not exist, so expect that we 
+        # The file does not exist, so expect that we
         # get a not found response
         response = requests.get(self.server.root_url() + 'not_found.txt')
         self.assertEqual(response.status_code, requests.codes.not_found)
@@ -245,7 +245,7 @@ class SuiteServerCoverageTest(unittest.TestCase):
     def test_creates_instrumenters_for_suites(self, instrumenter_cls):
 
         # Configure the instrumenter class to return mocks
-        instr_mocks = [mock.MagicMock(SrcInstrumenter), 
+        instr_mocks = [mock.MagicMock(SrcInstrumenter),
                        mock.MagicMock(SrcInstrumenter)]
         instrumenter_cls.side_effect = instr_mocks
 
@@ -254,7 +254,7 @@ class SuiteServerCoverageTest(unittest.TestCase):
                           self._mock_suite_desc('/root_2', ['src3.js', 'src4.js'])]
 
         # Create a suite page server for those descriptions
-        server = SuitePageServer(mock_desc_list, 
+        server = SuitePageServer(mock_desc_list,
                                  mock.MagicMock(SuiteRenderer),
                                  jscover_path=self.JSCOVER_PATH)
 
@@ -291,7 +291,7 @@ class SuiteServerCoverageTest(unittest.TestCase):
         mock_desc = self._mock_suite_desc('/root', ['src.js'])
 
         # Create a suite page server for those descriptions
-        server = SuitePageServer([mock_desc], 
+        server = SuitePageServer([mock_desc],
                                  mock.MagicMock(SuiteRenderer),
                                  jscover_path=self.JSCOVER_PATH)
 
@@ -328,7 +328,7 @@ class SuiteServerCoverageTest(unittest.TestCase):
 
         # Access the lib and spec pages
         url_list = [server.root_url() + "suite/0/include/lib.js",
-                server.root_url() + "suite/0/include/spec.js"]
+                    server.root_url() + "suite/0/include/spec.js"]
 
         for url in url_list:
             requests.get(url, timeout=0.1)

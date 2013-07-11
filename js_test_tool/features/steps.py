@@ -35,7 +35,7 @@ def run_tool_with_html_coverage(step):
 
 @step(u'When I run js-test-tool with XML and HTML coverage')
 def run_tool_with_html_coverage(step):
-    args = [TEST_SUITE_DESC_PATH, 
+    args = [TEST_SUITE_DESC_PATH,
             '--coverage-html', ACTUAL_COVERAGE_HTML,
             '--coverage-xml', ACTUAL_COVERAGE_XML]
     world.run_tool_with_args(args)

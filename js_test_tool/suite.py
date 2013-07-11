@@ -63,7 +63,6 @@ class SuiteDescription(object):
         # Validate the root directory
         self._validate_root_dir(self._root_dir)
 
-
     def root_dir(self):
         """
         Return the root directory to which all paths in the suite
@@ -113,14 +112,14 @@ class SuiteDescription(object):
         Return the name of the test runner to use (e.g. "Jasmine")
         """
 
-        # We validated data in the constructor, 
+        # We validated data in the constructor,
         # so the key is guaranteed to exist
         return self._desc_dict['test_runner']
 
     def _js_paths(self, dir_path_list):
         """
         Recursively search the directories at `dir_path_list` (list of paths)
-        for *.js files.  
+        for *.js files.
 
         Returns the list of paths to each JS file it finds, prepending
         the path to the search directory.
@@ -135,7 +134,7 @@ class SuiteDescription(object):
 
         # Recursively search each directory
         for dir_path in dir_path_list:
-            
+
             # Store all paths within this root directory, so
             # we can sort them while preserving the order of
             # the root directories.
@@ -160,9 +159,9 @@ class SuiteDescription(object):
         # Now that we've found the files we're looking for, we
         # want to return relative paths to our root
         # (for use in URLs)
-        rel_paths = [os.path.relpath(path, self._root_dir) 
+        rel_paths = [os.path.relpath(path, self._root_dir)
                      for path in js_paths]
-        
+
         return rel_paths
 
     @classmethod
@@ -217,7 +216,7 @@ class SuiteRenderer(object):
 
     # Dictionary mapping test runner names (e.g. 'jasmine') to
     # templates used to render the test runner page.
-    TEMPLATE_DICT = { 'jasmine': 'jasmine_test_runner.html' }
+    TEMPLATE_DICT = {'jasmine': 'jasmine_test_runner.html'}
 
     # The CSS ID of the <div> that will contain the output test results
     RESULTS_DIV_ID = 'js_test_tool_results'
@@ -252,7 +251,7 @@ class SuiteRenderer(object):
                             'spec_path_list': suite_desc.spec_paths(),
                             'div_id': self.RESULTS_DIV_ID}
 
-        # Render the template 
+        # Render the template
         try:
             html = self.render_template(template_name, template_context)
         except Exception as ex:

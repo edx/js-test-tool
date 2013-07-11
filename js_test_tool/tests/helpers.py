@@ -22,7 +22,7 @@ class TempWorkspaceTestCase(unittest.TestCase):
         working directory.
         """
 
-        # Create a temporary directory 
+        # Create a temporary directory
         self.temp_dir = tempfile.mkdtemp()
 
         # Set the working directory to the temp dir, so we can
@@ -130,7 +130,7 @@ class StubRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         """
         Respond to an HTTP GET request.
-        Log the request to the server, then return 
+        Log the request to the server, then return
         the response configured for the server.
         """
         self.server.log_request('GET', self.path, self._content())

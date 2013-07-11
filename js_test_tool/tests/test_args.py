@@ -18,17 +18,17 @@ class ParseArgsTest(unittest.TestCase):
         argv = ['test_suite_1.yaml', 'test_suite_2.yaml', '--use-chrome']
         arg_dict = parse_args(argv)
 
-        self.assertEqual(arg_dict.get('test_suite_paths'), 
+        self.assertEqual(arg_dict.get('test_suite_paths'),
                          ['test_suite_1.yaml', 'test_suite_2.yaml'])
 
     def test_parse_coverage_xml(self):
-        argv = ['test_suite.yaml', '--coverage-xml', 
+        argv = ['test_suite.yaml', '--coverage-xml',
                 'coverage.xml', '--use-firefox']
         arg_dict = parse_args(argv)
         self.assertEqual(arg_dict.get('coverage_xml'), 'coverage.xml')
 
     def test_parse_coverage_html(self):
-        argv = ['test_suite.yaml', '--coverage-html', 'coverage.html', 
+        argv = ['test_suite.yaml', '--coverage-html', 'coverage.html',
                 '--use-firefox']
         arg_dict = parse_args(argv)
         self.assertEqual(arg_dict.get('coverage_html'), 'coverage.html')
@@ -55,7 +55,7 @@ class ParseArgsTest(unittest.TestCase):
 
     def test_parse_all_browsers(self):
 
-        argv = ['test_suite.yaml', '--use-phantomjs', 
+        argv = ['test_suite.yaml', '--use-phantomjs',
                 '--use-chrome', '--use-firefox']
 
         arg_dict = parse_args(argv)

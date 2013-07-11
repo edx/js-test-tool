@@ -66,7 +66,7 @@ class SuitePageServer(HTTPServer):
         # Create a list for source instrumenter services
         # (One for each suite description)
         self._instr_list = []
-        
+
         # Using port 0 assigns us an unused port
         address = ('127.0.0.1', 0)
         HTTPServer.__init__(self, address, SuitePageRequestHandler)
@@ -88,9 +88,9 @@ class SuitePageServer(HTTPServer):
             # Start each SrcInstrumenter instance if we know where JSCover is
             for desc in self.desc_list:
 
-                # Create an instrumenter serving files 
+                # Create an instrumenter serving files
                 # in the suite description root directory
-                instr = SrcInstrumenter(desc.root_dir(), 
+                instr = SrcInstrumenter(desc.root_dir(),
                                         tool_path=self._jscover_path)
 
                 # Start the instrumenter service
@@ -144,7 +144,7 @@ class SuitePageServer(HTTPServer):
 
     def all_coverage_data(self):
         """
-        Returns a `CoverageData` instance containing all coverage data 
+        Returns a `CoverageData` instance containing all coverage data
         received from running the tests.
 
         Blocks until all suites have reported coverage data.  If it
@@ -180,7 +180,7 @@ class SuitePageServer(HTTPServer):
 
     def _has_all_coverage(self):
         """
-        Returns True if and only if every suite 
+        Returns True if and only if every suite
         has coverage information.
         """
         # Retrieve the indices of each suite for which coverage
@@ -191,6 +191,7 @@ class SuitePageServer(HTTPServer):
         # (This is not the most efficient way to do this --
         # if it becomes a bottleneck, we can revisit.)
         return (suite_num_list == [x for x in range(len(self.desc_list))])
+
 
 class BasePageHandler(object):
     """
@@ -204,7 +205,7 @@ class BasePageHandler(object):
     # HTTP methods handled by this class
     # The default is to handle only GET methods
     HTTP_METHODS = ["GET"]
-    
+
     # Subclasses override this to provide a regex that matches
     # URL paths.  Should be a `re` module compiled regex.
     PATH_REGEX = None
@@ -377,8 +378,8 @@ class DependencyPageHandler(BasePageHandler):
 
     def _dependency_path(self, suite_num, path):
         """
-        Return the full filesystem path to the dependency, if it 
-        is specified in the test suite description with index `suite_num`.  
+        Return the full filesystem path to the dependency, if it
+        is specified in the test suite description with index `suite_num`.
         Otherwise, return None.
         """
 
@@ -388,7 +389,6 @@ class DependencyPageHandler(BasePageHandler):
 
         except IndexError:
             return None
-
 
         # Get all dependency paths
         all_paths = (suite_desc.lib_paths() +
@@ -498,7 +498,7 @@ class StoreCoveragePageHandler(BasePageHandler):
 
     PATH_REGEX = re.compile('^/jscoverage-store/([0-9]+)/?$')
 
-    # Handle only POST 
+    # Handle only POST
     HTTP_METHODS = ["POST"]
 
     def __init__(self, desc_list, coverage_data):
@@ -528,10 +528,9 @@ class StoreCoveragePageHandler(BasePageHandler):
         # Store the coverage data
         return self._store_coverage_data(suite_num, content)
 
-
     def _store_coverage_data(self, suite_num, request_content):
         """
-        Store received coverage data for the JS source file 
+        Store received coverage data for the JS source file
         in the suite numbered `suite_num`.
 
         `request_content` is the content of the HTTP POST request.
@@ -587,7 +586,7 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         # We always handle suite runner pages, and
         # the runner dependencies (e.g. jasmine.js)
         self._page_handlers = [SuitePageHandler(server.renderer, server.desc_list),
-                          RunnerPageHandler()]
+                               RunnerPageHandler()]
 
         # If we are configured for coverage, add another handler
         # to serve instrumented versions of the source files.
@@ -600,11 +599,11 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
 
             # Create a handler to store coverage data POSTed back
             # to the server from the client.
-            store_coverage_handler = StoreCoveragePageHandler(server.desc_list, 
+            store_coverage_handler = StoreCoveragePageHandler(server.desc_list,
                                                               server.coverage_data)
             self._page_handlers.append(store_coverage_handler)
 
-        # We always serve dependencies.  If running with coverage, 
+        # We always serve dependencies.  If running with coverage,
         # the instrumented src handler will intercept source files.
         # Serving the un-instrumented version is the fallback, and
         # will still be used for library/spec dependencies.

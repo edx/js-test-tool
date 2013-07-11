@@ -34,7 +34,7 @@ class Browser(object):
         # Store the browser name
         self._name = browser_name
 
-        # Create a browser session 
+        # Create a browser session
         try:
             self._splinter_browser = SplinterBrowser(browser_name)
         except:
@@ -150,5 +150,3 @@ class Browser(object):
             final_list.append(modified_dict)
 
         return final_list
-        
-

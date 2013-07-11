@@ -2,9 +2,7 @@ import unittest
 import mock
 import requests
 import re
-import json
 from textwrap import dedent
-from js_test_tool.tests.helpers import TempWorkspaceTestCase
 from js_test_tool.coverage import SrcInstrumenter, SrcInstrumenterError, CoverageData
 
 
@@ -13,7 +11,7 @@ class SrcInstrumenterTest(unittest.TestCase):
     TEST_ROOT_DIR = '/tmp/test'
     TEST_TOOL_PATH = '/usr/bin/jscover'
     TEST_INSTRUMENTED_SRC = 'instrumented JS src'
-    
+
     ADDRESS_IN_USE_ERROR = dedent("""
         Exception in thread "main" java.lang.RuntimeException: java.net.BindException: Address already in use
             at jscover.Main.runServer(Main.java:470)
@@ -56,7 +54,7 @@ class SrcInstrumenterTest(unittest.TestCase):
                                             requests_module=self.requests)
 
     def tearDown(self):
-        
+
         # Reset the old wait time between attempts
         SrcInstrumenter.WAIT_BETWEEN_ATTEMPTS = self._old_wait_between_attempts
 
@@ -93,7 +91,7 @@ class SrcInstrumenterTest(unittest.TestCase):
         # Expect that a GET request was made at the correct URL
         args, _ = self.requests.get.call_args
         self.assertEqual(len(args), 1)
-        
+
         matches = re.match(r'http://127.0.0.1:\d+/src.js', args[0])
         self.assertIsNot(matches, None)
 
@@ -125,7 +123,7 @@ class SrcInstrumenterTest(unittest.TestCase):
         # Start the service
         self.instrumenter.start()
 
-        # Expect that the service process was started twice, 
+        # Expect that the service process was started twice,
         # with different ports.
         self._assert_jscover_called(self.TEST_TOOL_PATH,
                                     self.TEST_ROOT_DIR,
@@ -170,14 +168,13 @@ class SrcInstrumenterTest(unittest.TestCase):
         with self.assertRaises(SrcInstrumenterError):
             self.instrumenter.instrumented_src('src.js')
 
-
     def test_http_connection_refused_retry(self):
 
         # Raise a connection error on the first connection
         # Then return a success on the second attempt
         self._configure_http_response(200, self.TEST_INSTRUMENTED_SRC)
         self.requests.get.side_effect = [requests.exceptions.ConnectionError,
-                                        self.requests.get.return_value]
+                                         self.requests.get.return_value]
 
         # Get the instrumented source (expect a retry on the first failure)
         result = self.instrumenter.instrumented_src('/src.js')
@@ -290,14 +287,17 @@ class SrcInstrumenterTest(unittest.TestCase):
 class CoverageDataTest(unittest.TestCase):
 
     TEST_COVERAGE_DICT = {
-        '/src1.js': 
-            {'lineData': [2, None, 1, 0, None, 2],
-             'functionData': ['not used'],
-             'branchData': ['not used']},
-        '/subdir/src2.js':
-            {'lineData': [1, 1, 1, 0],
-             'functionData': ['not used'],
-             'branchData': ['not used']}}
+        '/src1.js': {
+            'lineData': [2, None, 1, 0, None, 2],
+            'functionData': ['not used'],
+            'branchData': ['not used']
+        },
+        '/subdir/src2.js': {
+            'lineData': [1, 1, 1, 0],
+            'functionData': ['not used'],
+            'branchData': ['not used']
+        }
+    }
 
     def test_load_from_dict(self):
 
@@ -310,10 +310,10 @@ class CoverageDataTest(unittest.TestCase):
                          [u'/root_dir/src1.js', u'/root_dir/subdir/src2.js'])
 
         self.assertEqual(coverage_data.line_dict_for_src('/root_dir/src1.js'),
-                {0: True, 2: True, 3: False, 5: True})
+                         {0: True, 2: True, 3: False, 5: True})
 
         self.assertEqual(coverage_data.line_dict_for_src('/root_dir/subdir/src2.js'),
-                {0: True, 1: True, 2: True, 3: False})
+                         {0: True, 1: True, 2: True, 3: False})
 
     def test_multiple_load_from_dict(self):
 
@@ -323,13 +323,11 @@ class CoverageDataTest(unittest.TestCase):
 
         # Load additional data covering the lines that were uncovered
         lines = [0, 1, 0, 1, 1, None]
-        coverage_data.load_from_dict('/root_dir', 
-                                     {'/src1.js': {'lineData': lines}})
+        coverage_data.load_from_dict('/root_dir', {'/src1.js': {'lineData': lines}})
 
         # Check that the two sources are combined correctly
         expected = {0: True, 1: True, 2: True, 3: True, 4: True, 5: True}
-        self.assertEqual(coverage_data.line_dict_for_src('/root_dir/src1.js'), 
-                         expected)
+        self.assertEqual(coverage_data.line_dict_for_src('/root_dir/src1.js'), expected)
 
     def test_different_root_dirs(self):
 

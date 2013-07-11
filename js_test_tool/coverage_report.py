@@ -87,7 +87,7 @@ class TemplateCoverageReporter(BaseCoverageReporter):
             {
                 'total_coverage': TOTAL_COVERAGE (decimal),
                 'sources': {
-                    SRC_PATH: { 
+                    SRC_PATH: {
                         'src_coverage': SRC_COVERAGE (decimal),
                         'lines': {
                             LINE_NUM: True | False
@@ -104,9 +104,9 @@ class TemplateCoverageReporter(BaseCoverageReporter):
             'total_coverage': coverage_data.total_coverage(),
             'sources': {
                 coverage_data.rel_src_path(full_path): {
-                   'src_coverage': coverage_data.coverage_for_src(full_path),
-                   'lines': coverage_data.line_dict_for_src(full_path),
-                   'src_lines': self._file_lines(full_path)
+                    'src_coverage': coverage_data.coverage_for_src(full_path),
+                    'lines': coverage_data.line_dict_for_src(full_path),
+                    'src_lines': self._file_lines(full_path)
                 } for full_path in coverage_data.src_list()
             }
         }

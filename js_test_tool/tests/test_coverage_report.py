@@ -50,7 +50,7 @@ class BaseCoverageReporterTest(TempWorkspaceTestCase):
         is equal to `expected_output`.
 
         `coverage_dict` is a dict of the form:
-            
+
             { SRC_PATH: [ COVER_INFO, ...]
 
         where COVER_INFO is either:
@@ -211,7 +211,7 @@ class HtmlCoverageReporterTest(BaseCoverageReporterTest):
                 <p><b>Total coverage</b>: 75.0%</p>
             </div>
         """)
-        
+
         self.assert_output_equals(coverage, expected)
 
     def test_full_coverage(self):
