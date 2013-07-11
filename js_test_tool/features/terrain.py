@@ -20,7 +20,7 @@ FIXTURE_DIR = os.path.join(os.path.dirname(__file__), 'fixtures')
 JSCOVER_ENV = 'JSCOVER_JAR'
 JSCOVER_JAR = 'jscover/target/dist/JSCover-all.jar'
 
-BROWSER_ARGS = ['--use-chrome', '--use-firefox', '--use-phantomjs']
+BROWSER_ARGS = ['--use-firefox', '--use-phantomjs']
 
 
 @before.all

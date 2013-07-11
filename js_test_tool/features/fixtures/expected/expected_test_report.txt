@@ -1,20 +1,6 @@
 =======================
 JavaScript test results
 =======================
-Browser: chrome
------------------------
-Adder: should start at zero [pass]
-Adder: should add to the sum [pass]
-Adder: should keep a running total [pass]
-Adder: should output to the DOM [pass]
-
------------------------
-Failed:  0
-Error:   0
-Skipped: 0
-Passed:  4
-=======================
-=======================
 Browser: firefox
 -----------------------
 Adder: should start at zero [pass]
