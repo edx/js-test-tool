@@ -9,7 +9,8 @@ from jinja2 import Environment, PackageLoader
 TEMPLATE_LOADER = PackageLoader(__package__)
 TEMPLATE_ENV = Environment(loader=TEMPLATE_LOADER,
                            trim_blocks=True,
-                           lstrip_blocks=True)
+                           lstrip_blocks=True,
+                           extensions=['jinja2.ext.with_'])
 
 
 class BaseCoverageReporter(object):
@@ -91,19 +92,41 @@ class TemplateCoverageReporter(BaseCoverageReporter):
                         'lines': {
                             LINE_NUM: True | False
                         }
+                        'src_lines': SRC_LINES
                     }
                 }
             }
+
+        where `SRC_LINES` is a list of lines in the source file,
+        or `None` if the source file could not be read.
         """
         return {
             'total_coverage': coverage_data.total_coverage(),
             'sources': {
                 coverage_data.rel_src_path(full_path): {
                    'src_coverage': coverage_data.coverage_for_src(full_path),
-                   'lines': coverage_data.line_dict_for_src(full_path)
+                   'lines': coverage_data.line_dict_for_src(full_path),
+                   'src_lines': self._file_lines(full_path)
                 } for full_path in coverage_data.src_list()
             }
         }
+
+    @staticmethod
+    def _file_lines(path):
+        """
+        Return a list of the lines in the file at `path`.
+        If the file could not be read, returns None.
+        """
+
+        try:
+            with open(path) as file_handle:
+                lines = file_handle.readlines()
+
+        except IOError:
+            return None
+
+        # Strip the lines of newline chars
+        return [line.strip('\n') for line in lines]
 
 
 class HtmlCoverageReporter(TemplateCoverageReporter):
