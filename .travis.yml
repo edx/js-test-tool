@@ -11,7 +11,8 @@ install:
   - "pip install coveralls"
   - "python setup.py install"
 script:
-  - "coverage run -m nose"
-  - "coverage run `which lettuce` js_test_tool/features"
+  - "coverage run -p -m nose"
+  - "coverage run -p `which lettuce` js_test_tool/features"
 after_success:
+  - "coverage combine"
   - coveralls
