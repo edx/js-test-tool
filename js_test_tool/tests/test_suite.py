@@ -18,25 +18,29 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
     # Temporary directory paths to be created within our root temp dir
     TEMP_DIRS = ['src/subdir', 'spec/subdir', 'lib/subdir',
                  'src/empty', 'spec/empty', 'lib/empty',
-                 'other_src', 'other_spec', 'other_lib']
+                 'other_src', 'other_spec', 'other_lib',
+                 'single_file']
 
     # Test files to create.  Paths specified relative to the root temp dir.
     LIB_FILES = ['lib/1.js', 'lib/2.js', 'lib/subdir/3.js',
-                 'other_lib/test.js']
+                 'other_lib/test.js',
+                 'single_file/lib.js']
 
     SRC_FILES = ['src/1.js', 'src/2.js', 'src/subdir/3.js',
-                 'other_src/test.js']
+                 'other_src/test.js',
+                 'single_file/src.js']
 
     SPEC_FILES = ['spec/1.js', 'spec/2.js', 'spec/subdir/3.js',
-                  'other_spec/test.js']
+                  'other_spec/test.js',
+                  'single_file/spec.js']
 
     IGNORE_FILES = ['src/ignore.txt', 'spec/ignore.txt', 'lib/ignore.txt']
 
     # Valid data used to create the YAML file describing the test suite
     YAML_DATA = {'name': 'test_suite',
-                 'lib_dirs': ['lib', 'other_lib'],
-                 'src_dirs': ['src', 'other_src'],
-                 'spec_dirs': ['spec', 'other_spec'],
+                 'lib_paths': ['lib', 'other_lib', 'single_file/lib.js'],
+                 'src_paths': ['src', 'other_src', 'single_file/src.js'],
+                 'spec_paths': ['spec', 'other_spec', 'single_file/spec.js'],
                  'test_runner': 'jasmine'}
 
     def setUp(self):
@@ -79,6 +83,25 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES)
         self.assertEqual(desc.test_runner(), self.YAML_DATA['test_runner'])
 
+    def test_different_working_dir(self):
+        
+        # Change the working directory temporarily
+        # (the superclass will reset it afterwards)
+        old_wd = os.getcwd()
+        os.chdir(self.TEMP_DIRS[0])
+
+        # Create an in-memory YAML file from the data
+        yaml_file = self._yaml_buffer(self.YAML_DATA)
+
+        # Create the suite description using the YAML file
+        desc = SuiteDescription(yaml_file, self.temp_dir)
+
+        # Check that we find the files we expect
+        self.assertEqual(desc.lib_paths(), self.LIB_FILES)
+        self.assertEqual(desc.src_paths(), self.SRC_FILES)
+        self.assertEqual(desc.spec_paths(), self.SPEC_FILES)
+        self.assertEqual(desc.test_runner(), self.YAML_DATA['test_runner'])
+
     def test_no_such_root_dir(self):
 
         # Try to create a description with a non-existent root directory
@@ -101,9 +124,9 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
 
         # Replace all list values with single values
         yaml_data = self.YAML_DATA.copy()
-        yaml_data['lib_dirs'] = 'lib'
-        yaml_data['src_dirs'] = 'src'
-        yaml_data['spec_dirs'] = 'spec'
+        yaml_data['lib_paths'] = 'lib'
+        yaml_data['src_paths'] = 'src'
+        yaml_data['spec_paths'] = 'spec'
 
         # Create an in-memory YAML file from the data
         yaml_file = self._yaml_buffer(yaml_data)
@@ -119,9 +142,9 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
 
     def test_no_lib_specified(self):
 
-        # 'lib_dirs' is an optional key
+        # 'lib_paths' is an optional key
         yaml_data = self.YAML_DATA.copy()
-        del yaml_data['lib_dirs']
+        del yaml_data['lib_paths']
 
         # Create an in-memory YAML file from the data
         yaml_file = self._yaml_buffer(yaml_data)
@@ -132,9 +155,47 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         # Check that we get an empty list of lib paths
         self.assertEqual(desc.lib_paths(), [])
 
+    def test_non_js_paths(self):
+
+        # Add extra non-JS files
+        yaml_data = self.YAML_DATA.copy()
+        yaml_data['src_paths'].append('src.txt')
+        yaml_data['spec_paths'].append('src.txt')
+        yaml_data['lib_paths'].append('src.txt')
+
+        # Create an in-memory YAML file from the data
+        yaml_file = self._yaml_buffer(yaml_data)
+
+        # Create the suite description using the YAML file
+        desc = SuiteDescription(yaml_file, self.temp_dir)
+
+        # Check that we ignore those files
+        self.assertEqual(desc.lib_paths(), self.LIB_FILES)
+        self.assertEqual(desc.src_paths(), self.SRC_FILES)
+        self.assertEqual(desc.spec_paths(), self.SPEC_FILES)
+
+    def test_repeated_paths(self):
+
+        # Repeat paths that are already included in the directories
+        yaml_data = self.YAML_DATA.copy()
+        yaml_data['src_paths'].append(self.SRC_FILES[0])
+        yaml_data['spec_paths'].append(self.SPEC_FILES[0])
+        yaml_data['lib_paths'].append(self.LIB_FILES[0])
+
+        # Create an in-memory YAML file from the data
+        yaml_file = self._yaml_buffer(yaml_data)
+
+        # Create the suite description using the YAML file
+        desc = SuiteDescription(yaml_file, self.temp_dir)
+
+        # Check that we ignore repeats
+        self.assertEqual(desc.lib_paths(), self.LIB_FILES)
+        self.assertEqual(desc.src_paths(), self.SRC_FILES)
+        self.assertEqual(desc.spec_paths(), self.SPEC_FILES)
+
     def test_missing_required_data(self):
 
-        for key in ['src_dirs', 'spec_dirs', 'test_runner']:
+        for key in ['src_paths', 'spec_paths', 'test_runner']:
 
             # Delete the required key from the description
             yaml_data = self.YAML_DATA.copy()
@@ -148,7 +209,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
 
     def test_empty_required_list(self):
 
-        for key in ['src_dirs', 'spec_dirs']:
+        for key in ['src_paths', 'spec_paths']:
 
             # Replace the key with an empty list
             yaml_data = self.YAML_DATA.copy()

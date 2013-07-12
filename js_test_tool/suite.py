@@ -6,6 +6,8 @@ import os
 import os.path
 from jinja2 import Environment, PackageLoader
 
+import logging
+LOGGER = logging.getLogger(__name__)
 
 # Set up the template environment
 TEMPLATE_LOADER = PackageLoader(__package__)
@@ -27,7 +29,7 @@ class SuiteDescription(object):
     Description of a JavaScript test suite loaded from a file.
     """
 
-    REQUIRED_KEYS = ['src_dirs', 'spec_dirs', 'test_runner']
+    REQUIRED_KEYS = ['src_paths', 'spec_paths', 'test_runner']
 
     # Supported test runners
     TEST_RUNNERS = ['jasmine']
@@ -81,8 +83,8 @@ class SuiteDescription(object):
 
         Raises a `SuiteDescriptionError` if the directory could not be found.
         """
-        if 'lib_dirs' in self._desc_dict:
-            return self._js_paths(self._desc_dict['lib_dirs'])
+        if 'lib_paths' in self._desc_dict:
+            return self._js_paths(self._desc_dict['lib_paths'])
         else:
             return []
 
@@ -95,7 +97,7 @@ class SuiteDescription(object):
 
         Raises a `SuiteDescriptionError` if the directory could not be found.
         """
-        return self._js_paths(self._desc_dict['src_dirs'])
+        return self._js_paths(self._desc_dict['src_paths'])
 
     def spec_paths(self):
         """
@@ -105,7 +107,7 @@ class SuiteDescription(object):
 
         Raises a `SuiteDescriptionError` if the directory could not be found.
         """
-        return self._js_paths(self._desc_dict['spec_dirs'])
+        return self._js_paths(self._desc_dict['spec_paths'])
 
     def test_runner(self):
         """
@@ -116,10 +118,13 @@ class SuiteDescription(object):
         # so the key is guaranteed to exist
         return self._desc_dict['test_runner']
 
-    def _js_paths(self, dir_path_list):
+    def _js_paths(self, path_list):
         """
-        Recursively search the directories at `dir_path_list` (list of paths)
+        Recursively search the directories in `path_list`
         for *.js files.
+
+        `path_list` can contain file paths; these will be included
+        in the returned list of js paths if they have a ".js" extension.
 
         Returns the list of paths to each JS file it finds, prepending
         the path to the search directory.
@@ -128,33 +133,59 @@ class SuiteDescription(object):
         alphabetically.  However, order of the root directories
         is preserved.
 
+        The paths in the resulting list are guaranteed to be unique.
+
         Raises a `SuiteDescriptionError` if the directory could not be found.
         """
+
+        # Create a list of JS paths to return
+        # We use a list instead of a set, even though we
+        # want paths to be unique, because we want
+        # to preserve the dependency order the user
+        # specified.
         js_paths = []
 
-        # Recursively search each directory
-        for dir_path in dir_path_list:
-
-            # Store all paths within this root directory, so
-            # we can sort them while preserving the order of
-            # the root directories.
-            inner_js_paths = []
+        for path in path_list:
 
             # We use the full path here so that we actually find
             # the files we're looking for
-            full_dir_path = os.path.join(self._root_dir, dir_path)
-            for root_dir, _, filenames in os.walk(full_dir_path):
+            full_path = os.path.join(self._root_dir, path)
 
-                # Look for JavaScript files (*.js)
-                for name in filenames:
-                    (_, ext) = os.path.splitext(name)
+            # If the path is a JS file, append it to the list
+            if os.path.isfile(full_path):
+                if self._is_js_file(full_path):
+                    js_paths.append(full_path)
 
-                    if ext == '.js':
-                        inner_js_paths.append(os.path.join(root_dir, name))
+                # This is a user-specified file, so we let the
+                # user know that we are skipping the dependency.
+                else:
+                    msg = "Skipping '{}' because it does not have a '.js' extension".format(path)
+                    LOGGER.warning(msg)
 
-            # Sort the paths in this directory in alphabetical order
-            # then add them to the final list.
-            js_paths.extend(sorted(inner_js_paths, key=str.lower))
+            # If the path is a directory, recursively search for JS files
+            elif os.path.isdir(full_path):
+
+                # Store all paths within this root directory, so
+                # we can sort them while preserving the order of
+                # the root directories.
+                inner_js_paths = []
+
+                for root_dir, _, filenames in os.walk(full_path):
+
+                    # Look for JavaScript files (*.js)
+                    for name in filenames:
+                        if self._is_js_file(name):
+                            inner_js_paths.append(os.path.join(root_dir, name))
+
+                # Sort the paths in this directory in alphabetical order
+                # then add them to the final list.
+                js_paths.extend(sorted(inner_js_paths, key=str.lower))
+
+            # If it's neither a file nor a directory,
+            # this is a user input error, so log it.
+            else:
+                msg = "Could not find file or directory at '{}'".format(path)
+                LOGGER.warning(msg)
 
         # Now that we've found the files we're looking for, we
         # want to return relative paths to our root
@@ -162,7 +193,33 @@ class SuiteDescription(object):
         rel_paths = [os.path.relpath(path, self._root_dir)
                      for path in js_paths]
 
-        return rel_paths
+        # Remove duplicates, preserving the order
+        return self._remove_duplicates(rel_paths)
+
+    @staticmethod
+    def _is_js_file(file_path):
+        """
+        Returns True only if the file at `file_path` has a .js extension.
+        """
+        _, ext = os.path.splitext(file_path)
+        return ext == '.js'
+
+    @staticmethod
+    def _remove_duplicates(path_list):
+        """
+        Return a list of paths with duplicates removed,
+        preserving the order in `path_list`.
+        """
+        already_found = []
+        result = []
+
+        for path in path_list:
+
+            if not path in already_found:
+                result.append(path)
+                already_found.append(path)
+
+        return result
 
     @classmethod
     def _validate_description(cls, desc_dict):
@@ -180,7 +237,7 @@ class SuiteDescription(object):
                 raise SuiteDescriptionError(msg)
 
         # Convert keys that can have multiple values to lists
-        for key in ['lib_dirs', 'src_dirs', 'spec_dirs']:
+        for key in ['lib_paths', 'src_paths', 'spec_paths']:
             if key in desc_dict and not isinstance(desc_dict[key], list):
                 desc_dict[key] = [desc_dict[key]]
 

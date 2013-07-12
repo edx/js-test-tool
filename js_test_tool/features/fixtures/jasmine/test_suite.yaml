@@ -1,4 +1,8 @@
-lib_dirs: [lib]
-spec_dirs: [spec]
-src_dirs: [src]
+---
+lib_paths:
+    - lib
+spec_paths: 
+    - spec
+src_paths: 
+    - src
 test_runner: jasmine
