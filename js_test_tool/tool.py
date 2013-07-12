@@ -46,6 +46,9 @@ def parse_args(argv):
 
     `BROWSER_NAMES` is the list of browsers under which to run the tests.
 
+    `argv` is the list of command line arguments, starting with
+    the name of the program.
+
     Raises an `IOError` if the test suite description does not exist.
     Raises a `SystemExit` exception if arguments are otherwise invalid.
     """
@@ -66,13 +69,14 @@ def parse_args(argv):
                             help=browser_help)
 
     # Parse the arguments
-    arg_dict = vars(parser.parse_args(argv))
+    # Exclude the first argument, which is the name of the program
+    arg_dict = vars(parser.parse_args(argv[1:]))
 
     # Check that we have at least one browser specified
     if not arg_dict.get('browser_names'):
         raise SystemExit('You must specify at least one browser.')
 
-    return vars(parser.parse_args(argv))
+    return arg_dict
 
 
 def generate_reports(suite_runner, output_file):

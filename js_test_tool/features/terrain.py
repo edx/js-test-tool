@@ -81,7 +81,7 @@ def run_tool_with_args(arg_list):
     """
 
     # Install the arguments
-    world.mock_sys.argv = arg_list + BROWSER_ARGS
+    world.mock_sys.argv = ["js-test-tool"] + arg_list + BROWSER_ARGS
 
     # Run the tool
     tool.main()
