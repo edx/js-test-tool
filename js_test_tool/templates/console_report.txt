@@ -1,0 +1,16 @@
+{% import 'console_report_browser.txt' as report %}
+=======================
+JavaScript test results
+{% for results in browser_results %}
+=======================
+{{ report.header(results.browser_name) }}
+-----------------------
+{% if results.test_results %}
+{{ report.results(results.test_results) }}
+-----------------------
+{{ report.stats(results.stats) }}
+{% else %}
+Warning: No test results reported.
+{% endif %}
+=======================
+{% endfor %}

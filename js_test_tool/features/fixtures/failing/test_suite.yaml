@@ -1,0 +1,3 @@
+spec_dirs: [spec]
+src_dirs: [src]
+test_runner: jasmine

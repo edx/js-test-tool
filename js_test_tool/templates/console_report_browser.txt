@@ -1,0 +1,20 @@
+{% macro header(browser_name) -%}
+Browser: {{ browser_name }}
+{%- endmacro %}
+
+{% macro results(test_results) -%}
+{% for result_dict in test_results %}
+{{ result_dict.test_group }}: {{ result_dict.test_name }} [{{ result_dict.status }}]
+{% if result_dict.detail -%}
+{{ result_dict.detail|indent(4, true) }}
+
+{% endif %}
+{% endfor %}
+{%- endmacro %}
+
+{% macro stats(stats_dict) -%}
+Failed:  {{ stats_dict.num_failed }}
+Error:   {{ stats_dict.num_error }}
+Skipped: {{ stats_dict.num_skipped }}
+Passed:  {{ stats_dict.num_passed }}
+{%- endmacro %}

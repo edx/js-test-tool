@@ -1,0 +1,6 @@
+mock
+nose
+coverage
+lettuce
+pep8
+pylint

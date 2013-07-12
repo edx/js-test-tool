@@ -1,0 +1,25 @@
+<?xml version="1.0" ?>
+<!DOCTYPE coverage
+  SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
+<packages>
+    {% if sources %}
+    <package branch-rate="0" complexity="0" line-rate="{{ total_coverage|round(4) }}" name="">
+        {% for src_path, src_data in sources|dictsort %}
+        <class branch-rate="0" complexity="0"
+               filename="{{ src_path }}" line-rate="{{ src_data.src_coverage|round(4) }}"
+               name="{{ src_path }}">
+            <methods />
+            <lines>
+                {% for line_num, is_covered in src_data.lines|dictsort %}
+                {% if is_covered %}
+                <line hits="1" number="{{ line_num }}" />
+                {% else %}
+                <line hits="0" number="{{ line_num }}" />
+                {% endif %}
+                {% endfor %}
+            </lines>
+        </class>
+        {% endfor %}
+    </package>
+    {% endif %}
+</packages>

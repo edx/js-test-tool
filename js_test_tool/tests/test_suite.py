@@ -1,19 +1,19 @@
 import unittest
 import mock
-import tempfile
 import os
 import os.path
-import shutil
 from StringIO import StringIO
 import yaml
 from textwrap import dedent
 from lxml import etree
 
+from js_test_tool.tests.helpers import TempWorkspaceTestCase
+
 from js_test_tool.suite import SuiteDescription, SuiteDescriptionError, \
     SuiteRenderer, SuiteRendererError
 
 
-class SuiteDescriptionTest(unittest.TestCase):
+class SuiteDescriptionTest(TempWorkspaceTestCase):
 
     # Temporary directory paths to be created within our root temp dir
     TEMP_DIRS = ['src/subdir', 'spec/subdir', 'lib/subdir',
@@ -33,19 +33,19 @@ class SuiteDescriptionTest(unittest.TestCase):
     IGNORE_FILES = ['src/ignore.txt', 'spec/ignore.txt', 'lib/ignore.txt']
 
     # Valid data used to create the YAML file describing the test suite
-    YAML_DATA = {'lib_dirs': ['lib', 'other_lib'],
+    YAML_DATA = {'name': 'test_suite',
+                 'lib_dirs': ['lib', 'other_lib'],
                  'src_dirs': ['src', 'other_src'],
                  'spec_dirs': ['spec', 'other_spec'],
-                 'test_runner': 'jasmine',
-                 'browsers': ['chrome', 'firefox']}
+                 'test_runner': 'jasmine'}
 
     def setUp(self):
         """
         Generate fake JS files in a temporary directory.
         """
 
-        # Create a temporary directory 
-        self.temp_dir = tempfile.mkdtemp()
+        # Call the superclass implementation to create the temp workspace
+        super(SuiteDescriptionTest, self).setUp()
 
         # Create subdirectories for dependency, source, and spec files
         # Because we are using `makedirs()`, the intermediate directories
@@ -62,32 +62,40 @@ class SuiteDescriptionTest(unittest.TestCase):
             with open(full_path, "w") as file_handle:
                 file_handle.write('Test data')
 
-        # Set the working directory to the temp dir, so we can
-        # use relative paths within the directory.
-        self._old_cwd = os.getcwd()
-        os.chdir(self.temp_dir)
-
-    def tearDown(self):
-        """
-        Delete the JS files we created and reset the working dir.
-        """
-        shutil.rmtree(self.temp_dir)
-        os.chdir(self._old_cwd)
-
     def test_valid_description(self):
 
         # Create an in-memory YAML file from the data
         yaml_file = self._yaml_buffer(self.YAML_DATA)
 
         # Create the suite description using the YAML file
-        desc = SuiteDescription(yaml_file)
+        desc = SuiteDescription(yaml_file, self.temp_dir)
+
+        # Check that the root directory is stored
+        self.assertEqual(desc.root_dir(), self.temp_dir)
 
         # Check that we find the files we expect
         self.assertEqual(desc.lib_paths(), self.LIB_FILES)
         self.assertEqual(desc.src_paths(), self.SRC_FILES)
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES)
         self.assertEqual(desc.test_runner(), self.YAML_DATA['test_runner'])
-        self.assertEqual(desc.browsers(), self.YAML_DATA['browsers'])
+
+    def test_no_such_root_dir(self):
+
+        # Try to create a description with a non-existent root directory
+        yaml_file = self._yaml_buffer(self.YAML_DATA)
+        no_such_dir = os.path.join(self.temp_dir, 'no_such_dir')
+
+        with self.assertRaises(SuiteDescriptionError):
+            SuiteDescription(yaml_file, no_such_dir)
+
+    def test_root_dir_is_file(self):
+
+        # Try to create a description with a file (not directory) root
+        yaml_file = self._yaml_buffer(self.YAML_DATA)
+        file_path = os.path.join(self.temp_dir, self.SRC_FILES[0])
+
+        with self.assertRaises(SuiteDescriptionError):
+            SuiteDescription(yaml_file, file_path)
 
     def test_non_list_data(self):
 
@@ -96,24 +104,37 @@ class SuiteDescriptionTest(unittest.TestCase):
         yaml_data['lib_dirs'] = 'lib'
         yaml_data['src_dirs'] = 'src'
         yaml_data['spec_dirs'] = 'spec'
-        yaml_data['browsers'] = 'chrome'
 
         # Create an in-memory YAML file from the data
         yaml_file = self._yaml_buffer(yaml_data)
 
         # Create the suite description using the YAML file
-        desc = SuiteDescription(yaml_file)
+        desc = SuiteDescription(yaml_file, self.temp_dir)
 
-        # Check that we get the right paths 
+        # Check that we get the right paths
         # (exclude files from the directories we left out)
         self.assertEqual(desc.lib_paths(), self.LIB_FILES[0:3])
         self.assertEqual(desc.src_paths(), self.SRC_FILES[0:3])
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES[0:3])
-        self.assertEqual(desc.browsers(), ['chrome'])
+
+    def test_no_lib_specified(self):
+
+        # 'lib_dirs' is an optional key
+        yaml_data = self.YAML_DATA.copy()
+        del yaml_data['lib_dirs']
+
+        # Create an in-memory YAML file from the data
+        yaml_file = self._yaml_buffer(yaml_data)
+
+        # Create the suite description using the YAML file
+        desc = SuiteDescription(yaml_file, self.temp_dir)
+
+        # Check that we get an empty list of lib paths
+        self.assertEqual(desc.lib_paths(), [])
 
     def test_missing_required_data(self):
 
-        for key in ['src_dirs', 'spec_dirs', 'test_runner', 'browsers']:
+        for key in ['src_dirs', 'spec_dirs', 'test_runner']:
 
             # Delete the required key from the description
             yaml_data = self.YAML_DATA.copy()
@@ -127,7 +148,7 @@ class SuiteDescriptionTest(unittest.TestCase):
 
     def test_empty_required_list(self):
 
-        for key in ['src_dirs', 'spec_dirs', 'browsers']:
+        for key in ['src_dirs', 'spec_dirs']:
 
             # Replace the key with an empty list
             yaml_data = self.YAML_DATA.copy()
@@ -138,14 +159,6 @@ class SuiteDescriptionTest(unittest.TestCase):
 
             # Check that we get an exception
             self._assert_invalid_desc(yaml_data)
-
-    def test_invalid_browser(self):
-
-        yaml_data = self.YAML_DATA.copy()
-        yaml_data['browsers'] = ['invalid_browser']
-
-        # Check that we get an exception
-        self._assert_invalid_desc(yaml_data)
 
     def test_invalid_test_runner(self):
         yaml_data = self.YAML_DATA.copy()
@@ -165,7 +178,7 @@ class SuiteDescriptionTest(unittest.TestCase):
 
         # Expect an exception when we try to parse the YAML file
         with self.assertRaises(SuiteDescriptionError):
-            SuiteDescription(yaml_file)
+            SuiteDescription(yaml_file, self.temp_dir)
 
     @staticmethod
     def _yaml_buffer(data_dict):
@@ -192,13 +205,9 @@ class SuiteRendererTest(unittest.TestCase):
             var jasmineEnv = jasmine.getEnv();
             jasmineEnv.updateInterval = 1000;
 
-            var htmlReporter = new jasmine.HtmlReporter();
+            var jsonReporter = new jasmine.JsonReporter("js_test_tool_results", "0");
 
-            jasmineEnv.addReporter(htmlReporter);
-
-            jasmineEnv.specFilter = function(spec) {
-                return htmlReporter.specFilter(spec);
-            };
+            jasmineEnv.addReporter(jsonReporter);
 
             var currentWindowOnload = window.onload;
 
@@ -206,6 +215,7 @@ class SuiteRendererTest(unittest.TestCase):
                 if (currentWindowOnload) {
                     currentWindowOnload();
                 }
+
                 execJasmine();
             };
 
@@ -230,15 +240,15 @@ class SuiteRendererTest(unittest.TestCase):
                                'jasmine')
 
         # Render the description as HTML
-        html = self.renderer.render_to_string(desc)
+        html = self.renderer.render_to_string(0, desc)
 
         # Expect that we get a `unicode` string
         self.assertTrue(isinstance(html, unicode))
 
     def test_jasmine_runner(self):
 
-        jasmine_libs = ['lib/jasmine/jasmine.js',
-                        'lib/jasmine/jasmine-html.js']
+        jasmine_libs = ['jasmine/jasmine.js',
+                        'jasmine/jasmine-json.js']
         lib_paths = ['lib1.js', 'lib2.js']
         src_paths = ['src1.js', 'src2.js']
         spec_paths = ['spec1.js', 'spec2.js']
@@ -247,13 +257,13 @@ class SuiteRendererTest(unittest.TestCase):
         desc = self._mock_desc(lib_paths, src_paths, spec_paths, 'jasmine')
 
         # Check that we get the right script includes
-        expected_includes = jasmine_libs + lib_paths + src_paths + spec_paths
-        self._assert_js_includes(expected_includes, desc)
+        suite_includes = lib_paths + src_paths + spec_paths
+        self._assert_js_includes(jasmine_libs, suite_includes, desc)
 
     def test_no_lib_files(self):
 
-        jasmine_libs = ['lib/jasmine/jasmine.js',
-                        'lib/jasmine/jasmine-html.js']
+        jasmine_libs = ['jasmine/jasmine.js',
+                        'jasmine/jasmine-json.js']
         src_paths = ['src.js']
         spec_paths = ['spec.js']
 
@@ -261,8 +271,8 @@ class SuiteRendererTest(unittest.TestCase):
         desc = self._mock_desc([], src_paths, spec_paths, 'jasmine')
 
         # Check that we get the right script includes
-        expected_includes = jasmine_libs + src_paths + spec_paths
-        self._assert_js_includes(expected_includes, desc)
+        suite_includes = src_paths + spec_paths
+        self._assert_js_includes(jasmine_libs, suite_includes, desc)
 
     def test_render_jasmine_runner(self):
 
@@ -270,10 +280,15 @@ class SuiteRendererTest(unittest.TestCase):
         desc = self._mock_desc([], [], [], 'jasmine')
 
         # Render the description to HTML
-        html = self.renderer.render_to_string(desc)
+        html = self.renderer.render_to_string(0, desc)
 
         # Parse the HTML
         tree = etree.HTML(html)
+
+        # Expect that a <div> exists with the correct ID for the results
+        div_id = SuiteRenderer.RESULTS_DIV_ID
+        elems = tree.xpath('/html/body/div[@id="{}"]'.format(div_id))
+        self.assertEqual(len(elems), 1)
 
         # Retrieve the script elements
         script_elems = tree.xpath('/html/head/script')
@@ -296,31 +311,33 @@ class SuiteRendererTest(unittest.TestCase):
 
         # Should get an exception that the template could not be found
         with self.assertRaises(SuiteRendererError):
-            self.renderer.render_to_string(desc)
+            self.renderer.render_to_string(0, desc)
 
     def test_template_render_error(self):
 
         # Create a mock test suite description with no includes
         desc = self._mock_desc([], [], [], 'jasmine')
 
-        # Patch Django's `render_to_string()` function
-        with mock.patch('js_test_tool.suite.render_to_string') as render_func:
+        # Patch Jinja2's `render()` function
+        with mock.patch.object(SuiteRenderer, 'render_template') as render_func:
 
             # Have the render function raise an exception
             render_func.side_effect = ValueError()
 
             # Expect that we get a `SuiteRendererError`
             with self.assertRaises(SuiteRendererError):
-                self.renderer.render_to_string(desc)
+                self.renderer.render_to_string(0, desc)
 
-    def _assert_js_includes(self, expected_includes, suite_desc):
+    def _assert_js_includes(self, runner_includes, suite_includes, suite_desc):
         """
         Render `suite_desc` (a `SuiteDescription` instance or mock) to
         `html`, then asserts that the `html` contains `<script>` tags with
-        `include_paths`, in order.
+        `runner_includes` (files included by default, with a `/runner/` prefix)
+        and `suite_includes` (files included by the test suite,
+        with a `/suite/include` prefix)
         """
         # Render the description as HTML
-        html = self.renderer.render_to_string(suite_desc)
+        html = self.renderer.render_to_string(0, suite_desc)
 
         # Parse the HTML
         tree = etree.HTML(html)
@@ -328,11 +345,17 @@ class SuiteRendererTest(unittest.TestCase):
         # Retrieve all <script> inclusions
         script_elems = tree.xpath('/html/head/script')
 
+        # Prepend the runner and suite includes
+        runner_includes = [os.path.join('/runner', path)
+                           for path in runner_includes]
+        suite_includes = [os.path.join('/suite', '0', 'include', path)
+                          for path in suite_includes]
+
         # Check that they match the sources we provided, in order
         all_paths = [element.get('src') for element in script_elems
                      if element.get('src') is not None]
 
-        self.assertEqual(all_paths, expected_includes)
+        self.assertEqual(all_paths, runner_includes + suite_includes)
 
     @staticmethod
     def _mock_desc(lib_paths, src_paths, spec_paths, test_runner):

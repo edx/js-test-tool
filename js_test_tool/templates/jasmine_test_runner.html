@@ -4,21 +4,20 @@
 <head>
   <title>Jasmine Spec Runner</title>
 
-  <link rel="shortcut icon" type="image/png" href="lib/jasmine/jasmine_favicon.png">
-  <link rel="stylesheet" type="text/css" href="lib/jasmine/jasmine.css">
-  <script type="text/javascript" src="lib/jasmine/jasmine.js"></script>
-  <script type="text/javascript" src="lib/jasmine/jasmine-html.js"></script>
+  <link rel="stylesheet" type="text/css" href="/runner/jasmine/jasmine.css">
+  <script type="text/javascript" src="/runner/jasmine/jasmine.js"></script>
+  <script type="text/javascript" src="/runner/jasmine/jasmine-json.js"></script>
 
   {% for lib_path in lib_path_list %}
-  <script type="text/javascript" src="{{ lib_path }}"></script>
+  <script type="text/javascript" src="/suite/{{ suite_num }}/include/{{ lib_path }}"></script>
   {% endfor %}
 
   {% for src_path in src_path_list %}
-  <script type="text/javascript" src="{{ src_path }}"></script>
+  <script type="text/javascript" src="/suite/{{ suite_num }}/include/{{ src_path }}"></script>
   {% endfor %}
 
   {% for spec_path in spec_path_list %}
-  <script type="text/javascript" src="{{ spec_path }}"></script>
+  <script type="text/javascript" src="/suite/{{ suite_num }}/include/{{ spec_path }}"></script>
   {% endfor %}
 
   <script type="text/javascript">
@@ -26,13 +25,9 @@
     var jasmineEnv = jasmine.getEnv();
     jasmineEnv.updateInterval = 1000;
 
-    var htmlReporter = new jasmine.HtmlReporter();
+    var jsonReporter = new jasmine.JsonReporter("{{ div_id }}", "{{ suite_num }}");
 
-    jasmineEnv.addReporter(htmlReporter);
-
-    jasmineEnv.specFilter = function(spec) {
-        return htmlReporter.specFilter(spec);
-    };
+    jasmineEnv.addReporter(jsonReporter);
 
     var currentWindowOnload = window.onload;
 
@@ -40,6 +35,7 @@
         if (currentWindowOnload) {
             currentWindowOnload();
         }
+
         execJasmine();
     };
 
@@ -53,5 +49,6 @@
 </head>
 
 <body>
+    <div id="{{ div_id }}"></div>
 </body>
 </html>
