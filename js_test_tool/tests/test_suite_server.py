@@ -33,6 +33,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
             suite.lib_paths.return_value = []
             suite.src_paths.return_value = []
             suite.spec_paths.return_value = []
+            suite.fixture_paths.return_value = []
             suite.root_dir.return_value = os.getcwd()
 
         # Create a mock suite renderer
@@ -139,6 +140,41 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         # Expect that the server sends us the files
         for path in spec_paths:
             url = self.server.root_url() + 'suite/0/include/' + path
+            self._assert_page_equals(url, expected_page)
+
+    def test_serve_fixtures(self):
+
+        # Configure the suite description to contain fixture files
+        fixture_paths = ['fixtures/1.html', 'fixtures/subdir/2.html']
+        self.suite_desc_list[0].fixture_paths.return_value = fixture_paths
+
+        # Create fake files to serve
+        os.makedirs('fixtures/subdir')
+        expected_page = u'test fi\u039Eture'
+        self._create_fake_files(fixture_paths, expected_page)
+
+        # Expect that the server sends us the files
+        for path in fixture_paths:
+            url = self.server.root_url() + 'suite/0/include/' + path
+            self._assert_page_equals(url, expected_page)
+
+    def test_ignore_get_params(self):
+
+        # Configure the suite description to contain dependency files
+        dependencies = ['1.js', '2.js', '3.js', '4.js']
+        self.suite_desc_list[0].lib_paths.return_value = [dependencies[0]]
+        self.suite_desc_list[0].src_paths.return_value = [dependencies[1]]
+        self.suite_desc_list[0].spec_paths.return_value = [dependencies[2]]
+        self.suite_desc_list[0].fixture_paths.return_value = [dependencies[3]]
+
+        # Create fake files to serve
+        expected_page = u'\u0236est dependency'
+        self._create_fake_files(dependencies, expected_page)
+
+        # Expect that the server sends us the files,
+        # ignoring any GET parameters we pass in the URL
+        for path in dependencies:
+            url = self.server.root_url() + 'suite/0/include/' + path + "?123456"
             self._assert_page_equals(url, expected_page)
 
     def test_different_working_dir(self):

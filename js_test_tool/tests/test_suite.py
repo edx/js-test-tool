@@ -20,7 +20,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
     TEMP_DIRS = ['src/subdir', 'spec/subdir', 'lib/subdir',
                  'src/empty', 'spec/empty', 'lib/empty',
                  'other_src', 'other_spec', 'other_lib',
-                 'single_file']
+                 'fixtures', 'single_file']
 
     # Test files to create.  Paths specified relative to the root temp dir.
     LIB_FILES = ['lib/1.js', 'lib/2.js', 'lib/subdir/3.js',
@@ -35,6 +35,9 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
                   'other_spec/test.js',
                   'single_file/spec.js']
 
+    FIXTURE_FILES = ['fixtures/fix1.html', 'fixtures/fix2.html',
+                     'single_file/fix.html']
+
     IGNORE_FILES = ['src/ignore.txt', 'spec/ignore.txt', 'lib/ignore.txt']
 
     # Valid data used to create the YAML file describing the test suite
@@ -42,6 +45,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
                  'lib_paths': ['lib', 'other_lib', 'single_file/lib.js'],
                  'src_paths': ['src', 'other_src', 'single_file/src.js'],
                  'spec_paths': ['spec', 'other_spec', 'single_file/spec.js'],
+                 'fixture_paths': ['fixtures', 'single_file/fix.html'],
                  'test_runner': 'jasmine'}
 
     def setUp(self):
@@ -60,7 +64,8 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
 
         # Create the test files
         all_files = (self.LIB_FILES + self.SRC_FILES
-                     + self.SPEC_FILES + self.IGNORE_FILES)
+                     + self.SPEC_FILES + self.FIXTURE_FILES
+                     + self.IGNORE_FILES)
 
         for file_path in all_files:
             full_path = os.path.join(self.temp_dir, file_path)
@@ -82,6 +87,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.lib_paths(), self.LIB_FILES)
         self.assertEqual(desc.src_paths(), self.SRC_FILES)
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES)
+        self.assertEqual(desc.fixture_paths(), self.FIXTURE_FILES)
         self.assertEqual(desc.test_runner(), self.YAML_DATA['test_runner'])
 
     def test_different_working_dir(self):
@@ -101,6 +107,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.lib_paths(), self.LIB_FILES)
         self.assertEqual(desc.src_paths(), self.SRC_FILES)
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES)
+        self.assertEqual(desc.fixture_paths(), self.FIXTURE_FILES)
         self.assertEqual(desc.test_runner(), self.YAML_DATA['test_runner'])
 
     def test_no_such_root_dir(self):
@@ -128,6 +135,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         yaml_data['lib_paths'] = 'lib'
         yaml_data['src_paths'] = 'src'
         yaml_data['spec_paths'] = 'spec'
+        yaml_data['fixture_paths'] = 'fixtures'
 
         # Create an in-memory YAML file from the data
         yaml_file = self._yaml_buffer(yaml_data)
@@ -168,6 +176,21 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         # Check that we get an empty list of lib paths
         self.assertEqual(desc.lib_paths(), [])
 
+    def test_no_fixtures_specified(self):
+
+        # 'fixture_paths' is an optional key
+        yaml_data = copy.deepcopy(self.YAML_DATA)
+        del yaml_data['fixture_paths']
+
+        # Create an in-memory YAML file from the data
+        yaml_file = self._yaml_buffer(yaml_data)
+
+        # Create the suite description using the YAML file
+        desc = SuiteDescription(yaml_file, self.temp_dir)
+
+        # Check that we get an empty list of lib paths
+        self.assertEqual(desc.fixture_paths(), [])
+
     def test_non_js_paths(self):
 
         # Add extra non-JS files
@@ -194,6 +217,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         yaml_data['src_paths'].append(self.SRC_FILES[0])
         yaml_data['spec_paths'].append(self.SPEC_FILES[0])
         yaml_data['lib_paths'].append(self.LIB_FILES[0])
+        yaml_data['fixture_paths'].append(self.FIXTURE_FILES[0])
 
         # Create an in-memory YAML file from the data
         yaml_file = self._yaml_buffer(yaml_data)
@@ -205,6 +229,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.lib_paths(), self.LIB_FILES)
         self.assertEqual(desc.src_paths(), self.SRC_FILES)
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES)
+        self.assertEqual(desc.fixture_paths(), self.FIXTURE_FILES)
 
     def test_missing_required_data(self):
 

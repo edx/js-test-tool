@@ -326,7 +326,9 @@ class DependencyPageHandler(BasePageHandler):
     Load dependencies required by the test suite description.
     """
 
-    PATH_REGEX = re.compile('^/suite/([0-9]+)/include/(.+)$')
+    # Parse the suite number and relative path,
+    # ignoring any GET parameters in the URL.
+    PATH_REGEX = re.compile('^/suite/([0-9]+)/include/([^?]+).*$')
 
     def __init__(self, desc_list):
         """
@@ -395,7 +397,8 @@ class DependencyPageHandler(BasePageHandler):
         # Get all dependency paths
         all_paths = (suite_desc.lib_paths() +
                      suite_desc.src_paths() +
-                     suite_desc.spec_paths())
+                     suite_desc.spec_paths() +
+                     suite_desc.fixture_paths())
 
         # If the path is in our listed dependencies, we can serve it
         if path in all_paths:
