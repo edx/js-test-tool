@@ -140,6 +140,18 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.src_paths(), self.SRC_FILES[0:3])
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES[0:3])
 
+    def test_yaml_is_list_not_dict(self):
+
+        # Set up the YAML file to be a list of dicts instead
+        # of a dict.
+        # (This is easy to do by mistake in the YAML syntax).
+        bad_data = [{key: value} for key, value in self.YAML_DATA.iteritems()]
+        yaml_file = self._yaml_buffer(bad_data)
+
+        # Expect an exception
+        with self.assertRaises(SuiteDescriptionError):
+            SuiteDescription(yaml_file, self.temp_dir)
+
     def test_no_lib_specified(self):
 
         # 'lib_paths' is an optional key

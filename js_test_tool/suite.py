@@ -4,6 +4,7 @@ Load test suite descriptions and generate test runner files.
 import yaml
 import os
 import os.path
+from textwrap import dedent
 from jinja2 import Environment, PackageLoader
 
 import logging
@@ -227,6 +228,25 @@ class SuiteDescription(object):
         Validate that `desc_dict` (a `dict`)contains all the required data,
         raising a `SuiteDescriptionError` if any key is missing.
         """
+
+        # Check that we have a dict
+        # The YAML syntax makes it easy to specify
+        # a list of dicts rather than a dict, which we expect.
+        if not isinstance(desc_dict, dict):
+            msg = dedent("""
+                    Suite description must be a dictionary.
+                    Check that your keys look like this:
+
+                    spec_paths:
+                        - spec
+                    
+                    and not like this:
+
+                    - spec_paths:
+                        - spec
+
+                    (note the initial - sign).""")
+            raise SuiteDescriptionError(msg)
 
         # Expect that all required keys are present and non-empty
         for key in cls.REQUIRED_KEYS:
