@@ -4,6 +4,7 @@ import os
 import os.path
 from StringIO import StringIO
 import yaml
+import copy
 from textwrap import dedent
 from lxml import etree
 
@@ -123,7 +124,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
     def test_non_list_data(self):
 
         # Replace all list values with single values
-        yaml_data = self.YAML_DATA.copy()
+        yaml_data = copy.deepcopy(self.YAML_DATA)
         yaml_data['lib_paths'] = 'lib'
         yaml_data['src_paths'] = 'src'
         yaml_data['spec_paths'] = 'spec'
@@ -155,7 +156,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
     def test_no_lib_specified(self):
 
         # 'lib_paths' is an optional key
-        yaml_data = self.YAML_DATA.copy()
+        yaml_data = copy.deepcopy(self.YAML_DATA)
         del yaml_data['lib_paths']
 
         # Create an in-memory YAML file from the data
@@ -170,7 +171,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
     def test_non_js_paths(self):
 
         # Add extra non-JS files
-        yaml_data = self.YAML_DATA.copy()
+        yaml_data = copy.deepcopy(self.YAML_DATA)
         yaml_data['src_paths'].append('src.txt')
         yaml_data['spec_paths'].append('src.txt')
         yaml_data['lib_paths'].append('src.txt')
@@ -189,7 +190,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
     def test_repeated_paths(self):
 
         # Repeat paths that are already included in the directories
-        yaml_data = self.YAML_DATA.copy()
+        yaml_data = copy.deepcopy(self.YAML_DATA)
         yaml_data['src_paths'].append(self.SRC_FILES[0])
         yaml_data['spec_paths'].append(self.SPEC_FILES[0])
         yaml_data['lib_paths'].append(self.LIB_FILES[0])
@@ -210,7 +211,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         for key in ['src_paths', 'spec_paths', 'test_runner']:
 
             # Delete the required key from the description
-            yaml_data = self.YAML_DATA.copy()
+            yaml_data = copy.deepcopy(self.YAML_DATA)
             del yaml_data[key]
 
             # Print a message to make failures more informative
@@ -224,7 +225,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         for key in ['src_paths', 'spec_paths']:
 
             # Replace the key with an empty list
-            yaml_data = self.YAML_DATA.copy()
+            yaml_data = copy.deepcopy(self.YAML_DATA)
             yaml_data[key] = []
 
             # Print a message to make failures more informative
@@ -234,7 +235,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
             self._assert_invalid_desc(yaml_data)
 
     def test_invalid_test_runner(self):
-        yaml_data = self.YAML_DATA.copy()
+        yaml_data = copy.deepcopy(self.YAML_DATA)
         yaml_data['test_runner'] = 'invalid_test_runner'
 
         # Check that we get an exception

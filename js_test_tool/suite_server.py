@@ -625,6 +625,15 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         """
         self._handle_request("POST")
 
+    def log_message(self, format, *args):
+        """
+        Override the base-class logger to avoid
+        spamming the console.
+        """
+        LOGGER.debug("{} -- [{}] {}".format(self.client_address[0],
+                                            self.log_date_time_string(),
+                                            format % args))
+
     def _handle_request(self, method):
         """
         Handle an HTTP request of type `method` (e.g. "GET" or "POST")
