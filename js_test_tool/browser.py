@@ -22,6 +22,10 @@ class Browser(object):
     # containing the JSON-encoded test results
     RESULTS_DIV_ID = 'js_test_tool_results'
 
+    # Expect that the results <div> will have this
+    # class when all the results are posted.
+    DONE_DIV_CLASS = "done"
+
     # Wait time for the DOM to load, in seconds
     TIMEOUT = 10
 
@@ -76,8 +80,8 @@ class Browser(object):
             raise BrowserError("Could not load page at '{}'".format(url))
 
         # Wait for the DOM to load
-        self._splinter_browser.is_element_present_by_id(self.RESULTS_DIV_ID,
-                                                        wait_time=self.TIMEOUT)
+        css_sel = "#{}.{}".format(self.RESULTS_DIV_ID, self.DONE_DIV_CLASS)
+        self._splinter_browser.is_element_present_by_css(css_sel, wait_time=self.TIMEOUT)
 
         # Retrieve the <div> containing the JSON-encoded results
         elements = self._splinter_browser.find_by_id(self.RESULTS_DIV_ID)

@@ -1,7 +1,7 @@
 from unittest import TestCase
 import json
+from textwrap import dedent
 from js_test_tool.browser import Browser, BrowserError
-from js_test_tool.suite import SuiteRenderer
 from js_test_tool.tests.helpers import StubServer
 
 
@@ -39,8 +39,9 @@ class BrowserTest(TestCase):
                     'testStatus': 'pass',
                     'testDetail': ''}]
 
-        content = u'<div id="{}">{}</div>'.format(SuiteRenderer.RESULTS_DIV_ID,
-                                                  json.dumps(results))
+        content = u'<div id="{}" class="{}">{}</div>'.format(Browser.RESULTS_DIV_ID,
+                                                             Browser.DONE_DIV_CLASS,
+                                                             json.dumps(results))
         self.stub_server.set_response(200, content)
 
         # Use the browser to load the page and parse the results
@@ -72,8 +73,9 @@ class BrowserTest(TestCase):
                      '"testStatus":"fail",' +
                      '"testDetail":"Error: Expected true to be falsy.\n at new jasmine.ExpectationResult"}]')
 
-        content = u'<div id="{}">{}</div>'.format(SuiteRenderer.RESULTS_DIV_ID,
-                                                  json_data)
+        content = u'<div id="{}" class="{}">{}</div>'.format(Browser.RESULTS_DIV_ID,
+                                                             Browser.DONE_DIV_CLASS,
+                                                             json_data)
         self.stub_server.set_response(200, content)
 
         # Use the browser to load the page and parse the results
@@ -91,7 +93,8 @@ class BrowserTest(TestCase):
 
     def test_no_results(self):
         # Configure the stub server to send an empty <div>
-        content = u'<div id="{}">[]</div>'.format(SuiteRenderer.RESULTS_DIV_ID)
+        content = u'<div id="{}" class="{}">[]</div>'.format(Browser.RESULTS_DIV_ID,
+                                                             Browser.DONE_DIV_CLASS)
         self.stub_server.set_response(200, content)
 
         # Use the browser to load the page and parse the results
@@ -101,9 +104,41 @@ class BrowserTest(TestCase):
         # Expect we get an empty list back
         self.assertEqual(output_results, [])
 
+    def test_slow_results(self):
+
+        # Configure the stub server to fill in the <div>
+        # after a long delay.
+        content = dedent(u"""
+            <script type="text/javascript">
+            setTimeout(function() {
+                var json = ('[{"testGroup":"group", ' + 
+                            '"testName":"name", ' +
+                            '"testStatus":"fail", ' +
+                            '"testDetail":"detail"}]');
+                var el = document.getElementById("js_test_tool_results");
+                el.innerText = json
+                el.className = "done"
+            }, 1000);
+            </script>
+            <div id="js_test_tool_results"></div>
+            """).strip()
+        self.stub_server.set_response(200, content)
+
+        # Use the browser to load the page and parse the results
+        server_url = self.stub_server.root_url()
+        output_results = self.browser.get_page_results(server_url)
+
+        # Expect that we block until the results load
+        expected_results = [
+            {u'test_group': u"group",
+             u'test_name': u"name",
+             u'status': u"fail",
+             u'detail': u"detail"}]
+        self.assertEqual(expected_results, output_results)
+
     def test_error_conditions(self):
 
-        div_id = SuiteRenderer.RESULTS_DIV_ID
+        div_id = Browser.RESULTS_DIV_ID
         error_responses = [(200, u'<div id="wrong_id"></div>'),
                            (200, u''),
                            (200, u'<div id="{}">Not JSON</div>'.format(div_id)),

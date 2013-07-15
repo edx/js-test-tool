@@ -46,7 +46,13 @@ jasmine.JsonReporter.prototype.reportRunnerResults = function(runner) {
     var divElement = document.getElementById(this._divId);
     
     if (divElement) {
+
+        // Write the results to the specified div
         divElement.innerHTML = this._jsonResults();
+
+        // Change the class to "done" to indicate that
+        // all results are written.
+        divElement.className = "done";
     }
 
     // If we could not find the <div>, throw an error.
