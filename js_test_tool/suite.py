@@ -4,6 +4,7 @@ Load test suite descriptions and generate test runner files.
 import yaml
 import os
 import os.path
+from textwrap import dedent
 from jinja2 import Environment, PackageLoader
 
 import logging
@@ -81,7 +82,7 @@ class SuiteDescription(object):
 
         Preserves the order of lib directories.
 
-        Raises a `SuiteDescriptionError` if the directory could not be found.
+        Raises a `SuiteDescriptionError` if a file or directory could not be found.
         """
         if 'lib_paths' in self._desc_dict:
             return self._js_paths(self._desc_dict['lib_paths'])
@@ -95,7 +96,7 @@ class SuiteDescription(object):
 
         Preserves the order of source directories.
 
-        Raises a `SuiteDescriptionError` if the directory could not be found.
+        Raises a `SuiteDescriptionError` if a file or directory could not be found.
         """
         return self._js_paths(self._desc_dict['src_paths'])
 
@@ -105,9 +106,21 @@ class SuiteDescription(object):
 
         Preserves the order of spec directories.
 
-        Raises a `SuiteDescriptionError` if the directory could not be found.
+        Raises a `SuiteDescriptionError` if a file or directory could not be found.
         """
         return self._js_paths(self._desc_dict['spec_paths'])
+
+    def fixture_paths(self):
+        """
+        Return a list of paths to fixture files used by the test suite.
+        These can be non-JavaScript files.
+
+        Raises a `SuiteDescriptionError` if a file or directory could not be found.
+        """
+        if 'fixture_paths' in self._desc_dict:
+            return self._file_paths(self._desc_dict['fixture_paths'])
+        else:
+            return []
 
     def test_runner(self):
         """
@@ -120,14 +133,23 @@ class SuiteDescription(object):
 
     def _js_paths(self, path_list):
         """
-        Recursively search the directories in `path_list`
-        for *.js files.
+        Find *.js files in `path_list`.  See `_file_paths` for
+        more information.
+        """
+        return self._file_paths(path_list, include_func=self._is_js_file)
 
-        `path_list` can contain file paths; these will be included
-        in the returned list of js paths if they have a ".js" extension.
+    def _file_paths(self, path_list, include_func=lambda file_path: True):
+        """
+        Recursively search the directories in `path_list` for
+        files that satisfy `include_func`.
 
-        Returns the list of paths to each JS file it finds, prepending
-        the path to the search directory.
+        `path_list` is a list of file and directory paths.
+        `include_func` is a function that acccepts a `file_path` argument
+        and returns a bool indicating whether to include the file.
+
+        Returns the list of  paths to each file it finds.
+        These are relative paths to the root directory passed
+        to the constructor.
 
         Within each directory in `dir_path_list`, paths are sorted
         alphabetically.  However, order of the root directories
@@ -138,12 +160,12 @@ class SuiteDescription(object):
         Raises a `SuiteDescriptionError` if the directory could not be found.
         """
 
-        # Create a list of JS paths to return
+        # Create a list of paths to return
         # We use a list instead of a set, even though we
         # want paths to be unique, because we want
         # to preserve the dependency order the user
         # specified.
-        js_paths = []
+        result_paths = []
 
         for path in path_list:
 
@@ -151,10 +173,11 @@ class SuiteDescription(object):
             # the files we're looking for
             full_path = os.path.join(self._root_dir, path)
 
-            # If the path is a JS file, append it to the list
+            # If the path is a file and satisfies the include function
+            # then add it to the list.
             if os.path.isfile(full_path):
-                if self._is_js_file(full_path):
-                    js_paths.append(full_path)
+                if include_func(full_path):
+                    result_paths.append(full_path)
 
                 # This is a user-specified file, so we let the
                 # user know that we are skipping the dependency.
@@ -168,18 +191,18 @@ class SuiteDescription(object):
                 # Store all paths within this root directory, so
                 # we can sort them while preserving the order of
                 # the root directories.
-                inner_js_paths = []
+                inner_paths = []
 
                 for root_dir, _, filenames in os.walk(full_path):
 
-                    # Look for JavaScript files (*.js)
+                    # Look for files that satisfy the include func
                     for name in filenames:
-                        if self._is_js_file(name):
-                            inner_js_paths.append(os.path.join(root_dir, name))
+                        if include_func(name):
+                            inner_paths.append(os.path.join(root_dir, name))
 
                 # Sort the paths in this directory in alphabetical order
                 # then add them to the final list.
-                js_paths.extend(sorted(inner_js_paths, key=str.lower))
+                result_paths.extend(sorted(inner_paths, key=str.lower))
 
             # If it's neither a file nor a directory,
             # this is a user input error, so log it.
@@ -191,7 +214,7 @@ class SuiteDescription(object):
         # want to return relative paths to our root
         # (for use in URLs)
         rel_paths = [os.path.relpath(path, self._root_dir)
-                     for path in js_paths]
+                     for path in result_paths]
 
         # Remove duplicates, preserving the order
         return self._remove_duplicates(rel_paths)
@@ -228,6 +251,25 @@ class SuiteDescription(object):
         raising a `SuiteDescriptionError` if any key is missing.
         """
 
+        # Check that we have a dict
+        # The YAML syntax makes it easy to specify
+        # a list of dicts rather than a dict, which we expect.
+        if not isinstance(desc_dict, dict):
+            msg = dedent("""
+                    Suite description must be a dictionary.
+                    Check that your keys look like this:
+
+                    spec_paths:
+                        - spec
+
+                    and not like this:
+
+                    - spec_paths:
+                        - spec
+
+                    (note the initial - sign).""")
+            raise SuiteDescriptionError(msg)
+
         # Expect that all required keys are present and non-empty
         for key in cls.REQUIRED_KEYS:
 
@@ -237,7 +279,7 @@ class SuiteDescription(object):
                 raise SuiteDescriptionError(msg)
 
         # Convert keys that can have multiple values to lists
-        for key in ['lib_paths', 'src_paths', 'spec_paths']:
+        for key in ['lib_paths', 'src_paths', 'spec_paths', 'fixture_paths']:
             if key in desc_dict and not isinstance(desc_dict[key], list):
                 desc_dict[key] = [desc_dict[key]]
 

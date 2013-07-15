@@ -326,7 +326,9 @@ class DependencyPageHandler(BasePageHandler):
     Load dependencies required by the test suite description.
     """
 
-    PATH_REGEX = re.compile('^/suite/([0-9]+)/include/(.+)$')
+    # Parse the suite number and relative path,
+    # ignoring any GET parameters in the URL.
+    PATH_REGEX = re.compile('^/suite/([0-9]+)/include/([^?]+).*$')
 
     def __init__(self, desc_list):
         """
@@ -340,6 +342,8 @@ class DependencyPageHandler(BasePageHandler):
         """
         Load the test suite dependency file, using a path relative
         to the description file.
+
+        Returns a `unicode` string of the page contents.
         """
 
         # Interpret the arguments (from the regex)
@@ -370,7 +374,7 @@ class DependencyPageHandler(BasePageHandler):
 
             # Successfully loaded the file; return the contents as a unicode str
             else:
-                return contents.decode()
+                return contents.decode('utf-8')
 
         # If this is not one of our listed dependencies, return None
         else:
@@ -393,7 +397,8 @@ class DependencyPageHandler(BasePageHandler):
         # Get all dependency paths
         all_paths = (suite_desc.lib_paths() +
                      suite_desc.src_paths() +
-                     suite_desc.spec_paths())
+                     suite_desc.spec_paths() +
+                     suite_desc.fixture_paths())
 
         # If the path is in our listed dependencies, we can serve it
         if path in all_paths:
@@ -625,6 +630,15 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         """
         self._handle_request("POST")
 
+    def log_message(self, format_str, *args):
+        """
+        Override the base-class logger to avoid
+        spamming the console.
+        """
+        LOGGER.debug("{} -- [{}] {}".format(self.client_address[0],
+                                            self.log_date_time_string(),
+                                            format_str % args))
+
     def _handle_request(self, method):
         """
         Handle an HTTP request of type `method` (e.g. "GET" or "POST")
@@ -658,7 +672,7 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
         if content:
-            self.wfile.write(content)
+            self.wfile.write(content.encode('utf8'))
 
     def _content(self):
         """

@@ -33,6 +33,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
             suite.lib_paths.return_value = []
             suite.src_paths.return_value = []
             suite.spec_paths.return_value = []
+            suite.fixture_paths.return_value = []
             suite.root_dir.return_value = os.getcwd()
 
         # Create a mock suite renderer
@@ -101,7 +102,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Create fake files to serve
         os.makedirs('lib/subdir')
-        expected_page = u'test lib file'
+        expected_page = u'\u0236est \u023Dib file'
         self._create_fake_files(lib_paths, expected_page)
 
         # Expect that the server sends us the files
@@ -117,7 +118,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Create fake files to serve
         os.makedirs('src/subdir')
-        expected_page = u'test src file'
+        expected_page = u'test \u023Frc file'
         self._create_fake_files(src_paths, expected_page)
 
         # Expect that the server sends us the files
@@ -133,12 +134,47 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Create fake files to serve
         os.makedirs('spec/subdir')
-        expected_page = u'test spec file'
+        expected_page = u'test spe\u023C file'
         self._create_fake_files(spec_paths, expected_page)
 
         # Expect that the server sends us the files
         for path in spec_paths:
             url = self.server.root_url() + 'suite/0/include/' + path
+            self._assert_page_equals(url, expected_page)
+
+    def test_serve_fixtures(self):
+
+        # Configure the suite description to contain fixture files
+        fixture_paths = ['fixtures/1.html', 'fixtures/subdir/2.html']
+        self.suite_desc_list[0].fixture_paths.return_value = fixture_paths
+
+        # Create fake files to serve
+        os.makedirs('fixtures/subdir')
+        expected_page = u'test fi\u039Eture'
+        self._create_fake_files(fixture_paths, expected_page)
+
+        # Expect that the server sends us the files
+        for path in fixture_paths:
+            url = self.server.root_url() + 'suite/0/include/' + path
+            self._assert_page_equals(url, expected_page)
+
+    def test_ignore_get_params(self):
+
+        # Configure the suite description to contain dependency files
+        dependencies = ['1.js', '2.js', '3.js', '4.js']
+        self.suite_desc_list[0].lib_paths.return_value = [dependencies[0]]
+        self.suite_desc_list[0].src_paths.return_value = [dependencies[1]]
+        self.suite_desc_list[0].spec_paths.return_value = [dependencies[2]]
+        self.suite_desc_list[0].fixture_paths.return_value = [dependencies[3]]
+
+        # Create fake files to serve
+        expected_page = u'\u0236est dependency'
+        self._create_fake_files(dependencies, expected_page)
+
+        # Expect that the server sends us the files,
+        # ignoring any GET parameters we pass in the URL
+        for path in dependencies:
+            url = self.server.root_url() + 'suite/0/include/' + path + "?123456"
             self._assert_page_equals(url, expected_page)
 
     def test_different_working_dir(self):
@@ -205,7 +241,8 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         self.assertEqual(response.status_code, requests.codes.ok, msg=url)
 
         # Expect that the content is what we rendered
-        self.assertIn(expected_content, response.content, msg=url)
+        self.assertIn(expected_content,
+                      response.content.decode('utf8'), msg=url)
 
         # Expect that the encoding is UTF-8
         self.assertEqual(response.encoding, 'utf-8', msg=url)
@@ -219,7 +256,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         for path in path_list:
             with open(path, 'w') as fake_file:
-                fake_file.write(contents)
+                fake_file.write(contents.encode('utf8'))
 
 
 class SuiteServerCoverageTest(unittest.TestCase):

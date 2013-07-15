@@ -9,6 +9,8 @@ import os
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 import threading
 
+import logging
+LOGGER = logging.getLogger(__name__)
 
 class TempWorkspaceTestCase(unittest.TestCase):
     """
@@ -135,6 +137,14 @@ class StubRequestHandler(BaseHTTPRequestHandler):
         """
         self.server.log_request('GET', self.path, self._content())
         self._send_server_response()
+
+    def log_message(self, format_str, *args):
+        """
+        Override the base-class logger to avoid spamming the console.
+        """
+        LOGGER.debug("{} -- [{}] {}".format(self.client_address[0],
+                                            self.log_date_time_string(),
+                                            format_str % args))
 
     def _content(self):
         """

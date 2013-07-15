@@ -22,7 +22,7 @@ class BaseCoverageReporterTest(TempWorkspaceTestCase):
     # Dummy source file data to be created in the workspace
     SRC_FILES = ["root_dir/src1.js", "root_dir/src2.js"]
     SRC_LENGTH = 10
-    SRC_CONTENT = "\n".join(["Line {}".format(num)
+    SRC_CONTENT = "\n".join([u'\u026Eine {}'.format(num)
                              for num in range(1, SRC_LENGTH + 1)])
 
     def setUp(self):
@@ -42,7 +42,7 @@ class BaseCoverageReporterTest(TempWorkspaceTestCase):
 
         for src_path in self.SRC_FILES:
             with open(src_path, "w") as src_file:
-                src_file.write(self.SRC_CONTENT)
+                src_file.write(self.SRC_CONTENT.encode('utf8'))
 
     def assert_output_equals(self, coverage_dict, expected_output):
         """
@@ -118,7 +118,7 @@ class HtmlCoverageReporterTest(BaseCoverageReporterTest):
 
     def test_empty_report(self):
         coverage = {}
-        expected = self._build_html("""
+        expected = self._build_html(u"""
             <p>No coverage information was reported.</p>
         """)
 
@@ -126,21 +126,21 @@ class HtmlCoverageReporterTest(BaseCoverageReporterTest):
 
     def test_one_src_file(self):
         coverage = {'src1.js': [None, 1, 1, 0, None, 1]}
-        expected = self._build_html("""
+        expected = self._build_html(u"""
             <div class="src">
                 <div class="src_desc"><b>Source:</b> src1.js (75.0%)</div>
                 <div class="src_display">
                     <table>
-                        <tr><td>1</td><td><pre>Line 1</pre></td></tr>
-                        <tr><td>2</td><td class="covered"><pre>Line 2</pre></td></tr>
-                        <tr><td>3</td><td class="covered"><pre>Line 3</pre></td></tr>
-                        <tr><td>4</td><td class="uncovered"><pre>Line 4</pre></td></tr>
-                        <tr><td>5</td><td><pre>Line 5</pre></td></tr>
-                        <tr><td>6</td><td class="covered"><pre>Line 6</pre></td></tr>
-                        <tr><td>7</td><td><pre>Line 7</pre></td></tr>
-                        <tr><td>8</td><td><pre>Line 8</pre></td></tr>
-                        <tr><td>9</td><td><pre>Line 9</pre></td></tr>
-                        <tr><td>10</td><td><pre>Line 10</pre></td></tr>
+                        <tr><td>1</td><td><pre>\u026Eine 1</pre></td></tr>
+                        <tr><td>2</td><td class="covered"><pre>\u026Eine 2</pre></td></tr>
+                        <tr><td>3</td><td class="covered"><pre>\u026Eine 3</pre></td></tr>
+                        <tr><td>4</td><td class="uncovered"><pre>\u026Eine 4</pre></td></tr>
+                        <tr><td>5</td><td><pre>\u026Eine 5</pre></td></tr>
+                        <tr><td>6</td><td class="covered"><pre>\u026Eine 6</pre></td></tr>
+                        <tr><td>7</td><td><pre>\u026Eine 7</pre></td></tr>
+                        <tr><td>8</td><td><pre>\u026Eine 8</pre></td></tr>
+                        <tr><td>9</td><td><pre>\u026Eine 9</pre></td></tr>
+                        <tr><td>10</td><td><pre>\u026Eine 10</pre></td></tr>
                     </table>
                 </div>
             </div>
@@ -154,21 +154,21 @@ class HtmlCoverageReporterTest(BaseCoverageReporterTest):
 
     def test_multiple_src_files(self):
         coverage = {'src1.js': [None, 1, 1, 0, None, 1], 'src2.js': [1, 1]}
-        expected = self._build_html("""
+        expected = self._build_html(u"""
             <div class="src">
                 <div class="src_desc"><b>Source:</b> src1.js (75.0%)</div>
                 <div class="src_display">
                     <table>
-                        <tr><td>1</td><td><pre>Line 1</pre></td></tr>
-                        <tr><td>2</td><td class="covered"><pre>Line 2</pre></td></tr>
-                        <tr><td>3</td><td class="covered"><pre>Line 3</pre></td></tr>
-                        <tr><td>4</td><td class="uncovered"><pre>Line 4</pre></td></tr>
-                        <tr><td>5</td><td><pre>Line 5</pre></td></tr>
-                        <tr><td>6</td><td class="covered"><pre>Line 6</pre></td></tr>
-                        <tr><td>7</td><td><pre>Line 7</pre></td></tr>
-                        <tr><td>8</td><td><pre>Line 8</pre></td></tr>
-                        <tr><td>9</td><td><pre>Line 9</pre></td></tr>
-                        <tr><td>10</td><td><pre>Line 10</pre></td></tr>
+                        <tr><td>1</td><td><pre>\u026Eine 1</pre></td></tr>
+                        <tr><td>2</td><td class="covered"><pre>\u026Eine 2</pre></td></tr>
+                        <tr><td>3</td><td class="covered"><pre>\u026Eine 3</pre></td></tr>
+                        <tr><td>4</td><td class="uncovered"><pre>\u026Eine 4</pre></td></tr>
+                        <tr><td>5</td><td><pre>\u026Eine 5</pre></td></tr>
+                        <tr><td>6</td><td class="covered"><pre>\u026Eine 6</pre></td></tr>
+                        <tr><td>7</td><td><pre>\u026Eine 7</pre></td></tr>
+                        <tr><td>8</td><td><pre>\u026Eine 8</pre></td></tr>
+                        <tr><td>9</td><td><pre>\u026Eine 9</pre></td></tr>
+                        <tr><td>10</td><td><pre>\u026Eine 10</pre></td></tr>
                     </table>
                 </div>
             </div>
@@ -176,16 +176,16 @@ class HtmlCoverageReporterTest(BaseCoverageReporterTest):
                 <div class="src_desc"><b>Source:</b> src2.js (100.0%)</div>
                 <div class="src_display">
                     <table>
-                        <tr><td>1</td><td class="covered"><pre>Line 1</pre></td></tr>
-                        <tr><td>2</td><td class="covered"><pre>Line 2</pre></td></tr>
-                        <tr><td>3</td><td><pre>Line 3</pre></td></tr>
-                        <tr><td>4</td><td><pre>Line 4</pre></td></tr>
-                        <tr><td>5</td><td><pre>Line 5</pre></td></tr>
-                        <tr><td>6</td><td><pre>Line 6</pre></td></tr>
-                        <tr><td>7</td><td><pre>Line 7</pre></td></tr>
-                        <tr><td>8</td><td><pre>Line 8</pre></td></tr>
-                        <tr><td>9</td><td><pre>Line 9</pre></td></tr>
-                        <tr><td>10</td><td><pre>Line 10</pre></td></tr>
+                        <tr><td>1</td><td class="covered"><pre>\u026Eine 1</pre></td></tr>
+                        <tr><td>2</td><td class="covered"><pre>\u026Eine 2</pre></td></tr>
+                        <tr><td>3</td><td><pre>\u026Eine 3</pre></td></tr>
+                        <tr><td>4</td><td><pre>\u026Eine 4</pre></td></tr>
+                        <tr><td>5</td><td><pre>\u026Eine 5</pre></td></tr>
+                        <tr><td>6</td><td><pre>\u026Eine 6</pre></td></tr>
+                        <tr><td>7</td><td><pre>\u026Eine 7</pre></td></tr>
+                        <tr><td>8</td><td><pre>\u026Eine 8</pre></td></tr>
+                        <tr><td>9</td><td><pre>\u026Eine 9</pre></td></tr>
+                        <tr><td>10</td><td><pre>\u026Eine 10</pre></td></tr>
                     </table>
                 </div>
             </div>
@@ -199,7 +199,7 @@ class HtmlCoverageReporterTest(BaseCoverageReporterTest):
 
     def test_src_not_found(self):
         coverage = {'not_found.js': [None, 1, 1, 0, None, 1]}
-        expected = self._build_html("""
+        expected = self._build_html(u"""
             <div class="src">
                 <div class="src_desc"><b>Source:</b> not_found.js (75.0%)</div>
                 <div class="src_display">
@@ -216,21 +216,21 @@ class HtmlCoverageReporterTest(BaseCoverageReporterTest):
 
     def test_full_coverage(self):
         coverage = {'src1.js': [1, 1], 'src2.js': [1, 1]}
-        expected = self._build_html("""
+        expected = self._build_html(u"""
             <div class="src">
                 <div class="src_desc"><b>Source:</b> src1.js (100.0%)</div>
                 <div class="src_display">
                     <table>
-                        <tr><td>1</td><td class="covered"><pre>Line 1</pre></td></tr>
-                        <tr><td>2</td><td class="covered"><pre>Line 2</pre></td></tr>
-                        <tr><td>3</td><td><pre>Line 3</pre></td></tr>
-                        <tr><td>4</td><td><pre>Line 4</pre></td></tr>
-                        <tr><td>5</td><td><pre>Line 5</pre></td></tr>
-                        <tr><td>6</td><td><pre>Line 6</pre></td></tr>
-                        <tr><td>7</td><td><pre>Line 7</pre></td></tr>
-                        <tr><td>8</td><td><pre>Line 8</pre></td></tr>
-                        <tr><td>9</td><td><pre>Line 9</pre></td></tr>
-                        <tr><td>10</td><td><pre>Line 10</pre></td></tr>
+                        <tr><td>1</td><td class="covered"><pre>\u026Eine 1</pre></td></tr>
+                        <tr><td>2</td><td class="covered"><pre>\u026Eine 2</pre></td></tr>
+                        <tr><td>3</td><td><pre>\u026Eine 3</pre></td></tr>
+                        <tr><td>4</td><td><pre>\u026Eine 4</pre></td></tr>
+                        <tr><td>5</td><td><pre>\u026Eine 5</pre></td></tr>
+                        <tr><td>6</td><td><pre>\u026Eine 6</pre></td></tr>
+                        <tr><td>7</td><td><pre>\u026Eine 7</pre></td></tr>
+                        <tr><td>8</td><td><pre>\u026Eine 8</pre></td></tr>
+                        <tr><td>9</td><td><pre>\u026Eine 9</pre></td></tr>
+                        <tr><td>10</td><td><pre>\u026Eine 10</pre></td></tr>
                     </table>
                 </div>
             </div>
@@ -238,16 +238,16 @@ class HtmlCoverageReporterTest(BaseCoverageReporterTest):
                 <div class="src_desc"><b>Source:</b> src2.js (100.0%)</div>
                 <div class="src_display">
                     <table>
-                        <tr><td>1</td><td class="covered"><pre>Line 1</pre></td></tr>
-                        <tr><td>2</td><td class="covered"><pre>Line 2</pre></td></tr>
-                        <tr><td>3</td><td><pre>Line 3</pre></td></tr>
-                        <tr><td>4</td><td><pre>Line 4</pre></td></tr>
-                        <tr><td>5</td><td><pre>Line 5</pre></td></tr>
-                        <tr><td>6</td><td><pre>Line 6</pre></td></tr>
-                        <tr><td>7</td><td><pre>Line 7</pre></td></tr>
-                        <tr><td>8</td><td><pre>Line 8</pre></td></tr>
-                        <tr><td>9</td><td><pre>Line 9</pre></td></tr>
-                        <tr><td>10</td><td><pre>Line 10</pre></td></tr>
+                        <tr><td>1</td><td class="covered"><pre>\u026Eine 1</pre></td></tr>
+                        <tr><td>2</td><td class="covered"><pre>\u026Eine 2</pre></td></tr>
+                        <tr><td>3</td><td><pre>\u026Eine 3</pre></td></tr>
+                        <tr><td>4</td><td><pre>\u026Eine 4</pre></td></tr>
+                        <tr><td>5</td><td><pre>\u026Eine 5</pre></td></tr>
+                        <tr><td>6</td><td><pre>\u026Eine 6</pre></td></tr>
+                        <tr><td>7</td><td><pre>\u026Eine 7</pre></td></tr>
+                        <tr><td>8</td><td><pre>\u026Eine 8</pre></td></tr>
+                        <tr><td>9</td><td><pre>\u026Eine 9</pre></td></tr>
+                        <tr><td>10</td><td><pre>\u026Eine 10</pre></td></tr>
                     </table>
                 </div>
             </div>
@@ -261,21 +261,21 @@ class HtmlCoverageReporterTest(BaseCoverageReporterTest):
 
     def test_no_coverage(self):
         coverage = {'src1.js': [0, 0], 'src2.js': [0, 0]}
-        expected = self._build_html("""
+        expected = self._build_html(u"""
             <div class="src">
                 <div class="src_desc"><b>Source:</b> src1.js (0.0%)</div>
                 <div class="src_display">
                     <table>
-                        <tr><td>1</td><td class="uncovered"><pre>Line 1</pre></td></tr>
-                        <tr><td>2</td><td class="uncovered"><pre>Line 2</pre></td></tr>
-                        <tr><td>3</td><td><pre>Line 3</pre></td></tr>
-                        <tr><td>4</td><td><pre>Line 4</pre></td></tr>
-                        <tr><td>5</td><td><pre>Line 5</pre></td></tr>
-                        <tr><td>6</td><td><pre>Line 6</pre></td></tr>
-                        <tr><td>7</td><td><pre>Line 7</pre></td></tr>
-                        <tr><td>8</td><td><pre>Line 8</pre></td></tr>
-                        <tr><td>9</td><td><pre>Line 9</pre></td></tr>
-                        <tr><td>10</td><td><pre>Line 10</pre></td></tr>
+                        <tr><td>1</td><td class="uncovered"><pre>\u026Eine 1</pre></td></tr>
+                        <tr><td>2</td><td class="uncovered"><pre>\u026Eine 2</pre></td></tr>
+                        <tr><td>3</td><td><pre>\u026Eine 3</pre></td></tr>
+                        <tr><td>4</td><td><pre>\u026Eine 4</pre></td></tr>
+                        <tr><td>5</td><td><pre>\u026Eine 5</pre></td></tr>
+                        <tr><td>6</td><td><pre>\u026Eine 6</pre></td></tr>
+                        <tr><td>7</td><td><pre>\u026Eine 7</pre></td></tr>
+                        <tr><td>8</td><td><pre>\u026Eine 8</pre></td></tr>
+                        <tr><td>9</td><td><pre>\u026Eine 9</pre></td></tr>
+                        <tr><td>10</td><td><pre>\u026Eine 10</pre></td></tr>
                     </table>
                 </div>
             </div>
@@ -283,16 +283,16 @@ class HtmlCoverageReporterTest(BaseCoverageReporterTest):
                 <div class="src_desc"><b>Source:</b> src2.js (0.0%)</div>
                 <div class="src_display">
                     <table>
-                        <tr><td>1</td><td class="uncovered"><pre>Line 1</pre></td></tr>
-                        <tr><td>2</td><td class="uncovered"><pre>Line 2</pre></td></tr>
-                        <tr><td>3</td><td><pre>Line 3</pre></td></tr>
-                        <tr><td>4</td><td><pre>Line 4</pre></td></tr>
-                        <tr><td>5</td><td><pre>Line 5</pre></td></tr>
-                        <tr><td>6</td><td><pre>Line 6</pre></td></tr>
-                        <tr><td>7</td><td><pre>Line 7</pre></td></tr>
-                        <tr><td>8</td><td><pre>Line 8</pre></td></tr>
-                        <tr><td>9</td><td><pre>Line 9</pre></td></tr>
-                        <tr><td>10</td><td><pre>Line 10</pre></td></tr>
+                        <tr><td>1</td><td class="uncovered"><pre>\u026Eine 1</pre></td></tr>
+                        <tr><td>2</td><td class="uncovered"><pre>\u026Eine 2</pre></td></tr>
+                        <tr><td>3</td><td><pre>\u026Eine 3</pre></td></tr>
+                        <tr><td>4</td><td><pre>\u026Eine 4</pre></td></tr>
+                        <tr><td>5</td><td><pre>\u026Eine 5</pre></td></tr>
+                        <tr><td>6</td><td><pre>\u026Eine 6</pre></td></tr>
+                        <tr><td>7</td><td><pre>\u026Eine 7</pre></td></tr>
+                        <tr><td>8</td><td><pre>\u026Eine 8</pre></td></tr>
+                        <tr><td>9</td><td><pre>\u026Eine 9</pre></td></tr>
+                        <tr><td>10</td><td><pre>\u026Eine 10</pre></td></tr>
                     </table>
                 </div>
             </div>
@@ -317,7 +317,7 @@ class HtmlCoverageReporterTest(BaseCoverageReporterTest):
                              for line in no_indent.split('\n')])
 
         # Add the header and footer
-        return "{}\n{}\n{}".format(self.HTML_HEADER, content, self.HTML_FOOTER)
+        return u"{}\n{}\n{}".format(self.HTML_HEADER, content, self.HTML_FOOTER)
 
 
 class XmlCoverageReporterTest(BaseCoverageReporterTest):

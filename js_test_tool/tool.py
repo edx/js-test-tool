@@ -19,11 +19,6 @@ BROWSER_ARGS = [('--use-phantomjs', 'phantomjs', PHANTOMJS_HELP),
                 ('--use-firefox', 'firefox', FIREFOX_HELP)]
 
 
-# Configure the logger to print to the console
-import logging
-logging.basicConfig(stream=sys.stdout)
-
-
 def parse_args(argv):
     """
     Parse command line arguments, returning a dict of valid options.
