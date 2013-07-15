@@ -101,7 +101,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Create fake files to serve
         os.makedirs('lib/subdir')
-        expected_page = u'test lib file'
+        expected_page = u'\u0236est \u023Dib file'
         self._create_fake_files(lib_paths, expected_page)
 
         # Expect that the server sends us the files
@@ -117,7 +117,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Create fake files to serve
         os.makedirs('src/subdir')
-        expected_page = u'test src file'
+        expected_page = u'test \u023Frc file'
         self._create_fake_files(src_paths, expected_page)
 
         # Expect that the server sends us the files
@@ -133,7 +133,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Create fake files to serve
         os.makedirs('spec/subdir')
-        expected_page = u'test spec file'
+        expected_page = u'test spe\u023C file'
         self._create_fake_files(spec_paths, expected_page)
 
         # Expect that the server sends us the files
@@ -205,7 +205,8 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         self.assertEqual(response.status_code, requests.codes.ok, msg=url)
 
         # Expect that the content is what we rendered
-        self.assertIn(expected_content, response.content, msg=url)
+        self.assertIn(expected_content,
+                      response.content.decode('utf8'), msg=url)
 
         # Expect that the encoding is UTF-8
         self.assertEqual(response.encoding, 'utf-8', msg=url)
@@ -219,7 +220,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         for path in path_list:
             with open(path, 'w') as fake_file:
-                fake_file.write(contents)
+                fake_file.write(contents.encode('utf8'))
 
 
 class SuiteServerCoverageTest(unittest.TestCase):

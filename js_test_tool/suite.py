@@ -239,7 +239,7 @@ class SuiteDescription(object):
 
                     spec_paths:
                         - spec
-                    
+
                     and not like this:
 
                     - spec_paths:

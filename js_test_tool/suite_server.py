@@ -340,6 +340,8 @@ class DependencyPageHandler(BasePageHandler):
         """
         Load the test suite dependency file, using a path relative
         to the description file.
+
+        Returns a `unicode` string of the page contents.
         """
 
         # Interpret the arguments (from the regex)
@@ -370,7 +372,7 @@ class DependencyPageHandler(BasePageHandler):
 
             # Successfully loaded the file; return the contents as a unicode str
             else:
-                return contents.decode()
+                return contents.decode('utf-8')
 
         # If this is not one of our listed dependencies, return None
         else:
@@ -625,14 +627,14 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         """
         self._handle_request("POST")
 
-    def log_message(self, format, *args):
+    def log_message(self, format_str, *args):
         """
         Override the base-class logger to avoid
         spamming the console.
         """
         LOGGER.debug("{} -- [{}] {}".format(self.client_address[0],
                                             self.log_date_time_string(),
-                                            format % args))
+                                            format_str % args))
 
     def _handle_request(self, method):
         """
@@ -667,7 +669,7 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
         if content:
-            self.wfile.write(content)
+            self.wfile.write(content.encode('utf8'))
 
     def _content(self):
         """

@@ -65,7 +65,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         for file_path in all_files:
             full_path = os.path.join(self.temp_dir, file_path)
             with open(full_path, "w") as file_handle:
-                file_handle.write('Test data')
+                file_handle.write(u'\u023Eest \u0256ata'.encode('utf8'))
 
     def test_valid_description(self):
 

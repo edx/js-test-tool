@@ -41,7 +41,7 @@ class BaseCoverageReporter(object):
 
         # Write the report to the output file
         with open(self._output_path, "w") as output_file:
-            output_file.write(report_str)
+            output_file.write(report_str.encode('utf8'))
 
     @abstractmethod
     def generate_report(self, coverage_data):
@@ -116,6 +116,8 @@ class TemplateCoverageReporter(BaseCoverageReporter):
         """
         Return a list of the lines in the file at `path`.
         If the file could not be read, returns None.
+
+        Returns the lines as UTF-8 unicode strings.
         """
 
         try:
@@ -126,7 +128,10 @@ class TemplateCoverageReporter(BaseCoverageReporter):
             return None
 
         # Strip the lines of newline chars
-        return [line.strip('\n') for line in lines]
+        lines = [line.strip('\n') for line in lines]
+
+        # Decode the unicode lines
+        return [line.decode('utf8') for line in lines]
 
 
 class HtmlCoverageReporter(TemplateCoverageReporter):

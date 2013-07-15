@@ -96,7 +96,7 @@ class Browser(object):
 
             # Raise an error if invalid JSON
             except ValueError:
-                msg = "Could not decode JSON test results: '{}'".format(contents)
+                msg = "Could not decode JSON test results for '{}'".format(url)
                 raise BrowserError(msg)
 
     def name(self):
