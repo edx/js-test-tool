@@ -34,16 +34,16 @@ class BrowserTest(TestCase):
     def test_get_page_results(self):
 
         # Configure the stub server to send a valid test results page
-        results = [{'testGroup': 'Adder tests',
-                    'testName': 'it should start at zero',
+        results = [{'testGroup': "Adder%20tests",
+                    'testName': "it%20should%20start%20at%20zero",
                     'testStatus': 'pass',
                     'testDetail': ''},
-                   {'testGroup': 'Adder tests',
-                    'testName': 'it should add to the sum',
+                   {'testGroup': 'Adder%20tests',
+                    'testName': "it%20should%20add%20to%20the%20sum",
                     'testStatus': 'fail',
-                    'testDetail': 'Stack trace'},
-                   {'testGroup': 'Multiplier test',
-                    'testName': 'it should multiply',
+                    'testDetail': 'Stack%20trace'},
+                   {'testGroup': 'Multiplier%20test',
+                    'testName': 'it%20should%20multiply',
                     'testStatus': 'pass',
                     'testDetail': ''}]
 
@@ -73,13 +73,13 @@ class BrowserTest(TestCase):
 
         self.assertEqual(expected_results, output_results)
 
-    def test_get_page_results_control_chars(self):
+    def test_result_control_chars(self):
 
         # Try sending a control char
-        json_data = ('[{"testGroup":"when song has been paused",' +
-                     '"testName":"should indicate that the song is currently paused",' +
+        json_data = ('[{"testGroup":"when%20song%20has%20been%20paused",' +
+                     '"testName":"should%20indicate%20that%20the%20song%20is%20currently%20paused",' +
                      '"testStatus":"fail",' +
-                     '"testDetail":"Error: Expected true to be falsy.\n at new jasmine.ExpectationResult"}]')
+                     '"testDetail":"Error:%20Expected%20true%20to%20be%20falsy.%0A%20at%20new%20jasmine.ExpectationResult"}]')
 
         content = u'<div id="{}" class="{}">{}</div>'.format(Browser.RESULTS_DIV_ID,
                                                              Browser.DONE_DIV_CLASS,
@@ -96,6 +96,58 @@ class BrowserTest(TestCase):
              u'test_name': u"should indicate that the song is currently paused",
              u'status': u"fail",
              u'detail': u"Error: Expected true to be falsy.\n at new jasmine.ExpectationResult"}]
+
+        self.assertEqual(expected_results, output_results)
+
+    def test_result_html_chars(self):
+
+        # Try sending unescaped HTML
+        results = [{'testGroup': "%3Cdiv%3Ehtml%20%26%20%27%20%22%20%5C%20%3C/div%3E",
+                    'testName': "%3Cb%3Emore%3C/b%3E%20%26%20%27%20%22%20%5C%20html",
+                    'testStatus': "pass",
+                    'testDetail': "%3Cb%3Eeven%20more%20%26%20%27%20%22%20%5C%20html"}]
+
+        content = u'<div id="{}" class="{}">{}</div>'.format(Browser.RESULTS_DIV_ID,
+                                                             Browser.DONE_DIV_CLASS,
+                                                             json.dumps(results))
+        self.stub_server.set_response(200, content)
+
+        # Use the browser to load the page and parse the results
+        server_url = self.stub_server.root_url()
+        output_results = self.browser.get_page_results(server_url)
+
+        # Expect that we get the results back
+        expected_results = [
+            {u'test_group': u"<div>html & ' \" \\ </div>",
+             u'test_name': u"<b>more</b> & ' \" \\ html",
+             u'status': u"pass",
+             u'detail': u"<b>even more & ' \" \\ html"}]
+
+        self.assertEqual(expected_results, output_results)
+
+    def test_results_unicode(self):
+
+        # Try sending unicode chars
+        results = [{'testGroup': u'\u017C'.encode('utf8'),
+                    'testName': u'\u0184'.encode('utf8'),
+                    'testStatus': u'\u018A'.encode('utf8'),
+                    'testDetail': u'\u02AA'.encode('utf8')}]
+
+        content = u'<div id="{}" class="{}">{}</div>'.format(Browser.RESULTS_DIV_ID,
+                                                             Browser.DONE_DIV_CLASS,
+                                                             json.dumps(results))
+        self.stub_server.set_response(200, content)
+
+        # Use the browser to load the page and parse the results
+        server_url = self.stub_server.root_url()
+        output_results = self.browser.get_page_results(server_url)
+
+        # Expect that we get the results back
+        expected_results = [
+            {u'test_group': u'\u017C',
+             u'test_name': u'\u0184',
+             u'status': u'\u018A',
+             u'detail': u'\u02AA'}]
 
         self.assertEqual(expected_results, output_results)
 

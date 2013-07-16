@@ -4,6 +4,7 @@ Load suite runner pages in a browser and parse the results.
 
 from splinter.browser import Browser as SplinterBrowser
 import json
+from urllib import unquote
 
 
 class BrowserError(Exception):
@@ -146,11 +147,17 @@ class Browser(object):
                              'status': result_dict.get('testStatus'),
                              'detail': result_dict.get('testDetail')}
 
-            # Verify that we got all the keys we expected
+            # Verify and unescape the values
             for key, value in modified_dict.items():
+
+                # Verify that we got all the keys we expected
                 if value is None:
                     msg = "Test result is missing required key '{}'".format(key)
                     raise BrowserError(msg)
+
+                else:
+                    unescaped = unquote(value)
+                    modified_dict[key] = unescaped
 
             # Add the modified dict to the list
             final_list.append(modified_dict)
