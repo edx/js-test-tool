@@ -27,7 +27,9 @@ class Browser(object):
     DONE_DIV_CLASS = "done"
 
     # Wait time for the DOM to load, in seconds
-    TIMEOUT = 10
+    # It could take a long time for all the tests to complete,
+    # so we set this number relatively high.
+    TIMEOUT = 600
 
     def __init__(self, browser_name):
         """
@@ -79,7 +81,7 @@ class Browser(object):
         if not self._splinter_browser.status_code.is_success():
             raise BrowserError("Could not load page at '{}'".format(url))
 
-        # Wait for the DOM to load
+        # Wait for the DOM to load and for all tests to complete
         css_sel = "#{}.{}".format(self.RESULTS_DIV_ID, self.DONE_DIV_CLASS)
         self._splinter_browser.is_element_present_by_css(css_sel, wait_time=self.TIMEOUT)
 

@@ -15,6 +15,11 @@ class BrowserTest(TestCase):
         # Create the browser (use PhantomJS)
         self.browser = Browser('phantomjs')
 
+        # Configure the browser to have a shorter
+        # timeout to speed up the test suite
+        self._old_timeout = Browser.TIMEOUT
+        Browser.TIMEOUT = 2.0
+
     def tearDown(self):
 
         # Stop the server and free the port
@@ -22,6 +27,9 @@ class BrowserTest(TestCase):
 
         # Stop the browser
         self.browser.quit()
+
+        # Restore the old timeout
+        Browser.TIMEOUT = self._old_timeout
 
     def test_get_page_results(self):
 
@@ -108,6 +116,7 @@ class BrowserTest(TestCase):
 
         # Configure the stub server to fill in the <div>
         # after a long delay.
+        delay_ms = 1000
         content = dedent(u"""
             <script type="text/javascript">
             setTimeout(function() {
@@ -117,11 +126,14 @@ class BrowserTest(TestCase):
                             '"testDetail":"detail"}]');
                 var el = document.getElementById("js_test_tool_results");
                 el.innerText = json
-                el.className = "done"
-            }, 1000);
+                el.className = "%s"
+            }, %d);
             </script>
-            <div id="js_test_tool_results"></div>
-            """).strip()
+            <div id="%s"></div>
+            """ % (Browser.DONE_DIV_CLASS,
+                   delay_ms,
+                   Browser.RESULTS_DIV_ID)).strip()
+
         self.stub_server.set_response(200, content)
 
         # Use the browser to load the page and parse the results
