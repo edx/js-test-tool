@@ -147,8 +147,8 @@ jasmine.JsonReporter.Result = function(testGroup, testName,
     // `testName` is the name of the specific test case
     // `testStatus` is either "pass", "fail", "error", or "skip"
     // `testDetail` is a string describing the test result
-    this.testGroup = testGroup;
-    this.testName = testName;
-    this.testStatus = testStatus;
-    this.testDetail = testDetail;
+    this.testGroup = escape(testGroup);
+    this.testName = escape(testName);
+    this.testStatus = escape(testStatus);
+    this.testDetail = escape(testDetail);
 };
