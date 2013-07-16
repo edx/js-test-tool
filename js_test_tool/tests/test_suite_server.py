@@ -158,6 +158,27 @@ class SuitePageServerTest(TempWorkspaceTestCase):
             url = self.server.root_url() + 'suite/0/include/' + path
             self._assert_page_equals(url, expected_page)
 
+    def test_serve_iso_encoded_dependency(self):
+        
+        # Configure the suite description to contain dependency files
+        # that are ISO encoded
+        dependencies = ['1.js', '2.js', '3.js', '4.js']
+        self.suite_desc_list[0].lib_paths.return_value = [dependencies[0]]
+        self.suite_desc_list[0].src_paths.return_value = [dependencies[1]]
+        self.suite_desc_list[0].spec_paths.return_value = [dependencies[2]]
+        self.suite_desc_list[0].fixture_paths.return_value = [dependencies[3]]
+
+        # Create fake files to serve with ISO-8859-1 chars
+        page_contents = '\xf6 \x9a \xa0'
+        self._create_fake_files(dependencies, page_contents, encoding=None)
+
+        # Expect that the server sends us the files,
+        # ignoring any GET parameters we pass in the URL
+        expected_page = u'\xf6 \x9a \xa0'
+        for path in dependencies:
+            url = self.server.root_url() + 'suite/0/include/' + path + "?123456"
+            self._assert_page_equals(url, expected_page)
+
     def test_ignore_get_params(self):
 
         # Configure the suite description to contain dependency files
@@ -248,7 +269,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         self.assertEqual(response.encoding, 'utf-8', msg=url)
 
     @staticmethod
-    def _create_fake_files(path_list, contents):
+    def _create_fake_files(path_list, contents, encoding='utf8'):
         """
         For each path in `path_list`, create a file containing `contents`
         (a string).
@@ -256,7 +277,16 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         for path in path_list:
             with open(path, 'w') as fake_file:
-                fake_file.write(contents.encode('utf8'))
+
+                # If an encoding is specified, use it to convert
+                # the string to a byte str
+                if encoding is not None:
+                    encoded_contents = contents.encode(encoding)
+                else:
+                    encoded_contents = contents
+
+                # Write the byte string to the file
+                fake_file.write(encoded_contents)
 
 
 class SuiteServerCoverageTest(unittest.TestCase):
