@@ -374,7 +374,14 @@ class DependencyPageHandler(BasePageHandler):
 
             # Successfully loaded the file; return the contents as a unicode str
             else:
-                return contents.decode('utf-8')
+
+                # First try to decode as UTF-8
+                try:
+                    return contents.decode('utf-8')
+
+                # If we can't decode as UTF-8, try ISO-8859-1
+                except UnicodeDecodeError:
+                    return contents.decode('iso-8859-1')
 
         # If this is not one of our listed dependencies, return None
         else:
