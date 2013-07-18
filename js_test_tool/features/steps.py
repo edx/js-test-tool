@@ -18,24 +18,24 @@ EXPECTED_TEST_REPORT = 'expected/expected_test_report.txt'
 
 @step(u'When I run js-test-tool without coverage')
 def run_tool_with_no_coverage(step):
-    world.run_tool_with_args([TEST_SUITE_DESC_PATH])
+    world.run_tool_with_args(['run', TEST_SUITE_DESC_PATH])
 
 
 @step(u'When I run js-test-tool with XML coverage')
 def run_tool_with_xml_coverage(step):
-    args = [TEST_SUITE_DESC_PATH, '--coverage-xml', ACTUAL_COVERAGE_XML]
+    args = ['run', TEST_SUITE_DESC_PATH, '--coverage-xml', ACTUAL_COVERAGE_XML]
     world.run_tool_with_args(args)
 
 
 @step(u'When I run js-test-tool with HTML coverage')
 def run_tool_with_html_coverage(step):
-    args = [TEST_SUITE_DESC_PATH, '--coverage-html', ACTUAL_COVERAGE_HTML]
+    args = ['run', TEST_SUITE_DESC_PATH, '--coverage-html', ACTUAL_COVERAGE_HTML]
     world.run_tool_with_args(args)
 
 
 @step(u'When I run js-test-tool with XML and HTML coverage')
 def run_tool_with_html_coverage(step):
-    args = [TEST_SUITE_DESC_PATH,
+    args = ['run', TEST_SUITE_DESC_PATH,
             '--coverage-html', ACTUAL_COVERAGE_HTML,
             '--coverage-xml', ACTUAL_COVERAGE_XML]
     world.run_tool_with_args(args)
@@ -43,12 +43,12 @@ def run_tool_with_html_coverage(step):
 
 @step(u'When I run js-test-tool with a passing test suite')
 def run_tool_with_passing_test_suite(step):
-    world.run_tool_with_args([PASSING_SUITE_DESC_PATH])
+    world.run_tool_with_args(['run', PASSING_SUITE_DESC_PATH])
 
 
 @step(u'When I run js-test-tool with a failing test suite')
 def run_tool_with_failing_test_suite(step):
-    world.run_tool_with_args([FAILING_SUITE_DESC_PATH])
+    world.run_tool_with_args(['run', FAILING_SUITE_DESC_PATH])
 
 
 @step(u'Then An XML coverage report is generated')
@@ -85,3 +85,14 @@ def disable_coverage_dependencies(step):
 @step(u'Then The tool exits with status "([^"]*)"')
 def exits_with_status(step, status_code):
     world.assert_exit_code(status_code)
+
+
+@step(u'When I run js-test-tool init')
+def when_i_run_js_test_tool_init(step):
+    args = ['init', 'js_test_suite.yml']
+    world.run_tool_with_args(args)
+
+
+@step(u'Then A default test suite description is created')
+def then_a_default_test_suite_description_is_created(step):
+    world.assert_file_exists('js_test_suite.yml')
