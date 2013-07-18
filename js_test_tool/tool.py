@@ -4,9 +4,21 @@ Implement the command-line tool interface.
 
 import argparse
 import sys
+from textwrap import dedent
+import pkg_resources
+import os.path
 from js_test_tool.runner import SuiteRunnerFactory
 
+import logging
+LOGGER = logging.getLogger(__name__)
+
+VALID_COMMANDS = ['init', 'run']
+
 DESCRIPTION = "Run JavaScript test suites and collect coverage information."
+COMMAND_HELP = dedent("""
+        init: Create a default suite description in the current directory.
+        run: Run the test suites provided.
+        """).strip()
 TEST_SUITE_HELP = "Test suite description file."
 COVERAGE_XML_HELP = "Generated XML coverage report."
 COVERAGE_HTML_HELP = "Generated HTML coverage report."
@@ -18,17 +30,23 @@ BROWSER_ARGS = [('--use-phantomjs', 'phantomjs', PHANTOMJS_HELP),
                 ('--use-chrome', 'chrome', CHROME_HELP),
                 ('--use-firefox', 'firefox', FIREFOX_HELP)]
 
+DEFAULT_SUITE_DESC_PATH = 'templates/default_test_suite.yml'
+
 
 def parse_args(argv):
     """
     Parse command line arguments, returning a dict of valid options.
 
         {
+            'command': 'init' | 'run',
             'test_suite_paths': TEST_SUITE_PATHS,
             'coverage_xml': COVERAGE_XML,
             'coverage_html': COVERAGE_HTML
             'browser_names': BROWSER_NAMES
         }
+
+    The command indicates whether to `init` (create a default suite description)
+    or `run` the suite.
 
     `TEST_SUITE_PATHS` is a list of paths to files describing the test
     suite to run (source files, spec files, dependencies, browser to use, etc.)
@@ -49,6 +67,9 @@ def parse_args(argv):
     """
     parser = argparse.ArgumentParser(description=DESCRIPTION)
 
+    # Command
+    parser.add_argument('command', type=str, help=COMMAND_HELP)
+
     # Test suite description files
     parser.add_argument('test_suite_paths', type=str, nargs='+',
                         help=TEST_SUITE_HELP)
@@ -67,8 +88,13 @@ def parse_args(argv):
     # Exclude the first argument, which is the name of the program
     arg_dict = vars(parser.parse_args(argv[1:]))
 
+    # Check that the command is one we recognize
+    if not arg_dict.get('command') in VALID_COMMANDS:
+        raise SystemExit('Invalid command.')
+
     # Check that we have at least one browser specified
-    if not arg_dict.get('browser_names'):
+    # if running the test suite
+    if arg_dict.get('command') == 'run' and not arg_dict.get('browser_names'):
         raise SystemExit('You must specify at least one browser.')
 
     return arg_dict
@@ -97,33 +123,67 @@ def generate_reports(suite_runner, output_file):
     return passed
 
 
+def create_default_suite(*file_name_list):
+    """
+    Create a default suite description at each file name
+    provided in `file_name_list`
+    """
+    suite_desc_str = pkg_resources.resource_string('js_test_tool',
+                                                   DEFAULT_SUITE_DESC_PATH)
+
+    for name in file_name_list:
+
+        # If the file already exists, skip it
+        if os.path.exists(name):
+            LOGGER.warning("'{}' already exists".format(name))
+
+        # Otherwise, create it
+        else:
+            with open(name, 'w') as file_handle:
+                file_handle.write(suite_desc_str)
+
+            print "Created '{}'".format(name)
+
+
 def main():
     """
     Main entry point for the command-line tool.
     """
     args_dict = parse_args(sys.argv)
+    command = args_dict.get('command')
 
-    # Configure a test suite runner
-    factory = SuiteRunnerFactory()
-    suite_runner, browser_list = \
-        factory.build_runner(args_dict.get('test_suite_paths'),
-                             args_dict.get('browser_names'),
-                             args_dict.get('coverage_xml'),
-                             args_dict.get('coverage_html'))
+    if command == 'init':
+        create_default_suite(*args_dict.get('test_suite_paths'))
 
-    try:
-        # Generate the reports and write test results to stdout
-        all_passed = generate_reports(suite_runner, sys.stdout)
+    elif command == 'run':
 
-    finally:
+        # Configure a test suite runner
+        factory = SuiteRunnerFactory()
+        suite_runner, browser_list = \
+            factory.build_runner(args_dict.get('test_suite_paths'),
+                                 args_dict.get('browser_names'),
+                                 args_dict.get('coverage_xml'),
+                                 args_dict.get('coverage_html'))
 
-        # Quit out of the browsers we created
-        for browser in browser_list:
-            browser.quit()
+        try:
+            # Generate the reports and write test results to stdout
+            all_passed = generate_reports(suite_runner, sys.stdout)
 
-    # If any test failed, exit with non-zero status code
-    if not all_passed:
-        sys.exit(1)
+        finally:
+
+            # Quit out of the browsers we created
+            for browser in browser_list:
+                browser.quit()
+
+        # If any test failed, exit with non-zero status code
+        if not all_passed:
+            sys.exit(1)
+
+    # Shouldn't get here because we validate the args,
+    # but it never hurts to check.
+    else:
+        raise SystemExit('Invalid command.')
+
 
 if __name__ == "__main__":
     main()

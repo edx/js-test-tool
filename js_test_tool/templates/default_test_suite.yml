@@ -1,0 +1,24 @@
+---
+# Currently, the only supported test runner is Jasmine
+# See http://pivotal.github.io/jasmine/
+# for the Jasmine documentation.
+test_runner: jasmine
+
+# Paths to source JavaScript files
+src_paths:
+    - path/to/src
+
+# Paths to library JavaScript files (optional)
+lib_paths:
+    - path/to/lib
+
+# Paths to spec (test) JavaScript files
+spec_paths:
+    - path/to/spec
+
+# Paths to fixture files (optional)
+# You can access these within JavaScript code
+# at the URL: document.location.href + "/include/"
+# plus the path to the file (relative to this YAML file)
+fixture_paths:
+    - path/to/fixture

@@ -62,7 +62,7 @@ This will create a YAML file that looks like:
 
 .. code:: bash
 
-    js-test-tool js_test.yml --use-firefox
+    js-test-tool run js_test.yml --use-firefox
 
 This will output a report to the console showing which tests passed or failed.
 
@@ -74,7 +74,7 @@ multiple browsers:
 
 .. code:: bash
 
-    js-test-tool js_test.yml --use-chrome --use-phantomjs
+    js-test-tool run js_test.yml --use-chrome --use-phantomjs
 
 will run the tests in both Chrome and PhantomJS if the
 browsers are installed.
@@ -105,7 +105,7 @@ __ http://tntim96.github.io/JSCover/
 
 .. code:: bash
 
-    js-test-tool js_test.yml --use-phantomjs --coverage-xml=js_coverage.xml --coverage-html=js_coverage.html
+    js-test-tool run js_test.yml --use-phantomjs --coverage-xml=js_coverage.xml --coverage-html=js_coverage.html
 
 This will create coverage reports in two formats:
 

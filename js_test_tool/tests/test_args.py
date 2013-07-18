@@ -8,35 +8,42 @@ class ParseArgsTest(unittest.TestCase):
 
     TOOL_NAME = "js-test-tool"
 
-    def test_parse_test_suite_file(self):
-        argv = [self.TOOL_NAME, 'test_suite.yaml', '--use-phantomjs']
+    def test_init_command(self):
+        argv = [self.TOOL_NAME, 'init', 'js_test_suite.yml']
+        arg_dict = parse_args(argv)
+        self.assertEqual(arg_dict.get('command'), 'init')
+        self.assertEqual(arg_dict.get('test_suite_paths'), ['js_test_suite.yml'])
+
+    def test_run_command(self):
+        argv = [self.TOOL_NAME, 'run', 'test_suite.yaml', '--use-phantomjs']
         arg_dict = parse_args(argv)
 
+        self.assertEqual(arg_dict.get('command'), 'run')
         self.assertEqual(arg_dict.get('test_suite_paths'), ['test_suite.yaml'])
         self.assertIs(arg_dict.get('coverage_xml'), None)
         self.assertIs(arg_dict.get('coverage_html'), None)
 
     def test_parse_test_suite_multiple_files(self):
-        argv = [self.TOOL_NAME, 'test_suite_1.yaml', 'test_suite_2.yaml', '--use-chrome']
+        argv = [self.TOOL_NAME, 'run', 'test_suite_1.yaml', 'test_suite_2.yaml', '--use-chrome']
         arg_dict = parse_args(argv)
 
         self.assertEqual(arg_dict.get('test_suite_paths'),
                          ['test_suite_1.yaml', 'test_suite_2.yaml'])
 
     def test_parse_coverage_xml(self):
-        argv = [self.TOOL_NAME, 'test_suite.yaml', '--coverage-xml',
+        argv = [self.TOOL_NAME, 'run', 'test_suite.yaml', '--coverage-xml',
                 'coverage.xml', '--use-firefox']
         arg_dict = parse_args(argv)
         self.assertEqual(arg_dict.get('coverage_xml'), 'coverage.xml')
 
     def test_parse_coverage_html(self):
-        argv = [self.TOOL_NAME, 'test_suite.yaml', '--coverage-html', 'coverage.html',
+        argv = [self.TOOL_NAME, 'run', 'test_suite.yaml', '--coverage-html', 'coverage.html',
                 '--use-firefox']
         arg_dict = parse_args(argv)
         self.assertEqual(arg_dict.get('coverage_html'), 'coverage.html')
 
     def test_parse_coverage_xml_and_html(self):
-        argv = [self.TOOL_NAME, 'test_suite.yaml',
+        argv = [self.TOOL_NAME, 'run', 'test_suite.yaml',
                 '--coverage-xml', 'coverage.xml',
                 '--coverage-html', 'coverage.html',
                 '--use-phantomjs']
@@ -51,13 +58,13 @@ class ParseArgsTest(unittest.TestCase):
                  ('--use-firefox', 'firefox')]
 
         for (browser_arg, browser_name) in cases:
-            argv = [self.TOOL_NAME, 'test_suite.yaml', browser_arg]
+            argv = [self.TOOL_NAME, 'run', 'test_suite.yaml', browser_arg]
             arg_dict = parse_args(argv)
             self.assertEqual(arg_dict.get('browser_names'), [browser_name])
 
     def test_parse_all_browsers(self):
 
-        argv = [self.TOOL_NAME, 'test_suite.yaml', '--use-phantomjs',
+        argv = [self.TOOL_NAME, 'run', 'test_suite.yaml', '--use-phantomjs',
                 '--use-chrome', '--use-firefox']
 
         arg_dict = parse_args(argv)
@@ -70,8 +77,15 @@ class ParseArgsTest(unittest.TestCase):
             # No arguments
             [],
 
-            # No browser or suite description
+            # No browser, suite description, or command
             [self.TOOL_NAME],
+
+            # No suite description
+            [self.TOOL_NAME, 'run'],
+            [self.TOOL_NAME, 'init'],
+
+            # Invalid command name
+            [self.TOOL_NAME, 'invalid_cmd', 'js_suite.yml'],
 
             # No browser
             ['test_suite.yaml', '--coverage-xml', 'coverage.xml'],
