@@ -94,7 +94,6 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         
         # Change the working directory temporarily
         # (the superclass will reset it afterwards)
-        old_wd = os.getcwd()
         os.chdir(self.TEMP_DIRS[0])
 
         # Create an in-memory YAML file from the data
@@ -231,6 +230,59 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES)
         self.assertEqual(desc.fixture_paths(), self.FIXTURE_FILES)
 
+    def test_exclude_from_page(self):
+
+        # Add in a rule to exclude files in other_* dir
+        yaml_data = copy.deepcopy(self.YAML_DATA)
+        yaml_data['exclude_from_page'] = 'other_[^/]*/.*'
+
+        # Create an in-memory YAML file from the data
+        yaml_file = self._yaml_buffer(yaml_data)
+
+        # Create the suite description using the YAML file
+        desc = SuiteDescription(yaml_file, self.temp_dir)
+
+        # Check that the root directory is stored
+        self.assertEqual(desc.root_dir(), self.temp_dir)
+
+        # Check that we find the files we expect
+        expected_lib = self.LIB_FILES[:]
+        expected_lib.remove('other_lib/test.js')
+
+        expected_src = self.SRC_FILES[:]
+        expected_src.remove('other_src/test.js')
+
+        expected_spec = self.SPEC_FILES[:]
+        expected_spec.remove('other_spec/test.js')
+
+        self.assertEqual(desc.lib_paths(only_in_page=True), expected_lib)
+        self.assertEqual(desc.src_paths(only_in_page=True), expected_src)
+        self.assertEqual(desc.spec_paths(only_in_page=True), expected_spec)
+
+    def test_include_and_exclude_from_page(self):
+
+        # Add in a rule to exclude files in other_* dir
+        yaml_data = copy.deepcopy(self.YAML_DATA)
+        yaml_data['exclude_from_page'] = 'other_[^/]*/.*'
+
+        # Add an override rule to always include other_*/test.js
+        yaml_data['include_in_page'] = 'other_[^/]*/test.js'
+
+        # Create an in-memory YAML file from the data
+        yaml_file = self._yaml_buffer(yaml_data)
+
+        # Create the suite description using the YAML file
+        desc = SuiteDescription(yaml_file, self.temp_dir)
+
+        # Check that the root directory is stored
+        self.assertEqual(desc.root_dir(), self.temp_dir)
+
+        # Check that we still get all the files back
+        # (the include rule overrides the exclude rule)
+        self.assertEqual(desc.lib_paths(only_in_page=True), self.LIB_FILES)
+        self.assertEqual(desc.src_paths(only_in_page=True), self.SRC_FILES)
+        self.assertEqual(desc.spec_paths(only_in_page=True), self.SPEC_FILES)
+
     def test_missing_required_data(self):
 
         for key in ['src_paths', 'spec_paths', 'test_runner']:
@@ -358,6 +410,11 @@ class SuiteRendererTest(unittest.TestCase):
         # Check that we get the right script includes
         suite_includes = lib_paths + src_paths + spec_paths
         self._assert_js_includes(jasmine_libs, suite_includes, desc)
+
+        # Check that only "include_in_page" scripts were used
+        desc.lib_paths.assert_called_with(only_in_page=True)
+        desc.src_paths.assert_called_with(only_in_page=True)
+        desc.spec_paths.assert_called_with(only_in_page=True)
 
     def test_no_lib_files(self):
 
