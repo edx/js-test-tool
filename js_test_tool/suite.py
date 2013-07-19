@@ -5,6 +5,7 @@ import yaml
 import os
 import os.path
 from textwrap import dedent
+import re
 from jinja2 import Environment, PackageLoader
 
 import logging
@@ -66,6 +67,13 @@ class SuiteDescription(object):
         # Validate the root directory
         self._validate_root_dir(self._root_dir)
 
+        # Compile exclude/include regular expressions
+        rules = self._desc_dict.get('include_in_page', [])
+        self._include_regex_list = [re.compile(r) for r in rules]
+
+        rules = self._desc_dict.get('exclude_from_page', [])
+        self._exclude_regex_list = [re.compile(r) for r in rules]
+
     def root_dir(self):
         """
         Return the root directory to which all paths in the suite
@@ -73,10 +81,14 @@ class SuiteDescription(object):
         """
         return self._root_dir
 
-    def lib_paths(self):
+    def lib_paths(self, only_in_page=False):
         """
         Return a list of paths to the dependency files needed by
         the test suite.
+
+        If `only_in_page` is True, returns only the paths
+        that should be included in <script> tags on the
+        test runner page.
 
         If no dependencies were specified, returns an empty list.
 
@@ -85,30 +97,38 @@ class SuiteDescription(object):
         Raises a `SuiteDescriptionError` if a file or directory could not be found.
         """
         if 'lib_paths' in self._desc_dict:
-            return self._js_paths(self._desc_dict['lib_paths'])
+            return self._js_paths(self._desc_dict['lib_paths'], only_in_page)
         else:
             return []
 
-    def src_paths(self):
+    def src_paths(self, only_in_page=False):
         """
         Return a list of paths to JavaScript source
         files used by the test suite.
+
+        If `only_in_page` is True, returns only the paths
+        that should be included in <script> tags on the
+        test runner page.
 
         Preserves the order of source directories.
 
         Raises a `SuiteDescriptionError` if a file or directory could not be found.
         """
-        return self._js_paths(self._desc_dict['src_paths'])
+        return self._js_paths(self._desc_dict['src_paths'], only_in_page)
 
-    def spec_paths(self):
+    def spec_paths(self, only_in_page=False):
         """
         Return a list of paths to JavaScript spec files used by the test suite.
+
+        If `only_in_page` is True, returns only the paths
+        that should be included in <script> tags on the
+        test runner page.
 
         Preserves the order of spec directories.
 
         Raises a `SuiteDescriptionError` if a file or directory could not be found.
         """
-        return self._js_paths(self._desc_dict['spec_paths'])
+        return self._js_paths(self._desc_dict['spec_paths'], only_in_page)
 
     def fixture_paths(self):
         """
@@ -131,12 +151,44 @@ class SuiteDescription(object):
         # so the key is guaranteed to exist
         return self._desc_dict['test_runner']
 
-    def _js_paths(self, path_list):
+    def _include_in_page(self, script_path):
+        """
+        Return True if and only if the script should be
+        included in the test runner page using <script> tags.
+
+        A script is included by default, UNLESS it matches
+        the regex rule `exclude_from_page` in the YAML description.
+        and it does NOT match the `include_in_page` rule.
+        """
+
+        # Check if the script matches a rule to always be included
+        for include_regex in self._include_regex_list:
+            if include_regex.match(script_path) is not None:
+                return True
+
+        # Check if the script matches an exclude rule
+        for exclude_regex in self._exclude_regex_list:
+            if exclude_regex.match(script_path) is not None:
+                return False
+
+        # Default is to include it
+        return True
+
+    def _js_paths(self, path_list, only_in_page):
         """
         Find *.js files in `path_list`.  See `_file_paths` for
         more information.
+
+        If `only_in_page` is True, filters the results for
+        only JS files to be included in the test runner page
+        <script> tags.
         """
-        return self._file_paths(path_list, include_func=self._is_js_file)
+        paths = self._file_paths(path_list,
+                                 include_func=self._is_js_file) 
+        if only_in_page:
+            return filter(self._include_in_page, paths)
+        else:
+            return paths
 
     def _file_paths(self, path_list, include_func=lambda file_path: True):
         """
@@ -279,7 +331,9 @@ class SuiteDescription(object):
                 raise SuiteDescriptionError(msg)
 
         # Convert keys that can have multiple values to lists
-        for key in ['lib_paths', 'src_paths', 'spec_paths', 'fixture_paths']:
+        for key in ['lib_paths', 'src_paths',
+                    'spec_paths', 'fixture_paths',
+                    'include_in_page', 'exclude_from_page']:
             if key in desc_dict and not isinstance(desc_dict[key], list):
                 desc_dict[key] = [desc_dict[key]]
 
@@ -345,9 +399,9 @@ class SuiteRenderer(object):
 
         # Create the context for the template
         template_context = {'suite_num': suite_num,
-                            'lib_path_list': suite_desc.lib_paths(),
-                            'src_path_list': suite_desc.src_paths(),
-                            'spec_path_list': suite_desc.spec_paths(),
+                            'lib_path_list': suite_desc.lib_paths(only_in_page=True),
+                            'src_path_list': suite_desc.src_paths(only_in_page=True),
+                            'spec_path_list': suite_desc.spec_paths(only_in_page=True),
                             'div_id': self.RESULTS_DIV_ID}
 
         # Render the template
