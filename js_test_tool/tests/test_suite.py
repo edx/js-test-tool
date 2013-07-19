@@ -443,7 +443,7 @@ class SuiteRendererTest(unittest.TestCase):
 
         # Expect that a <div> exists with the correct ID for the results
         div_id = SuiteRenderer.RESULTS_DIV_ID
-        elems = tree.xpath('/html/body/div[@id="{}"]'.format(div_id))
+        elems = tree.xpath('//div[@id="{}"]'.format(div_id))
         self.assertEqual(len(elems), 1)
 
         # Retrieve the script elements
