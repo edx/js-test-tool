@@ -248,9 +248,17 @@ class CoverageData(object):
     """
     Load coverage data from JSON.
     """
-    def __init__(self):
+    def __init__(self, expected_src_list=None):
         """
-        Initialize to contain no data.
+        Initialize to report data for all source paths in 
+        `expected_src_list` (a list of absolute paths).
+
+        All source information loaded using `load_from_dict()`
+        will be stored and reported.  If a source is 
+        in `expected_src_list`, then it will *always* be reported,
+        even if no coverage information is received for
+        that source.  If no coverage information is received,
+        the source is reported as 0% covered.
         """
 
         # Create a dict mapping source file names to coverage
@@ -258,6 +266,11 @@ class CoverageData(object):
         # as a dict mapping line numbers to True/False values
         # indicating whether the line is covered.
         self._src_dict = dict()
+
+        # Create entries for all expected sources
+        if expected_src_list is not None:
+            for expected_src in expected_src_list:
+                self._src_dict[expected_src] = None
 
         # Create a dict mapping absolute source paths
         # to the path relative to the test suite root directory
@@ -364,7 +377,7 @@ class CoverageData(object):
     def src_list(self):
         """
         Return the list of source files for which we have coverage
-        information.
+        information OR were specified explicitly in the constructor.
 
         Each source in the list is an absolute path.
         """
@@ -379,9 +392,36 @@ class CoverageData(object):
         and True/False as values, where True indicates
         that the line is covered.
 
-        If no such source file, return None.
+        If the source file has no coverage information,
+        return a dict with all keys set to False, indicating
+        that the file is completely uncovered.
+
+        If the source file is not in our source list,
+        return None.
         """
-        return self._src_dict.get(full_src_path, None)
+
+        if full_src_path in self._src_dict:
+
+            # Retrieve the coverage data
+            coverage_data = self._src_dict[full_src_path]
+
+            # If the coverage data is None, that means we didn't
+            # get coverage information for a source we expected.
+            # Report the source as completely uncovered.
+            if coverage_data is None:
+
+                # self.num_file_lines() is guaranteed to return an integer
+                # If the file isn't found, it returns 0, so coverage_data
+                # will be an empty dict.
+                coverage_data = {line_num: False for line_num
+                                 in range(self.num_file_lines(full_src_path))}
+
+            return coverage_data
+
+        # Source not found
+        else:
+            return None
+
 
     def rel_src_path(self, full_src_path):
         """
@@ -444,3 +484,20 @@ class CoverageData(object):
         which we have coverage information.
         """
         return sorted([num for num in self._suite_num_set])
+
+    @staticmethod
+    def num_file_lines(file_path):
+        """
+        Returns the number of lines in the file
+        at `file_path`.  If the file does not exist,
+        returns 0.
+        """
+        try:
+            with open(file_path) as file_handle:
+                lines = file_handle.readlines()
+                return len(lines)
+
+        # If the file could not be accessed, treat
+        # it as a file with 0 lines.
+        except IOError:
+            return 0

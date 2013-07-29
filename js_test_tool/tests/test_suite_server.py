@@ -2,7 +2,6 @@
 Tests for the suite page server.
 """
 
-import unittest
 from js_test_tool.tests.helpers import TempWorkspaceTestCase
 import mock
 import re
@@ -289,7 +288,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
                 fake_file.write(encoded_contents)
 
 
-class SuiteServerCoverageTest(unittest.TestCase):
+class SuiteServerCoverageTest(TempWorkspaceTestCase):
     """
     Test that the suite page server correctly collects
     coverage info for JS source files.
@@ -299,11 +298,17 @@ class SuiteServerCoverageTest(unittest.TestCase):
 
     def setUp(self):
 
+        # Create the temp workspace
+        super(SuiteServerCoverageTest, self).setUp()
+
         # Configure the server to timeout quickly, to keep the test suite fast
         self._old_timeout = SuitePageServer.COVERAGE_TIMEOUT
         SuitePageServer.COVERAGE_TIMEOUT = 0.01
 
     def tearDown(self):
+
+        # Tear down the temp workspace
+        super(SuiteServerCoverageTest, self).tearDown()
 
         # Restore the old timeout
         SuitePageServer.COVERAGE_TIMEOUT = self._old_timeout
@@ -432,6 +437,45 @@ class SuiteServerCoverageTest(unittest.TestCase):
         self.assertEqual(result_data.src_list(), ['/root/src.js'])
         self.assertEqual(result_data.line_dict_for_src('/root/src.js'),
                          {0: True, 1: False, 3: True, 4: True, 6: False})
+
+    def test_uncovered_src(self):
+
+        # Create the source file -- we need to do this
+        # CoverageData can determine the number of uncovered
+        # lines (every line in the file)
+        num_lines = 5
+        with open('src.js', 'w') as src_file:
+            contents = '\n'.join(['test line' for _ in range(num_lines)])
+            src_file.write(contents)
+
+        # Start the page server
+        root_dir = self.temp_dir
+        server = SuitePageServer([self._mock_suite_desc(root_dir, ['src.js'])],
+                                 mock.MagicMock(SuiteRenderer),
+                                 jscover_path=self.JSCOVER_PATH)
+        server.start()
+        self.addCleanup(server.stop)
+
+        # POST empty coverage data back to the server
+        # Since no coverage information is reported, we expect
+        # that the source file in the suite description is
+        # reported as uncovered.
+        coverage_data = {}
+
+        requests.post(server.root_url() + "jscoverage-store/0",
+                      data=json.dumps(coverage_data),
+                      timeout=0.1)
+
+        # Get the results immediately from the server.
+        # It's the server's responsibility to block until all results are received.
+        result_data = server.all_coverage_data()
+
+        # Check the result -- expect that the source file
+        # is reported as completely uncovered
+        full_src_path = os.path.join(root_dir, 'src.js')
+        self.assertEqual(result_data.src_list(), [full_src_path])
+        self.assertEqual(result_data.line_dict_for_src(full_src_path),
+                         {line_num: False for line_num in range(num_lines)})
 
     def test_timeout_if_missing_coverage(self):
 
