@@ -410,3 +410,54 @@ class CoverageDataTest(unittest.TestCase):
         # Unknown path returns None, even if in the root dir
         self.assertIs(coverage_data.rel_src_path('unknown'), None)
         self.assertIs(coverage_data.rel_src_path('/root_dir/unknown'), None)
+
+    @mock.patch.object(CoverageData, 'num_file_lines')
+    def test_uncovered_src(self, mock_num_file_lines):
+
+        # Set an expected source file
+        coverage_data = CoverageData(expected_src_list=['root_dir/src1.js'])
+
+        # Configure the num file lines for the source file
+        num_lines = 10
+        mock_num_file_lines.return_value = num_lines
+
+        # Provide no coverage information (did NOT call `load_from_dict()`)
+
+        # Expect that the source is still reported
+        self.assertEqual(coverage_data.src_list(), ['root_dir/src1.js'])
+
+        # Expect that the source is reported as 0% covered
+        self.assertEqual(coverage_data.line_dict_for_src('root_dir/src1.js'),
+                         {line_num: False for line_num in range(num_lines)})
+
+        # Expect that total coverage is 0%
+        self.assertEqual(coverage_data.total_coverage(), 0.0)
+
+    @mock.patch.object(CoverageData, 'num_file_lines')
+    def test_covered_and_uncovered_src(self, mock_num_file_lines):
+
+        # Set an expected source file
+        coverage_data = CoverageData(expected_src_list=['/root_dir/uncovered.js'])
+
+        # Configure the num file lines for the source file
+        num_lines = 10
+        mock_num_file_lines.return_value = num_lines
+
+        # Provide coverage info for other source files,
+        # but not the one we passed to the constructor
+        coverage_data.load_from_dict('/root_dir', self.TEST_COVERAGE_DICT)
+
+        # Expect that all sources are reported (including the uncovered src)
+        self.assertEqual(coverage_data.src_list(), 
+                         [u'/root_dir/src1.js',
+                          u'/root_dir/subdir/src2.js',
+                          u'/root_dir/uncovered.js'])
+
+        # Expect that the source is reported as 0% covered
+        self.assertEqual(coverage_data.line_dict_for_src('/root_dir/uncovered.js'),
+                         {line_num: False for line_num in range(num_lines)})
+
+        # Expect that total coverage is smaller because
+        # of the uncovered file.
+        expected_coverage = 6.0 / (8.0 + num_lines)
+        self.assertEqual(coverage_data.total_coverage(), expected_coverage)
