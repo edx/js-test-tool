@@ -343,8 +343,14 @@ class SuiteDescription(object):
             msg = "'{}' is not a supported test runner.".format(test_runner)
             raise SuiteDescriptionError(msg)
 
-    @classmethod
-    def _validate_root_dir(cls, root_dir):
+        # Check that we are not using double-dot relative paths
+        for key in ['lib_paths', 'src_paths', 'spec_paths', 'fixture_paths']:
+            if key in desc_dict and cls.path_list_has_double_dot(desc_dict[key]):
+                msg = "Paths cannot use up-level references (..)"
+                raise SuiteDescriptionError(msg)
+
+    @staticmethod
+    def _validate_root_dir(root_dir):
         """
         Validate that the root directory exists and is a directory,
         raising a `SuiteDescriptionError` if this is not the case.
@@ -352,6 +358,17 @@ class SuiteDescription(object):
         if not os.path.isdir(root_dir):
             msg = "'{}' is not a valid directory".format(root_dir)
             raise SuiteDescriptionError(msg)
+
+    @staticmethod
+    def path_list_has_double_dot(path_list):
+        """
+        Return True if any path in `path_list` uses
+        an up-level reference (double dot).
+        """
+        for path in path_list:
+            if '..' in path.split('/'):
+                return True
+        return False
 
 
 class SuiteRendererError(Exception):

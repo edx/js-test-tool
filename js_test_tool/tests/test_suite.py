@@ -109,6 +109,28 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.fixture_paths(), self.FIXTURE_FILES)
         self.assertEqual(desc.test_runner(), self.YAML_DATA['test_runner'])
 
+    def test_double_dot_paths(self):
+
+        # Transform the paths into relative paths
+        rel_path_map = lambda path: os.path.join('..', path)
+        yaml_data = copy.deepcopy(self.YAML_DATA)
+        for key in ['lib_paths', 'src_paths', 'spec_paths', 'fixture_paths']:
+            yaml_data[key] = map(rel_path_map, yaml_data[key])
+
+        # Create a new root directory for the suite
+        # temp_dir/suite_root
+        # where the files are still in ../lib, ../src, etc.
+        suite_root = os.path.join(self.temp_dir, 'suite_root')
+        os.mkdir(suite_root)
+
+        # Create an in-memory YAML file from the data
+        yaml_file = self._yaml_buffer(yaml_data)
+
+        # Expect an error for using relative paths,
+        # even though the files exist
+        with self.assertRaises(SuiteDescriptionError):
+            SuiteDescription(yaml_file, suite_root)
+
     def test_no_such_root_dir(self):
 
         # Try to create a description with a non-existent root directory
