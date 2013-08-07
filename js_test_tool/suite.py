@@ -391,7 +391,14 @@ class SuiteRenderer(object):
     # The CSS ID of the <div> that will contain the output test results
     RESULTS_DIV_ID = 'js_test_tool_results'
 
-    def render_to_string(self, suite_num, suite_desc, dev_mode=False):
+    def __init__(self, dev_mode=False):
+        """
+        If `dev_mode` is `True`, then display results in the browser
+        in a human-readable form.
+        """
+        self._dev_mode = dev_mode
+
+    def render_to_string(self, suite_num, suite_desc):
         """
         Given a `test_suite_desc` (`TestSuiteDescription` instance),
         render a test runner page.  When loaded, this page will
@@ -399,9 +406,6 @@ class SuiteRenderer(object):
 
         `suite_num` is the index of the suite, used to generate
         links to that suite's dependencies.
-
-        If `dev_mode` is `True`, then display results in the browser
-        in a human-readable form.
 
         Returns a unicode string.
 
@@ -423,7 +427,7 @@ class SuiteRenderer(object):
                             'src_path_list': suite_desc.src_paths(only_in_page=True),
                             'spec_path_list': suite_desc.spec_paths(only_in_page=True),
                             'div_id': self.RESULTS_DIV_ID,
-                            'dev_mode': dev_mode}
+                            'dev_mode': self._dev_mode}
 
         # Render the template
         try:

@@ -487,11 +487,14 @@ class SuiteRendererTest(unittest.TestCase):
 
     def test_render_jasmine_dev_mode(self):
 
+        # Configure the renderer to use dev mode
+        self.renderer = SuiteRenderer(dev_mode=True)
+
         # Create a mock test suite description 
         desc = self._mock_desc([], [], [], 'jasmine')
 
         # Render the description to HTML, enabling dev mode
-        html = self.renderer.render_to_string(0, desc, dev_mode=True)
+        html = self.renderer.render_to_string(0, desc)
 
         # Parse the HTML
         tree = etree.HTML(html)
