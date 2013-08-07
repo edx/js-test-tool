@@ -23,6 +23,11 @@ class ParseArgsTest(unittest.TestCase):
         self.assertIs(arg_dict.get('coverage_xml'), None)
         self.assertIs(arg_dict.get('coverage_html'), None)
 
+    def test_dev_command(self):
+        argv = [self.TOOL_NAME, 'dev', 'test_suite.yaml']
+        arg_dict = parse_args(argv)
+        self.assertEqual(arg_dict.get('command'), 'dev')
+
     def test_parse_test_suite_multiple_files(self):
         argv = [self.TOOL_NAME, 'run', 'test_suite_1.yaml', 'test_suite_2.yaml', '--use-chrome']
         arg_dict = parse_args(argv)
@@ -102,6 +107,9 @@ class ParseArgsTest(unittest.TestCase):
 
             # No test suite description
             ['--use-phantomjs', '--use-chrome', '--use-firefox'],
+
+            # Dev mode with multiple suites
+            [self.TOOL_NAME, 'dev', 'test_suite_1.yaml', 'test_suite_2.yaml'],
         ]
 
         for argv in invalid_argv:

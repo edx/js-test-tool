@@ -25,9 +25,16 @@
     var jasmineEnv = jasmine.getEnv();
     jasmineEnv.updateInterval = 1000;
 
-    var jsonReporter = new jasmine.JsonReporter("{{ div_id }}", "{{ suite_num }}");
+    {% if dev_mode -%}
+    var reporter = new jasmine.HtmlReporter();
+    {% else -%}
+    var reporter = new jasmine.JsonReporter("{{ div_id }}", "{{ suite_num }}");
+    {% endif -%}
+    jasmineEnv.addReporter(reporter);
 
-    jasmineEnv.addReporter(jsonReporter);
+    jasmineEnv.specFilter = function(spec) {
+        return reporter.specFilter(spec);
+    };
 
     var currentWindowOnload = window.onload;
 

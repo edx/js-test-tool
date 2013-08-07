@@ -12,12 +12,13 @@ from js_test_tool.runner import SuiteRunnerFactory
 import logging
 LOGGER = logging.getLogger(__name__)
 
-VALID_COMMANDS = ['init', 'run']
+VALID_COMMANDS = ['init', 'run', 'dev']
 
 DESCRIPTION = "Run JavaScript test suites and collect coverage information."
 COMMAND_HELP = dedent("""
         init: Create a default suite description in the current directory.
         run: Run the test suites provided.
+        dev: Run the test suite in the default browser.
         """).strip()
 TEST_SUITE_HELP = "Test suite description file."
 COVERAGE_XML_HELP = "Generated XML coverage report."
@@ -96,6 +97,11 @@ def parse_args(argv):
     # if running the test suite
     if arg_dict.get('command') == 'run' and not arg_dict.get('browser_names'):
         raise SystemExit('You must specify at least one browser.')
+
+    # Check that if we're running in dev mode, we're
+    # only using one test suite
+    if arg_dict.get('command') == 'dev' and len(arg_dict.get('test_suite_paths')) > 1:
+        raise SystemExit('You cannot run multiple test suites in dev mode')
 
     return arg_dict
 
