@@ -341,7 +341,9 @@ class SuitePageHandler(BasePageHandler):
 
 class RunnerPageHandler(BasePageHandler):
 
-    PATH_REGEX = re.compile('^/runner/(.+)$')
+    # Handle requests to /runner/ pages, ignoring
+    # GET parameters
+    PATH_REGEX = re.compile('^/runner/([^\?]+).*$')
 
     def load_page(self, method, content, *args):
         """

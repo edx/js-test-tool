@@ -98,11 +98,28 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         for path in ['jasmine/jasmine.css',
                      'jasmine/jasmine.js',
-                     'jasmine/jasmine-json.js']:
+                     'jasmine/jasmine-json.js',
+                     'jasmine/jasmine-html.js']:
 
             pkg_path = 'runner/' + path
             expected_page = pkg_resources.resource_string('js_test_tool', pkg_path)
             url = self.server.root_url() + pkg_path
+            self._assert_page_equals(url, expected_page)
+
+    def test_ignore_runner_get_params(self):
+
+        for path in ['jasmine/jasmine.css',
+                     'jasmine/jasmine.js',
+                     'jasmine/jasmine-json.js',
+                     'jasmine/jasmine-html.js']:
+
+            pkg_path = 'runner/' + path
+            expected_page = pkg_resources.resource_string('js_test_tool', pkg_path)
+
+            # Append GET params to the URL
+            url = self.server.root_url() + pkg_path + "?param=abc.123&another=87"
+
+            # Should still be able to load the page
             self._assert_page_equals(url, expected_page)
 
     def test_serve_lib_js(self):
@@ -190,7 +207,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
             url = self.server.root_url() + 'suite/0/include/' + path + "?123456"
             self._assert_page_equals(url, expected_page)
 
-    def test_ignore_get_params(self):
+    def test_ignore_dependency_get_params(self):
 
         # Configure the suite description to contain dependency files
         dependencies = ['1.js', '2.js', '3.js', '4.js']
