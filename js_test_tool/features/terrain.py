@@ -9,6 +9,7 @@ import os
 import os.path
 import shutil
 import tempfile
+from splinter import Browser
 from nose.tools import assert_equal, assert_false, assert_true
 from js_test_tool import tool
 
@@ -30,6 +31,7 @@ def setup_all():
     """
     world.temp_dir = tempfile.mkdtemp()
     world.fixtures_dir = os.path.join(world.temp_dir, 'fixtures')
+    world.browser = Browser('firefox')
 
 
 @after.all
@@ -38,6 +40,7 @@ def teardown_all(total_result):
     Delete the temporary directory we created.
     """
     shutil.rmtree(world.temp_dir)
+    world.browser.quit()
 
 
 @before.each_scenario
@@ -57,6 +60,9 @@ def setup_scenario(scenario):
     world.mock_sys = patch('js_test_tool.tool.sys').start()
     world.mock_sys.stdout = StringIO()
 
+    # Mock the webbrowser (for use with dev mode)
+    world.mock_webbrowser = patch('js_test_tool.dev_runner.webbrowser').start()
+
 
 @after.each_scenario
 def teardown_scenario(scenario):
@@ -70,7 +76,7 @@ def teardown_scenario(scenario):
     # Restore the current working directory
     os.chdir(world.old_cwd)
 
-    # Stop mocking the system
+    # Uninstall all mocks
     patch.stopall()
 
 
@@ -171,3 +177,11 @@ def assert_exit_code(expected_code):
     else:
         args, kwargs = world.mock_sys.exit.call_args
         assert_equal(args[0], int(expected_code))
+
+
+@world.absorb
+def load_page(url):
+    """
+    Load the page at `url` using the Splinter browser.
+    """
+    world.browser.visit(url)

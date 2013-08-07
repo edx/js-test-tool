@@ -24,7 +24,7 @@ class SuiteDevRunner(object):
     """
 
     def __init__(self, page_server, 
-                 webbrowser_module=webbrowser,
+                 webbrowser_module=None,
                  stop_fast=False):
         """
         Configure the runner to serve the test suite pages
@@ -40,6 +40,10 @@ class SuiteDevRunner(object):
         """
         self._server = page_server
         self._stop_fast = stop_fast
+
+        if webbrowser_module is None:
+            webbrowser_module = webbrowser
+
         self._webbrowser = webbrowser_module
 
     def run(self):

@@ -3,6 +3,7 @@ Steps for the Lettuce BDD specs.
 """
 
 from lettuce import step, world
+from nose.tools import assert_true
 
 
 TEST_SUITE_DESC_PATH = 'jasmine/test_suite.yaml'
@@ -96,3 +97,28 @@ def when_i_run_js_test_tool_init(step):
 @step(u'Then A default test suite description is created')
 def then_a_default_test_suite_description_is_created(step):
     world.assert_file_exists('js_test_suite.yml')
+
+
+@step(u'When I run js-test-tool in dev mode')
+def run_tool_in_dev_mode(step):
+
+    # Patch the call to webbrowser.open_new()
+    # Use this to raise a KeyboardInterrupt (so the tool terminates)
+    # while checking that the page loads correctly
+    def load_page_and_exit(url):
+        world.load_page(url)
+        raise KeyboardInterrupt
+
+    world.mock_webbrowser.open_new.side_effect = load_page_and_exit
+    world.run_tool_with_args(['dev', TEST_SUITE_DESC_PATH])
+
+
+@step(u'Then An HTML report of test results opens in the default browser')
+def display_html_report_in_browser(step):
+
+    # Our patched `webbrowser.open_new()` should have used
+    # `world.browser()` (a Splinter browser) to load the dev
+    # test suite page.
+
+    # Verify that the Jasmine HTMLReporter ran
+    assert_true(world.browser.is_element_present_by_id('HTMLReporter'))

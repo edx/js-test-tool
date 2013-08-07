@@ -519,6 +519,24 @@ class SuiteRendererTest(unittest.TestCase):
         # Expect that we're using the basic Jasmine HTML reporter
         self.assertEqual(runner_script, expected_script)
 
+    def test_jasmine_dev_mode_includes(self):
+
+        # Configure the renderer to use dev mode
+        self.renderer = SuiteRenderer(dev_mode=True)
+
+        # Include the HTMLReporter instead of the JSON reporter
+        jasmine_libs = ['jasmine/jasmine.js',
+                        'jasmine/jasmine-html.js']
+        lib_paths = ['lib1.js', 'lib2.js']
+        src_paths = ['src1.js', 'src2.js']
+        spec_paths = ['spec1.js', 'spec2.js']
+
+        # Create a mock test suite description
+        desc = self._mock_desc(lib_paths, src_paths, spec_paths, 'jasmine')
+
+        # Check that we get the right script includes
+        suite_includes = lib_paths + src_paths + spec_paths
+        self._assert_js_includes(jasmine_libs, suite_includes, desc)
 
     def test_undefined_template(self):
 

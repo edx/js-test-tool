@@ -8,6 +8,7 @@ from textwrap import dedent
 import pkg_resources
 import os.path
 from js_test_tool.runner import SuiteRunnerFactory
+from js_test_tool.dev_runner import SuiteDevRunnerFactory
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -160,6 +161,18 @@ def main():
 
     if command == 'init':
         create_default_suite(*args_dict.get('test_suite_paths'))
+
+    elif command == 'dev':
+
+        # Arg validation guarantees that there is exactly 1 path
+        test_suite_path = args_dict.get('test_suite_paths')[0]
+
+        # Build a dev-mode runner using a factory
+        factory = SuiteDevRunnerFactory()
+        suite_dev_runner = factory.build_runner(test_suite_path)
+        
+        # Run in dev mode (serve pages until user terminates)
+        suite_dev_runner.run()
 
     elif command == 'run':
 
