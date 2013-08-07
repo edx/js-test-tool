@@ -346,7 +346,8 @@ class SuiteDescription(object):
         # Check that we are not using double-dot relative paths
         for key in ['lib_paths', 'src_paths', 'spec_paths', 'fixture_paths']:
             if key in desc_dict and cls.path_list_has_double_dot(desc_dict[key]):
-                msg = "Paths cannot use up-level references (..)"
+                msg = ("Paths cannot use up-level references (e.g. ../path/to/dir).  " +
+                      "Try using a symbolic link instead.")
                 raise SuiteDescriptionError(msg)
 
     @staticmethod

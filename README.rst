@@ -77,6 +77,11 @@ This will create a YAML file that looks like:
 
 * JavaScript files are loaded in the specified order.
 
+* Paths cannot contain up-level references. For example, ``path/to/dir`` is okay,
+  but ``../path/to/dir`` is not.
+  If you need to access files in directories above the test suite directory,
+  use symbolic links.
+
 2. Run the test suite.
 
 .. code:: bash
