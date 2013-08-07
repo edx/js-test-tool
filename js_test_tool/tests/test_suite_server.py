@@ -82,6 +82,18 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         for url in self.server.suite_url_list():
             self._assert_page_equals(url, expected_page)
 
+    def test_serve_suite_pages_ignore_get_params(self):
+
+        # Configure the suite renderer to return a test string
+        expected_page = u'test suite mock'
+        self.suite_renderer.render_to_string.return_value = expected_page
+
+        # Check that we can load each page in the suite,
+        # even if we add additional GET params
+        for url in self.server.suite_url_list():
+            url = url + "?param=12345"
+            self._assert_page_equals(url, expected_page)
+
     def test_serve_runners(self):
 
         for path in ['jasmine/jasmine.css',

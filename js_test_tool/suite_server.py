@@ -294,7 +294,9 @@ class SuitePageHandler(BasePageHandler):
     Serves the suite runner page.
     """
 
-    PATH_REGEX = re.compile('^/suite/([0-9]+)/?$')
+    # Handle requests to /suite/#/
+    # Ignore GET parameters
+    PATH_REGEX = re.compile('^/suite/([0-9])+/?(\?.*)?$')
 
     def __init__(self, renderer, desc_list):
         """
