@@ -68,6 +68,11 @@ jasmine.JsonReporter.prototype.reportRunnerResults = function(runner) {
     }
 };
 
+jasmine.JsonReporter.prototype.specFilter = function(spec) {
+    // Do not filter specs -- instead, always show everything
+    return true;
+};
+
 
 /*
  * Private helper methods.

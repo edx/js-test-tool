@@ -378,9 +378,16 @@ class SuiteRendererTest(unittest.TestCase):
             var jasmineEnv = jasmine.getEnv();
             jasmineEnv.updateInterval = 1000;
 
-            var jsonReporter = new jasmine.JsonReporter("js_test_tool_results", "0");
+            var reporter = new jasmine.JsonReporter("js_test_tool_results", "0");
+            jasmineEnv.addReporter(reporter);
 
-            jasmineEnv.addReporter(jsonReporter);
+            jasmineEnv.specFilter = function(spec) {
+                return reporter.specFilter(spec);
+            };
+
+            if (jasmine.getFixtures) {
+                jasmine.getFixtures().fixturesPath = "/suite/0/include/fixtures/";
+            }
 
             var currentWindowOnload = window.onload;
 
@@ -418,7 +425,7 @@ class SuiteRendererTest(unittest.TestCase):
         # Expect that we get a `unicode` string
         self.assertTrue(isinstance(html, unicode))
 
-    def test_jasmine_runner(self):
+    def test_jasmine_runner_includes(self):
 
         jasmine_libs = ['jasmine/jasmine.js',
                         'jasmine/jasmine-json.js']
@@ -481,6 +488,59 @@ class SuiteRendererTest(unittest.TestCase):
 
         # Check that it is the Jasmine test runner script
         self.assertEqual(runner_script, self.JASMINE_TEST_RUNNER_SCRIPT)
+
+    def test_render_jasmine_dev_mode(self):
+
+        # Configure the renderer to use dev mode
+        self.renderer = SuiteRenderer(dev_mode=True)
+
+        # Create a mock test suite description
+        desc = self._mock_desc([], [], [], 'jasmine')
+
+        # Render the description to HTML, enabling dev mode
+        html = self.renderer.render_to_string(0, desc)
+
+        # Parse the HTML
+        tree = etree.HTML(html)
+
+        # Retrieve the script elements
+        script_elems = tree.xpath('/html/head/script')
+
+        # Expect at least one element
+        self.assertTrue(len(script_elems) > 0)
+
+        # Retrieve the last script element, which should be the inline
+        # test runner code
+        runner_script = script_elems[-1].text
+        runner_script = runner_script.strip()
+
+        # Should get the same script, except with an HTML reporter
+        # instead of the custom JSON reporter
+        expected_script = self.JASMINE_TEST_RUNNER_SCRIPT.replace(
+            'JsonReporter("js_test_tool_results", "0")',
+            'HtmlReporter()')
+
+        # Expect that we're using the basic Jasmine HTML reporter
+        self.assertEqual(runner_script, expected_script)
+
+    def test_jasmine_dev_mode_includes(self):
+
+        # Configure the renderer to use dev mode
+        self.renderer = SuiteRenderer(dev_mode=True)
+
+        # Include the HTMLReporter instead of the JSON reporter
+        jasmine_libs = ['jasmine/jasmine.js',
+                        'jasmine/jasmine-html.js']
+        lib_paths = ['lib1.js', 'lib2.js']
+        src_paths = ['src1.js', 'src2.js']
+        spec_paths = ['spec1.js', 'spec2.js']
+
+        # Create a mock test suite description
+        desc = self._mock_desc(lib_paths, src_paths, spec_paths, 'jasmine')
+
+        # Check that we get the right script includes
+        suite_includes = lib_paths + src_paths + spec_paths
+        self._assert_js_includes(jasmine_libs, suite_includes, desc)
 
     def test_undefined_template(self):
 

@@ -1,6 +1,3 @@
-// Configure Jasmine to load the HTML fixture from the server 
-jasmine.getFixtures().fixturesPath = document.location.href + "/include/fixtures/"
-
 describe("Adder", function() {
 
     var adder;

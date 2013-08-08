@@ -8,16 +8,18 @@ from textwrap import dedent
 import pkg_resources
 import os.path
 from js_test_tool.runner import SuiteRunnerFactory
+from js_test_tool.dev_runner import SuiteDevRunnerFactory
 
 import logging
 LOGGER = logging.getLogger(__name__)
 
-VALID_COMMANDS = ['init', 'run']
+VALID_COMMANDS = ['init', 'run', 'dev']
 
 DESCRIPTION = "Run JavaScript test suites and collect coverage information."
 COMMAND_HELP = dedent("""
         init: Create a default suite description in the current directory.
         run: Run the test suites provided.
+        dev: Run the test suite in the default browser.
         """).strip()
 TEST_SUITE_HELP = "Test suite description file."
 COVERAGE_XML_HELP = "Generated XML coverage report."
@@ -97,6 +99,11 @@ def parse_args(argv):
     if arg_dict.get('command') == 'run' and not arg_dict.get('browser_names'):
         raise SystemExit('You must specify at least one browser.')
 
+    # Check that if we're running in dev mode, we're
+    # only using one test suite
+    if arg_dict.get('command') == 'dev' and len(arg_dict.get('test_suite_paths')) > 1:
+        raise SystemExit('You cannot run multiple test suites in dev mode')
+
     return arg_dict
 
 
@@ -154,6 +161,18 @@ def main():
 
     if command == 'init':
         create_default_suite(*args_dict.get('test_suite_paths'))
+
+    elif command == 'dev':
+
+        # Arg validation guarantees that there is exactly 1 path
+        test_suite_path = args_dict.get('test_suite_paths')[0]
+
+        # Build a dev-mode runner using a factory
+        factory = SuiteDevRunnerFactory()
+        suite_dev_runner = factory.build_runner(test_suite_path)
+
+        # Run in dev mode (serve pages until user terminates)
+        suite_dev_runner.run()
 
     elif command == 'run':
 

@@ -6,7 +6,11 @@
 
   <link rel="stylesheet" type="text/css" href="/runner/jasmine/jasmine.css">
   <script type="text/javascript" src="/runner/jasmine/jasmine.js"></script>
+  {% if dev_mode %}
+  <script type="text/javascript" src="/runner/jasmine/jasmine-html.js"></script>
+  {% else %}
   <script type="text/javascript" src="/runner/jasmine/jasmine-json.js"></script>
+  {% endif %}
 
   {% for lib_path in lib_path_list %}
   <script type="text/javascript" src="/suite/{{ suite_num }}/include/{{ lib_path }}"></script>
@@ -25,9 +29,20 @@
     var jasmineEnv = jasmine.getEnv();
     jasmineEnv.updateInterval = 1000;
 
-    var jsonReporter = new jasmine.JsonReporter("{{ div_id }}", "{{ suite_num }}");
+    {% if dev_mode -%}
+    var reporter = new jasmine.HtmlReporter();
+    {% else -%}
+    var reporter = new jasmine.JsonReporter("{{ div_id }}", "{{ suite_num }}");
+    {% endif -%}
+    jasmineEnv.addReporter(reporter);
 
-    jasmineEnv.addReporter(jsonReporter);
+    jasmineEnv.specFilter = function(spec) {
+        return reporter.specFilter(spec);
+    };
+
+    if (jasmine.getFixtures) {
+        jasmine.getFixtures().fixturesPath = "/suite/{{ suite_num }}/include/fixtures/";
+    }
 
     var currentWindowOnload = window.onload;
 

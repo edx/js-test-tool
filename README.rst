@@ -90,6 +90,23 @@ This will create a YAML file that looks like:
 
 This will output a report to the console showing which tests passed or failed.
 
+
+Dev Mode
+--------
+
+``js-test-tool`` has a special mode for writing and debugging tests:
+
+.. code:: bash
+
+    js-test-tool dev js_test.yml
+
+This will start ``js-test-tool`` in **dev mode**:
+
+* Tests will run in your default browser.
+* The tool will keep running until you terminate it with ``Ctrl-C``.
+* Test results are displayed directly in the browser.
+
+
 Multiple Browsers
 ------------------
 

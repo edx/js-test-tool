@@ -10,6 +10,7 @@ import os.path
 import logging
 import json
 import time
+import mimetypes
 from abc import ABCMeta, abstractmethod
 from js_test_tool.coverage import SrcInstrumenter, SrcInstrumenterError, CoverageData
 
@@ -221,9 +222,11 @@ class BasePageHandler(object):
 
     def page_contents(self, path, method, content):
         """
-        Check whether the handler can load the page at `path` (URL path).
-        If so, return the contents of the page as a unicode string.
-        Otherwise, return None.
+        Returns a `(content, mime_type)` tuple if the page
+        could be loaded.  Otherwise, returns `(None, None)`.
+        `content` is a unicode string representing the page contents;
+        `mime_type` is the MIME type to send as the Content-Header
+        in the response.
 
         `method` is the HTTP method used to load the page (e.g. "GET" or "POST")
         `content` is the content of the HTTP request.
@@ -237,14 +240,16 @@ class BasePageHandler(object):
 
             # If this is not a match, return None
             if result is None:
-                return None
+                return (None, None)
 
             # If we do match, attempt to load the page.
             else:
-                return self.load_page(method, content, *result.groups())
+                page_contents = self.load_page(method, content, *result.groups())
+                mime_type = self.mime_type(method, content, *result.groups())
+                return (page_contents, mime_type)
 
         else:
-            return None
+            return (None, None)
 
     @abstractmethod
     def load_page(self, method, content, *args):
@@ -260,6 +265,27 @@ class BasePageHandler(object):
         """
         pass
 
+    @abstractmethod
+    def mime_type(self, method, content, *args):
+        """
+        Subclasses override this to return the MIME type
+        for the page.
+
+        Arguments have the same meaning as in `load_page()`.
+        """
+        pass
+
+    @staticmethod
+    def guess_mime_type(url):
+        """
+        Guess the mime type for a given URL by its
+        extension; default to text/plain.
+        """
+        mime_type, _ = mimetypes.guess_type(url)
+        if mime_type is None:
+            mime_type = 'text/plain'
+        return mime_type
+
 
 class SuitePageHandler(BasePageHandler):
     """
@@ -268,7 +294,9 @@ class SuitePageHandler(BasePageHandler):
     Serves the suite runner page.
     """
 
-    PATH_REGEX = re.compile('^/suite/([0-9]+)/?$')
+    # Handle requests to /suite/#/
+    # Ignore GET parameters
+    PATH_REGEX = re.compile(r'^/suite/([0-9])+/?(\?.*)?$')
 
     def __init__(self, renderer, desc_list):
         """
@@ -304,10 +332,22 @@ class SuitePageHandler(BasePageHandler):
         else:
             return self._renderer.render_to_string(suite_num, suite_desc)
 
+    def mime_type(self, method, content, *args):
+        """
+        Return the MIME type for the page.
+        """
+        return 'text/html'
+
 
 class RunnerPageHandler(BasePageHandler):
+    """
+    Handle requests for paths of the form '/runner/RUNNER_PATH', where
+    `RUNNER_PATH` is a page that runs JavaScript tests.
+    """
 
-    PATH_REGEX = re.compile('^/runner/(.+)$')
+    # Handle requests to /runner/ pages, ignoring
+    # GET parameters
+    PATH_REGEX = re.compile(r'^/runner/([^\?]+).*$')
 
     def load_page(self, method, content, *args):
         """
@@ -328,6 +368,12 @@ class RunnerPageHandler(BasePageHandler):
         # If we successfully loaded it, return a unicode str
         else:
             return content.decode()
+
+    def mime_type(self, method, content, *args):
+        """
+        Return the MIME type for the page.
+        """
+        return self.guess_mime_type(args[0])
 
 
 class DependencyPageHandler(BasePageHandler):
@@ -395,6 +441,14 @@ class DependencyPageHandler(BasePageHandler):
         # If this is not one of our listed dependencies, return None
         else:
             return None
+
+    def mime_type(self, method, content, *args):
+        """
+        Return the MIME type for the page.
+        """
+        _, rel_path = args
+        return self.guess_mime_type(rel_path)
+
 
     def _dependency_path(self, suite_num, path):
         """
@@ -474,6 +528,13 @@ class InstrumentedSrcPageHandler(BasePageHandler):
         else:
             return None
 
+    def mime_type(self, method, content, *args):
+        """
+        Return the MIME type for the page.
+        """
+        _, rel_path = args
+        return self.guess_mime_type(rel_path)
+
     def _send_instrumented_src(self, suite_num, rel_path):
         """
         Return an instrumented version of the JS source file at `rel_path`
@@ -548,6 +609,12 @@ class StoreCoveragePageHandler(BasePageHandler):
 
         # Store the coverage data
         return self._store_coverage_data(suite_num, content)
+
+    def mime_type(self, method, content, *args):
+        """
+        Return the MIME type for the page.
+        """
+        return 'text/plain'
 
     def _store_coverage_data(self, suite_num, request_content):
         """
@@ -666,25 +733,27 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         for handler in self._page_handlers:
 
             # Try to retrieve the page
-            content = handler.page_contents(self.path, method, request_content)
+            content, mime_type = handler.page_contents(self.path, method, request_content)
 
             # If we got a page, send the contents
             if content is not None:
-                self._send_response(200, content)
+                self._send_response(200, content, mime_type)
                 return
 
         # If we could not retrieve the contents (e.g. because
         # the file does not exist), send an error response
-        self._send_response(404, None)
+        self._send_response(404, None, 'text/plain')
 
-    def _send_response(self, status_code, content):
+    def _send_response(self, status_code, content, mime_type):
         """
         Send a response to an HTTP request as UTF-8 encoded HTML.
         `content` can be empty, None, or a UTF-8 string.
+        `mime_type` is sent as the Content-Type header.
         """
 
         self.send_response(status_code)
-        self.send_header('Content-Type', 'text/html; charset=utf-8')
+        self.send_header('Content-Type', mime_type + '; charset=utf-8')
+        self.send_header('Content-Language', 'en')
         self.end_headers()
 
         if content:
