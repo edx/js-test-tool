@@ -1,4 +1,20 @@
 ---
+# JavaScript test suite description
+#
+#
+# To run all the tests and print results to the console:
+#
+#   js-test-tool run TEST_SUITE --use-firefox
+#
+# where `TEST_SUITE` is this file.
+#
+#
+# To run the tests in your default browser ("dev mode"):
+#
+#   js-test-tool dev TEST_SUITE
+#
+
+
 # Currently, the only supported test runner is Jasmine
 # See http://pivotal.github.io/jasmine/
 # for the Jasmine documentation.
