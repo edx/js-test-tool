@@ -749,6 +749,7 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
 
         self.send_response(status_code)
         self.send_header('Content-Type', mime_type + '; charset=utf-8')
+        self.send_header('Content-Language', 'en')
         self.end_headers()
 
         if content:
