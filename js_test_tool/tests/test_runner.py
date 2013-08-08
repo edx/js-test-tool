@@ -558,7 +558,16 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
 
         # Build a runner and configure it to test using these browsers
         browser_names = ['chrome', 'firefox', 'phantomjs']
-        _, browsers = self._build_runner(1, browser_names=browser_names)
+        _, browsers = self._build_runner(1, browser_names=browser_names,
+                                         coverage_xml_path='coverage.xml',
+                                         coverage_html_path='coverage.html',
+                                         timeout_sec=5)
+
+        # Expect that the browsers were created using the provided timeout
+        call_args = self.mock_browser_class.call_args_list
+        for _, kwargs in call_args:
+            timeout_sec = kwargs.get('timeout_sec')
+            self.assertEqual(timeout_sec, 5)
 
         # Expect that the suite runner was configured with the correct browsers
         expected_browsers = [self.mock_browser] * len(browser_names)
@@ -636,6 +645,18 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         _, kwargs = self.mock_server_class.call_args
         self.assertEqual(kwargs.get('jscover_path'), 'jscover.jar')
 
+    def test_configure_coverage_but_no_report(self):
+
+        # Build a runner with no coverage report
+        # But DO configure the JSCover environment variable
+        with mock.patch.dict('os.environ', JSCOVER_JAR='jscover.jar'):
+            self._build_runner(1, coverage_xml_path=None,
+                               coverage_html_path=None)
+
+        # Expect that the server was NOT configured to use coverage
+        _, kwargs = self.mock_server_class.call_args
+        self.assertEqual(kwargs.get('jscover_path'), None)
+
     def test_invalid_browser_names(self):
 
         with self.assertRaises(UnknownBrowserError):
@@ -654,9 +675,10 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         return ['suite_{}.yaml'.format(num) for num in range(num_suites)]
 
     def _build_runner(self, num_suites,
-                      coverage_xml_path='coverage.xml',
-                      coverage_html_path='coverage.html',
-                      browser_names=None):
+                      coverage_xml_path=None,
+                      coverage_html_path=None,
+                      browser_names=None,
+                      timeout_sec=None):
         """
         Build a configured `SuiteRunner` instance
         using the `SuiteRunnerFactory`.
@@ -668,6 +690,9 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
 
         `browser_names` is a list of browser names to use in the
         suite descriptions.
+
+        `timeout_sec` is the number of seconds to wait for a page to load
+        before timing out
 
         Because we are using mock dependencies that always return the same
         values, each suite runner will be identical,
@@ -692,4 +717,5 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         return self.factory.build_runner(suite_path_list,
                                          browser_names,
                                          coverage_xml_path,
-                                         coverage_html_path)
+                                         coverage_html_path,
+                                         timeout_sec)

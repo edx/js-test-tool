@@ -30,16 +30,21 @@ class Browser(object):
     # Wait time for the DOM to load, in seconds
     # It could take a long time for all the tests to complete,
     # so we set this number relatively high.
-    TIMEOUT = 600
+    DEFAULT_TIMEOUT = 300
 
-    def __init__(self, browser_name):
+    def __init__(self, browser_name, timeout_sec=DEFAULT_TIMEOUT):
         """
         Initialize the browser to use `browser_name` (e.g. chrome).
         Valid browser names are those defined by the Splinter API:
         http://splinter.cobrateam.info/docs/
+
+        `timeout_sec` is the amount of time to wait for the DOM
+        to load.  It could take a long time, so default to a high
+        value.
         """
         # Store the browser name
         self._name = browser_name
+        self._timeout_sec = timeout_sec
 
         # Create a browser session
         try:
@@ -84,7 +89,7 @@ class Browser(object):
 
         # Wait for the DOM to load and for all tests to complete
         css_sel = "#{}.{}".format(self.RESULTS_DIV_ID, self.DONE_DIV_CLASS)
-        self._splinter_browser.is_element_present_by_css(css_sel, wait_time=self.TIMEOUT)
+        self._splinter_browser.is_element_present_by_css(css_sel, wait_time=self._timeout_sec)
 
         # Retrieve the <div> containing the JSON-encoded results
         elements = self._splinter_browser.find_by_id(self.RESULTS_DIV_ID)
