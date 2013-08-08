@@ -386,7 +386,7 @@ class SuiteRendererTest(unittest.TestCase):
             };
 
             if (jasmine.getFixtures) {
-                jasmine.getFixtures().fixturesPath = "/suite/0/include/fixtures/";
+                jasmine.getFixtures().fixturesPath = "/suite/0/include/";
             }
 
             var currentWindowOnload = window.onload;

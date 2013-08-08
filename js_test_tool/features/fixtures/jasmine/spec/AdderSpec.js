@@ -3,7 +3,7 @@ describe("Adder", function() {
     var adder;
 
     beforeEach(function() {
-        loadFixtures('adder.html')
+        loadFixtures('fixtures/adder.html')
         adder = new Adder();
     });
 
