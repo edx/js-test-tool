@@ -13,12 +13,8 @@ class BrowserTest(TestCase):
         self.stub_server = StubServer()
 
         # Create the browser (use PhantomJS)
-        self.browser = Browser('phantomjs')
-
-        # Configure the browser to have a shorter
-        # timeout to speed up the test suite
-        self._old_timeout = Browser.TIMEOUT
-        Browser.TIMEOUT = 2.0
+        # Configure the browser to timeout quickly
+        self.browser = Browser('phantomjs', timeout_sec=0.3)
 
     def tearDown(self):
 
@@ -27,9 +23,6 @@ class BrowserTest(TestCase):
 
         # Stop the browser
         self.browser.quit()
-
-        # Restore the old timeout
-        Browser.TIMEOUT = self._old_timeout
 
     def test_get_page_results(self):
 
@@ -227,15 +220,6 @@ class BrowserTest(TestCase):
         self.stub_server.set_ignore_requests(True)
 
         server_url = self.stub_server.root_url()
-
-        # Configure the Browser to timeout quickly
-        old_timeout = Browser.TIMEOUT
-
-        def cleanup():
-            Browser.TIMEOUT = old_timeout
-        self.addCleanup(cleanup)
-
-        Browser.TIMEOUT = 0.2
 
         # Expect the Browser to give an error when it times out
         with self.assertRaises(BrowserError):

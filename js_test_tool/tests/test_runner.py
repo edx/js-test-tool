@@ -560,7 +560,14 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         browser_names = ['chrome', 'firefox', 'phantomjs']
         _, browsers = self._build_runner(1, browser_names=browser_names,
                                          coverage_xml_path='coverage.xml',
-                                         coverage_html_path='coverage.html')
+                                         coverage_html_path='coverage.html',
+                                         timeout_sec=5)
+
+        # Expect that the browsers were created using the provided timeout
+        call_args = self.mock_browser_class.call_args_list
+        for _, kwargs in call_args:
+            timeout_sec = kwargs.get('timeout_sec')
+            self.assertEqual(timeout_sec, 5)
 
         # Expect that the suite runner was configured with the correct browsers
         expected_browsers = [self.mock_browser] * len(browser_names)
@@ -670,7 +677,8 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
     def _build_runner(self, num_suites,
                       coverage_xml_path=None,
                       coverage_html_path=None,
-                      browser_names=None):
+                      browser_names=None,
+                      timeout_sec=None):
         """
         Build a configured `SuiteRunner` instance
         using the `SuiteRunnerFactory`.
@@ -682,6 +690,9 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
 
         `browser_names` is a list of browser names to use in the
         suite descriptions.
+
+        `timeout_sec` is the number of seconds to wait for a page to load
+        before timing out
 
         Because we are using mock dependencies that always return the same
         values, each suite runner will be identical,
@@ -706,4 +717,5 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         return self.factory.build_runner(suite_path_list,
                                          browser_names,
                                          coverage_xml_path,
-                                         coverage_html_path)
+                                         coverage_html_path,
+                                         timeout_sec)

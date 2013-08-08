@@ -27,6 +27,7 @@ COVERAGE_HTML_HELP = "Generated HTML coverage report."
 PHANTOMJS_HELP = "Run the tests using the PhantomJS browser."
 CHROME_HELP = "Run the tests using the Chrome browser."
 FIREFOX_HELP = "Run the tests using the Firefox browser."
+TIMEOUT_HELP = "Number of seconds to wait for the test runner page to load before timing out."
 
 BROWSER_ARGS = [('--use-phantomjs', 'phantomjs', PHANTOMJS_HELP),
                 ('--use-chrome', 'chrome', CHROME_HELP),
@@ -43,8 +44,9 @@ def parse_args(argv):
             'command': 'init' | 'run',
             'test_suite_paths': TEST_SUITE_PATHS,
             'coverage_xml': COVERAGE_XML,
-            'coverage_html': COVERAGE_HTML
-            'browser_names': BROWSER_NAMES
+            'coverage_html': COVERAGE_HTML,
+            'browser_names': BROWSER_NAMES,
+            'timeout_sec': TIMEOUT_SEC
         }
 
     The command indicates whether to `init` (create a default suite description)
@@ -60,6 +62,9 @@ def parse_args(argv):
     the dictionary will not contain those keys.
 
     `BROWSER_NAMES` is the list of browsers under which to run the tests.
+
+    `TIMEOUT_SEC` is the number of seconds to wait for a test runner
+    page to load before timing out.
 
     `argv` is the list of command line arguments, starting with
     the name of the program.
@@ -85,6 +90,9 @@ def parse_args(argv):
         parser.add_argument(browser_arg, dest='browser_names',
                             action='append_const', const=browser_name,
                             help=browser_help)
+
+    # Timeout
+    parser.add_argument('--timeout_sec', type=float, help=TIMEOUT_HELP)
 
     # Parse the arguments
     # Exclude the first argument, which is the name of the program
@@ -182,7 +190,8 @@ def main():
             factory.build_runner(args_dict.get('test_suite_paths'),
                                  args_dict.get('browser_names'),
                                  args_dict.get('coverage_xml'),
-                                 args_dict.get('coverage_html'))
+                                 args_dict.get('coverage_html'),
+                                 args_dict.get('timeout_sec'))
 
         try:
             # Generate the reports and write test results to stdout

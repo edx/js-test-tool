@@ -226,7 +226,8 @@ class SuiteRunnerFactory(object):
         self._runner_class = runner_class
 
     def build_runner(self, suite_path_list, browser_names,
-                     coverage_xml_path, coverage_html_path):
+                     coverage_xml_path, coverage_html_path,
+                     timeout_sec):
         """
         Configure `SuiteRunner` instances for each suite description.
         Each `SuiteRunner` will:
@@ -291,7 +292,7 @@ class SuiteRunnerFactory(object):
                 JSCover is not configured: no coverage reports will be generated.
 
                 To configure JSCover:
-                
+
                 1) Download the latest version from http://tntim96.github.io/JSCover/
                 2) Set the JSCOVER_JAR environment variable as the path to JSCover-all.jar
                 """).strip()
@@ -307,7 +308,8 @@ class SuiteRunnerFactory(object):
                                     jscover_path=jscover_path)
 
         # Create a list of all browsers we will need
-        browsers = [self._browser_class(name) for name in browser_names]
+        browsers = [self._browser_class(name, timeout_sec=timeout_sec)
+                    for name in browser_names]
 
         # Create a suite runner for each description
         runner = self._runner_class(browsers, server, coverage_reporters)

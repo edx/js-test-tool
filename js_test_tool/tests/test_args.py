@@ -22,6 +22,7 @@ class ParseArgsTest(unittest.TestCase):
         self.assertEqual(arg_dict.get('test_suite_paths'), ['test_suite.yaml'])
         self.assertIs(arg_dict.get('coverage_xml'), None)
         self.assertIs(arg_dict.get('coverage_html'), None)
+        self.assertIs(arg_dict.get('timeout'), None)
 
     def test_dev_command(self):
         argv = [self.TOOL_NAME, 'dev', 'test_suite.yaml']
@@ -76,6 +77,15 @@ class ParseArgsTest(unittest.TestCase):
         self.assertEqual(arg_dict.get('browser_names'),
                          ['phantomjs', 'chrome', 'firefox'])
 
+    def test_parse_timeout(self):
+
+        argv = [self.TOOL_NAME, 'run',
+                'test_suite.yaml', '--use-phantomjs',
+                '--timeout_sec', '5.3']
+
+        arg_dict = parse_args(argv)
+        self.assertEqual(arg_dict.get('timeout_sec'), 5.3)
+
     def test_parse_invalid_arg(self):
 
         invalid_argv = [
@@ -91,6 +101,10 @@ class ParseArgsTest(unittest.TestCase):
 
             # Invalid command name
             [self.TOOL_NAME, 'invalid_cmd', 'js_suite.yml'],
+
+            # Invalid or missing timeout values
+            [self.TOOL_NAME, 'run', '--use-chrome', '--timeout_sec', 'not_a_number', 'test.yml'],
+            [self.TOOL_NAME, 'run', 'test.yml', '--use-chrome', '--timeout_sec'],
 
             # No browser
             ['test_suite.yaml', '--coverage-xml', 'coverage.xml'],
