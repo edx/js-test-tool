@@ -558,7 +558,9 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
 
         # Build a runner and configure it to test using these browsers
         browser_names = ['chrome', 'firefox', 'phantomjs']
-        _, browsers = self._build_runner(1, browser_names=browser_names)
+        _, browsers = self._build_runner(1, browser_names=browser_names,
+                                         coverage_xml_path='coverage.xml',
+                                         coverage_html_path='coverage.html')
 
         # Expect that the suite runner was configured with the correct browsers
         expected_browsers = [self.mock_browser] * len(browser_names)
@@ -636,6 +638,18 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         _, kwargs = self.mock_server_class.call_args
         self.assertEqual(kwargs.get('jscover_path'), 'jscover.jar')
 
+    def test_configure_coverage_but_no_report(self):
+
+        # Build a runner with no coverage report
+        # But DO configure the JSCover environment variable
+        with mock.patch.dict('os.environ', JSCOVER_JAR='jscover.jar'):
+            self._build_runner(1, coverage_xml_path=None,
+                               coverage_html_path=None)
+
+        # Expect that the server was NOT configured to use coverage
+        _, kwargs = self.mock_server_class.call_args
+        self.assertEqual(kwargs.get('jscover_path'), None)
+
     def test_invalid_browser_names(self):
 
         with self.assertRaises(UnknownBrowserError):
@@ -654,8 +668,8 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         return ['suite_{}.yaml'.format(num) for num in range(num_suites)]
 
     def _build_runner(self, num_suites,
-                      coverage_xml_path='coverage.xml',
-                      coverage_html_path='coverage.html',
+                      coverage_xml_path=None,
+                      coverage_html_path=None,
                       browser_names=None):
         """
         Build a configured `SuiteRunner` instance

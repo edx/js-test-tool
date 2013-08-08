@@ -5,9 +5,12 @@ from js_test_tool.suite import SuiteDescription, SuiteRenderer
 from js_test_tool.suite_server import SuitePageServer
 from js_test_tool.coverage_report import HtmlCoverageReporter, XmlCoverageReporter
 from js_test_tool.browser import Browser
+from textwrap import dedent
 import os.path
 from jinja2 import Environment, PackageLoader
 
+import logging
+LOGGER = logging.getLogger(__name__)
 
 # Set up the template environment
 TEMPLATE_LOADER = PackageLoader(__package__)
@@ -276,10 +279,32 @@ class SuiteRunnerFactory(object):
             html_coverage = self._html_coverage_class(coverage_html_path)
             coverage_reporters.append(html_coverage)
 
+        # Configure to use coverage only if we expect a report
+        if len(coverage_reporters) > 0:
+
+            # Get the path to the JSCover JAR file from an env variable
+            jscover_path = os.environ.get('JSCOVER_JAR')
+
+            # Print a warning if the path isn't set
+            if jscover_path is None:
+                msg = dedent("""
+                JSCover is not configured: no coverage reports will be generated.
+
+                To configure JSCover:
+                
+                1) Download the latest version from http://tntim96.github.io/JSCover/
+                2) Set the JSCOVER_JAR environment variable as the path to JSCover-all.jar
+                """).strip()
+
+                LOGGER.warning(msg)
+
+        else:
+            jscover_path = None
+
         # Create the suite page server
         # We re-use the same server across test suites
         server = self._server_class(suite_desc_list, renderer,
-                                    jscover_path=os.environ.get('JSCOVER_JAR'))
+                                    jscover_path=jscover_path)
 
         # Create a list of all browsers we will need
         browsers = [self._browser_class(name) for name in browser_names]
