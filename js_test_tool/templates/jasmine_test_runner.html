@@ -40,6 +40,10 @@
         return reporter.specFilter(spec);
     };
 
+    if (jasmine.getFixtures) {
+        jasmine.getFixtures().fixturesPath = "/suite/{{ suite_num }}/include/fixtures/";
+    }
+
     var currentWindowOnload = window.onload;
 
     window.onload = function() {
