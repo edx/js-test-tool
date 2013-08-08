@@ -494,7 +494,7 @@ class SuiteRendererTest(unittest.TestCase):
         # Configure the renderer to use dev mode
         self.renderer = SuiteRenderer(dev_mode=True)
 
-        # Create a mock test suite description 
+        # Create a mock test suite description
         desc = self._mock_desc([], [], [], 'jasmine')
 
         # Render the description to HTML, enabling dev mode
@@ -517,8 +517,8 @@ class SuiteRendererTest(unittest.TestCase):
         # Should get the same script, except with an HTML reporter
         # instead of the custom JSON reporter
         expected_script = self.JASMINE_TEST_RUNNER_SCRIPT.replace(
-                'JsonReporter("js_test_tool_results", "0")',
-                'HtmlReporter()')
+            'JsonReporter("js_test_tool_results", "0")',
+            'HtmlReporter()')
 
         # Expect that we're using the basic Jasmine HTML reporter
         self.assertEqual(runner_script, expected_script)

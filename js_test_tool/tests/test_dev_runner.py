@@ -93,6 +93,9 @@ class SuiteDevRunnerFactoryTest(TempWorkspaceTestCase):
         # Build the runner instance
         runner = self.factory.build_runner('test_suite.yml')
 
+        # Should get a runner
+        self.assertTrue(isinstance(runner, SuiteDevRunner))
+
         # Retrieve the arguments used to initialize the suite description
         call_args_list = self.mock_desc_class.call_args_list
         self.assertEqual(len(call_args_list), 1)

@@ -170,7 +170,7 @@ def main():
         # Build a dev-mode runner using a factory
         factory = SuiteDevRunnerFactory()
         suite_dev_runner = factory.build_runner(test_suite_path)
-        
+
         # Run in dev mode (serve pages until user terminates)
         suite_dev_runner.run()
 

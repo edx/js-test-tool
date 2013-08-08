@@ -270,7 +270,7 @@ class BasePageHandler(object):
         """
         Subclasses override this to return the MIME type
         for the page.
-        
+
         Arguments have the same meaning as in `load_page()`.
         """
         pass
@@ -296,7 +296,7 @@ class SuitePageHandler(BasePageHandler):
 
     # Handle requests to /suite/#/
     # Ignore GET parameters
-    PATH_REGEX = re.compile('^/suite/([0-9])+/?(\?.*)?$')
+    PATH_REGEX = re.compile(r'^/suite/([0-9])+/?(\?.*)?$')
 
     def __init__(self, renderer, desc_list):
         """
@@ -340,10 +340,14 @@ class SuitePageHandler(BasePageHandler):
 
 
 class RunnerPageHandler(BasePageHandler):
+    """
+    Handle requests for paths of the form '/runner/RUNNER_PATH', where
+    `RUNNER_PATH` is a page that runs JavaScript tests.
+    """
 
     # Handle requests to /runner/ pages, ignoring
     # GET parameters
-    PATH_REGEX = re.compile('^/runner/([^\?]+).*$')
+    PATH_REGEX = re.compile(r'^/runner/([^\?]+).*$')
 
     def load_page(self, method, content, *args):
         """

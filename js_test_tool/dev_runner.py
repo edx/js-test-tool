@@ -23,7 +23,7 @@ class SuiteDevRunner(object):
     Run the test suite in dev mode.
     """
 
-    def __init__(self, page_server, 
+    def __init__(self, page_server,
                  webbrowser_module=None,
                  stop_fast=False):
         """
@@ -71,7 +71,7 @@ class SuiteDevRunner(object):
 
             # Open the page in the user's default browser
             self._webbrowser.open_new(url_list[0])
-            
+
             # Wait for the user to terminate
             while True:
 
@@ -109,7 +109,6 @@ class SuiteDevRunnerFactory(object):
         self._renderer_class = renderer_class
         self._server_class = server_class
         self._runner_class = runner_class
-                
 
     def build_runner(self, test_suite_path):
         """
