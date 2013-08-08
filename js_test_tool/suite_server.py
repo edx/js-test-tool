@@ -438,6 +438,14 @@ class DependencyPageHandler(BasePageHandler):
         else:
             return None
 
+    def mime_type(self, method, content, *args):
+        """
+        Return the MIME type for the page.
+        """
+        _, rel_path = args
+        return self.guess_mime_type(rel_path)
+
+
     def _dependency_path(self, suite_num, path):
         """
         Return the full filesystem path to the dependency, if it
@@ -468,12 +476,6 @@ class DependencyPageHandler(BasePageHandler):
 
             # If we did not find the path, we cannot serve it
             return None
-
-    def mime_type(self, method, content, *args):
-        """
-        Return the MIME type for the page.
-        """
-        return self.guess_mime_type(args[0])
 
 
 class InstrumentedSrcPageHandler(BasePageHandler):
@@ -526,7 +528,8 @@ class InstrumentedSrcPageHandler(BasePageHandler):
         """
         Return the MIME type for the page.
         """
-        return self.guess_mime_type(args[0])
+        _, rel_path = args
+        return self.guess_mime_type(rel_path)
 
     def _send_instrumented_src(self, suite_num, rel_path):
         """
