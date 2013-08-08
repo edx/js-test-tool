@@ -1,6 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Install dependencies for acceptance tests
+# Run from the repo root
+
 LETTUCE_FIXTURES_DIR=js_test_tool/features/fixtures
 JS_LIB_DIR=$LETTUCE_FIXTURES_DIR/jasmine/lib
 JSCOVER_DIR=$LETTUCE_FIXTURES_DIR/jscover
