@@ -32,17 +32,29 @@ This will create a YAML file that looks like:
     # for the Jasmine documentation.
     test_runner: jasmine
 
-    # Paths to source JavaScript files
-    src_paths:
-        - path/to/src
-
     # Paths to library JavaScript files (optional)
     lib_paths:
         - path/to/lib
 
+    # Paths to source JavaScript files
+    src_paths:
+        - path/to/src
+
     # Paths to spec (test) JavaScript files
     spec_paths:
         - path/to/spec
+
+    # Paths to fixture files (optional)
+    # The fixture path will be set automatically when using jasmine-jquery.
+    # (https://github.com/velesin/jasmine-jquery)
+    #
+    # You can then access fixtures using paths relative to
+    # the test suite description:
+    #
+    #   loadFixtures('path/to/fixture/fixture.html');
+    #
+    fixture_paths:
+        - path/to/fixture
 
     # Regular expressions used to exclude *.js files from
     # appearing in the test runner page.
@@ -61,13 +73,6 @@ This will create a YAML file that looks like:
     # but make an exception for particular files.
     include_in_page:
         - path/to/lib/exclude/exception_*.js
-
-    # Paths to fixture files (optional)
-    # You can access these within JavaScript code
-    # at the URL: document.location.href + "/include/"
-    # plus the path to the file (relative to this YAML file)
-    fixture_paths:
-        - path/to/fixture
 
 
 * All paths are specified relative 
