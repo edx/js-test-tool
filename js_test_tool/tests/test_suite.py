@@ -385,10 +385,6 @@ class SuiteRendererTest(unittest.TestCase):
                 return reporter.specFilter(spec);
             };
 
-            if (jasmine.getFixtures) {
-                jasmine.getFixtures().fixturesPath = "/suite/0/include/";
-            }
-
             var currentWindowOnload = window.onload;
 
             window.onload = function() {
@@ -404,6 +400,13 @@ class SuiteRendererTest(unittest.TestCase):
             }
 
         })();
+    """).strip()
+
+    JASMINE_LOAD_FIXTURES_SCRIPT = dedent("""
+        // Load fixtures if using jasmine-jquery
+        if (jasmine.getFixtures) {
+            jasmine.getFixtures().fixturesPath = "/suite/0/include/";
+        }
     """).strip()
 
     def setUp(self):
@@ -478,8 +481,8 @@ class SuiteRendererTest(unittest.TestCase):
         # Retrieve the script elements
         script_elems = tree.xpath('/html/head/script')
 
-        # Expect at least one element
-        self.assertTrue(len(script_elems) > 0)
+        # Expect at least two element
+        self.assertTrue(len(script_elems) >= 2)
 
         # Retrieve the last script element, which should be the inline
         # test runner code
@@ -488,6 +491,14 @@ class SuiteRendererTest(unittest.TestCase):
 
         # Check that it is the Jasmine test runner script
         self.assertEqual(runner_script, self.JASMINE_TEST_RUNNER_SCRIPT)
+
+        # Retrieve the second-to-last script element, which should
+        # set the fixture path
+        fixture_script = script_elems[-2].text
+        fixture_script = fixture_script.strip()
+
+        # Check that it is the fixture path setting script
+        self.assertEqual(fixture_script, self.JASMINE_LOAD_FIXTURES_SCRIPT)
 
     def test_render_jasmine_dev_mode(self):
 
