@@ -20,6 +20,13 @@
   <script type="text/javascript" src="/suite/{{ suite_num }}/include/{{ src_path }}"></script>
   {% endfor %}
 
+  <script type="text/javascript">
+// Load fixtures if using jasmine-jquery
+if (jasmine.getFixtures) {
+    jasmine.getFixtures().fixturesPath = "/suite/{{ suite_num }}/include/";
+}
+  </script>
+
   {% for spec_path in spec_path_list %}
   <script type="text/javascript" src="/suite/{{ suite_num }}/include/{{ spec_path }}"></script>
   {% endfor %}
@@ -39,10 +46,6 @@
     jasmineEnv.specFilter = function(spec) {
         return reporter.specFilter(spec);
     };
-
-    if (jasmine.getFixtures) {
-        jasmine.getFixtures().fixturesPath = "/suite/{{ suite_num }}/include/";
-    }
 
     var currentWindowOnload = window.onload;
 
