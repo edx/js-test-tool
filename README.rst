@@ -20,9 +20,9 @@ Getting Started
 
 .. code:: bash
 
-    js-test-tool init
+    js-test-tool init js_test.yml
 
-This will create a YAML file that looks like:
+This will create a YAML file (``js_test.yml``) that looks like:
 
 .. code:: yaml
 
@@ -112,26 +112,6 @@ This will start ``js-test-tool`` in **dev mode**:
 * Test results are displayed directly in the browser.
 
 
-Multiple Browsers
-------------------
-
-Using command-line options, you can run the tests in
-multiple browsers:
-
-.. code:: bash
-
-    js-test-tool run js_test.yml --use-chrome --use-phantomjs
-
-will run the tests in both Chrome and PhantomJS if the
-browsers are installed.
-
-The tool currently supports these browsers:
-
-* Chrome
-* PhantomJS
-* Firefox
-
-
 Timeouts
 --------
 
@@ -170,6 +150,44 @@ This will create coverage reports in two formats:
 
 * Cobertura XML
 * HTML
+
+
+Multiple Browsers
+------------------
+
+Using command-line options, you can run the tests in
+multiple browsers:
+
+.. code:: bash
+
+    js-test-tool run js_test.yml --use-chrome --use-phantomjs
+
+will run the tests in both Chrome and PhantomJS if the
+browsers are installed.
+
+The tool currently supports these browsers:
+
+* Chrome
+* PhantomJS
+* Firefox
+
+Coverage information is combined across browsers: a line is
+considered covered if it is executed under *any* browser.
+
+
+Multiple Test Suites
+--------------------
+
+You can run test suites sequentially:
+
+.. code:: bash
+
+    js-test-tool run test_1.yml test_2.yml --use-firefox
+
+If collecting coverage, then the coverage report
+will contain information for all files included
+in each test suite.
+
 
 License
 -------
