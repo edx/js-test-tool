@@ -25,7 +25,7 @@ jasmine.JsonReporter.prototype.reportSpecResults = function(spec) {
     // `spec` is the Jasmine spec
     
     // Retrieve information from the spec
-    var testGroup = spec.suite.description;
+    var testGroup = spec.suite.getFullName();
     var testName = spec.description;
     var testStatus = this._getTestStatus(spec);
     var testDetail = this._getTestDetail(spec);
