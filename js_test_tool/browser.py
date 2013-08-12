@@ -30,9 +30,9 @@ class Browser(object):
     # Wait time for the DOM to load, in seconds
     # It could take a long time for all the tests to complete,
     # so we set this number relatively high.
-    DEFAULT_TIMEOUT = 300
+    DEFAULT_TIMEOUT = 10
 
-    def __init__(self, browser_name, timeout_sec=DEFAULT_TIMEOUT):
+    def __init__(self, browser_name, timeout_sec=None):
         """
         Initialize the browser to use `browser_name` (e.g. chrome).
         Valid browser names are those defined by the Splinter API:
@@ -42,6 +42,9 @@ class Browser(object):
         to load.  It could take a long time, so default to a high
         value.
         """
+        if timeout_sec is None:
+            timeout_sec = self.DEFAULT_TIMEOUT
+
         # Store the browser name
         self._name = browser_name
         self._timeout_sec = timeout_sec
