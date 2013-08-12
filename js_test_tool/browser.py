@@ -50,7 +50,13 @@ class Browser(object):
         try:
             self._splinter_browser = SplinterBrowser(browser_name)
         except:
-            raise BrowserError('Could not create a browser instance')
+            if browser_name == 'chrome':
+                msg = ' '.join(['Could not create a browser instance.',
+                                'Make sure you have both ChromeDriver and Chrome installed.',
+                                'See http://splinter.cobrateam.info/docs/drivers/chrome.html'])
+            else:
+                msg = 'Could not create a {} browser instance.  Is this browser installed?'.format(browser_name)
+            raise BrowserError(msg)
 
     def get_page_results(self, url):
         """

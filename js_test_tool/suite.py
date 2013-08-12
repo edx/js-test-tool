@@ -74,6 +74,14 @@ class SuiteDescription(object):
         rules = self._desc_dict.get('exclude_from_page', [])
         self._exclude_regex_list = [re.compile(r) for r in rules]
 
+        # Try to find all paths once, with warnings enabled
+        # This way, we print warnings for missing files to the
+        # console only one time.
+        self.lib_paths(enable_warnings=True)
+        self.spec_paths(enable_warnings=True)
+        self.src_paths(enable_warnings=True)
+        self.fixture_paths(enable_warnings=True)
+
     def root_dir(self):
         """
         Return the root directory to which all paths in the suite
@@ -81,7 +89,7 @@ class SuiteDescription(object):
         """
         return self._root_dir
 
-    def lib_paths(self, only_in_page=False):
+    def lib_paths(self, only_in_page=False, enable_warnings=False):
         """
         Return a list of paths to the dependency files needed by
         the test suite.
@@ -90,6 +98,9 @@ class SuiteDescription(object):
         that should be included in <script> tags on the
         test runner page.
 
+        If `enable_warnings` is true, then log a warning whenever
+        we can't find a file we expect.
+
         If no dependencies were specified, returns an empty list.
 
         Preserves the order of lib directories.
@@ -97,11 +108,13 @@ class SuiteDescription(object):
         Raises a `SuiteDescriptionError` if a file or directory could not be found.
         """
         if 'lib_paths' in self._desc_dict:
-            return self._js_paths(self._desc_dict['lib_paths'], only_in_page)
+            return self._js_paths(self._desc_dict['lib_paths'],
+                                  only_in_page,
+                                  enable_warnings)
         else:
             return []
 
-    def src_paths(self, only_in_page=False):
+    def src_paths(self, only_in_page=False, enable_warnings=False):
         """
         Return a list of paths to JavaScript source
         files used by the test suite.
@@ -110,13 +123,18 @@ class SuiteDescription(object):
         that should be included in <script> tags on the
         test runner page.
 
+        If `enable_warnings` is true, then log a warning whenever
+        we can't find a file we expect.
+
         Preserves the order of source directories.
 
         Raises a `SuiteDescriptionError` if a file or directory could not be found.
         """
-        return self._js_paths(self._desc_dict['src_paths'], only_in_page)
+        return self._js_paths(self._desc_dict['src_paths'],
+                              only_in_page,
+                              enable_warnings)
 
-    def spec_paths(self, only_in_page=False):
+    def spec_paths(self, only_in_page=False, enable_warnings=False):
         """
         Return a list of paths to JavaScript spec files used by the test suite.
 
@@ -124,21 +142,30 @@ class SuiteDescription(object):
         that should be included in <script> tags on the
         test runner page.
 
+        If `enable_warnings` is true, then log a warning whenever
+        we can't find a file we expect.
+
         Preserves the order of spec directories.
 
         Raises a `SuiteDescriptionError` if a file or directory could not be found.
         """
-        return self._js_paths(self._desc_dict['spec_paths'], only_in_page)
+        return self._js_paths(self._desc_dict['spec_paths'],
+                              only_in_page,
+                              enable_warnings)
 
-    def fixture_paths(self):
+    def fixture_paths(self, enable_warnings=False):
         """
         Return a list of paths to fixture files used by the test suite.
         These can be non-JavaScript files.
 
+        If `enable_warnings` is true, then log a warning whenever
+        we can't find a file we expect.
+
         Raises a `SuiteDescriptionError` if a file or directory could not be found.
         """
         if 'fixture_paths' in self._desc_dict:
-            return self._file_paths(self._desc_dict['fixture_paths'])
+            return self._file_paths(self._desc_dict['fixture_paths'],
+                                    enable_warnings)
         else:
             return []
 
@@ -174,7 +201,7 @@ class SuiteDescription(object):
         # Default is to include it
         return True
 
-    def _js_paths(self, path_list, only_in_page):
+    def _js_paths(self, path_list, only_in_page, enable_warnings):
         """
         Find *.js files in `path_list`.  See `_file_paths` for
         more information.
@@ -182,15 +209,21 @@ class SuiteDescription(object):
         If `only_in_page` is True, filters the results for
         only JS files to be included in the test runner page
         <script> tags.
+
+        If `enable_warnings` is true, then log a warning whenever
+        we can't find a file we expect.
         """
         paths = self._file_paths(path_list,
+                                 enable_warnings,
                                  include_func=self._is_js_file) 
         if only_in_page:
             return filter(self._include_in_page, paths)
         else:
             return paths
 
-    def _file_paths(self, path_list, include_func=lambda file_path: True):
+    def _file_paths(self, path_list,
+                    enable_warnings,
+                    include_func=lambda file_path: True):
         """
         Recursively search the directories in `path_list` for
         files that satisfy `include_func`.
@@ -198,6 +231,9 @@ class SuiteDescription(object):
         `path_list` is a list of file and directory paths.
         `include_func` is a function that acccepts a `file_path` argument
         and returns a bool indicating whether to include the file.
+
+        If `enable_warnings` is true, then log a warning whenever
+        we can't find a file we expect.
 
         Returns the list of  paths to each file it finds.
         These are relative paths to the root directory passed
@@ -233,7 +269,7 @@ class SuiteDescription(object):
 
                 # This is a user-specified file, so we let the
                 # user know that we are skipping the dependency.
-                else:
+                elif enable_warnings:
                     msg = "Skipping '{}' because it does not have a '.js' extension".format(path)
                     LOGGER.warning(msg)
 
@@ -258,7 +294,7 @@ class SuiteDescription(object):
 
             # If it's neither a file nor a directory,
             # this is a user input error, so log it.
-            else:
+            elif enable_warnings:
                 msg = "Could not find file or directory at '{}'".format(path)
                 LOGGER.warning(msg)
 
