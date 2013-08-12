@@ -241,7 +241,10 @@ class SrcInstrumenter(object):
             raise SrcInstrumenterError(msg)
 
         # Return a unicode representation of the response
-        return response.text.decode('utf-8')
+        if isinstance(response.text, unicode):
+            return response.text
+        else:
+            return response.text.decode('utf-8')
 
 
 class CoverageData(object):
