@@ -95,6 +95,20 @@ class SrcInstrumenterTest(unittest.TestCase):
         matches = re.match(r'http://127.0.0.1:\d+/src.js', args[0])
         self.assertIsNot(matches, None)
 
+    def test_instrumenter_returns_unicode(self):
+
+        # Configure the `requests` HTTP library to return a
+        # unicode response
+        # (This used to cause a UnicodeDecode error)
+        instrumented_unicode = u'tes\u0142 \u014Cf inst\0158umented uni\0186ode'
+        self._configure_http_response(200, instrumented_unicode)
+
+        # Try to instrument a source
+        result = self.instrumenter.instrumented_src('src.js')
+
+        # Expect that we get the right source back
+        self.assertEqual(result, instrumented_unicode)
+
     def test_multiple_instances_unique_ip(self):
 
         # Start the first service
