@@ -98,27 +98,32 @@ class Browser(object):
 
         # Wait for the DOM to load and for all tests to complete
         css_sel = "#{}.{}".format(self.RESULTS_DIV_ID, self.DONE_DIV_CLASS)
-        self._splinter_browser.is_element_present_by_css(css_sel, wait_time=self._timeout_sec)
+        is_done = self._splinter_browser.is_element_present_by_css(
+                    css_sel, wait_time=self._timeout_sec)
 
-        # Retrieve the <div> containing the JSON-encoded results
-        elements = self._splinter_browser.find_by_id(self.RESULTS_DIV_ID)
-
-        # Raise an error if we can't find the div we expect
-        if elements.is_empty():
-            msg = "Could not find test results on page at '{}'".format(url)
-            raise BrowserError(msg)
+        if not is_done:
+            raise BrowserError("Timed out waiting for test results.")
 
         else:
-            # Try to JSON-decode the contents of the <div>
-            contents = elements.first.html
+            # Retrieve the <div> containing the JSON-encoded results
+            elements = self._splinter_browser.find_by_id(self.RESULTS_DIV_ID)
 
-            try:
-                return self._parse_runner_output(contents)
-
-            # Raise an error if invalid JSON
-            except ValueError:
-                msg = "Could not decode JSON test results for '{}'".format(url)
+            # Raise an error if we can't find the div we expect
+            if elements.is_empty():
+                msg = "Could not find test results on page at '{}'".format(url)
                 raise BrowserError(msg)
+
+            else:
+                # Try to JSON-decode the contents of the <div>
+                contents = elements.first.html
+
+                try:
+                    return self._parse_runner_output(contents)
+
+                # Raise an error if invalid JSON
+                except ValueError:
+                    msg = "Could not decode JSON test results for '{}'".format(url)
+                    raise BrowserError(msg)
 
     def name(self):
         """

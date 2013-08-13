@@ -79,6 +79,12 @@ class SuiteRunner(object):
                 if (stats['num_failed'] + stats['num_error']) > 0:
                     context_dict['all_passed'] = False
 
+            # After all browsers have loaded their pages,
+            # Block until all coverage data received
+            # (if coverage is not configured, this will
+            # not do anything).
+            self._suite_page_server.all_coverage_data()
+
         # Re-raise any exceptions that occur
         except:
             raise
