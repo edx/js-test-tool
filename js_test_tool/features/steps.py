@@ -50,8 +50,7 @@ def run_tool_with_html_coverage(step):
 
 @step(u'When I run js-test-tool with a passing test suite')
 def run_tool_with_passing_test_suite(step):
-    world.run_tool_with_args(['run', PASSING_SUITE_DESC_PATH,
-                              '--timeout', '2'])
+    world.run_tool_with_args(['run', PASSING_SUITE_DESC_PATH])
 
 
 @step(u'When I run js-test-tool with a failing test suite')

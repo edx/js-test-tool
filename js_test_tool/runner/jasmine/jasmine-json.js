@@ -46,6 +46,12 @@ jasmine.JsonReporter.prototype.reportRunnerResults = function(runner) {
     var divElement = document.getElementById(this._divId);
     
     if (divElement) {
+        // Trigger JSCover to POST coverage data to server
+        // at /jscoverage-store/{suite_num}
+        // where {suite_num} is the argument to jscoverage_report.
+        if (window.jscoverage_report) {
+            jscoverage_report(this._suiteNum)
+        }
 
         // Write the results to the specified div
         divElement.innerHTML = this._jsonResults();
@@ -58,13 +64,6 @@ jasmine.JsonReporter.prototype.reportRunnerResults = function(runner) {
     // If we could not find the <div>, throw an error.
     else {
         throw "No element with CSS selector ID '" + this._divId + "' found";
-    }
-
-    // Trigger JSCover to POST coverage data to server
-    // at /jscoverage-store/{suite_num}
-    // where {suite_num} is the argument to jscoverage_report.
-    if (window.jscoverage_report) {
-        jscoverage_report(this._suiteNum)
     }
 };
 

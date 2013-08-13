@@ -30,9 +30,9 @@ class Browser(object):
     # Wait time for the DOM to load, in seconds
     # It could take a long time for all the tests to complete,
     # so we set this number relatively high.
-    DEFAULT_TIMEOUT = 300
+    DEFAULT_TIMEOUT = 10
 
-    def __init__(self, browser_name, timeout_sec=DEFAULT_TIMEOUT):
+    def __init__(self, browser_name, timeout_sec=None):
         """
         Initialize the browser to use `browser_name` (e.g. chrome).
         Valid browser names are those defined by the Splinter API:
@@ -42,6 +42,9 @@ class Browser(object):
         to load.  It could take a long time, so default to a high
         value.
         """
+        if timeout_sec is None:
+            timeout_sec = self.DEFAULT_TIMEOUT
+
         # Store the browser name
         self._name = browser_name
         self._timeout_sec = timeout_sec
@@ -95,27 +98,32 @@ class Browser(object):
 
         # Wait for the DOM to load and for all tests to complete
         css_sel = "#{}.{}".format(self.RESULTS_DIV_ID, self.DONE_DIV_CLASS)
-        self._splinter_browser.is_element_present_by_css(css_sel, wait_time=self._timeout_sec)
+        is_done = self._splinter_browser.is_element_present_by_css(
+                    css_sel, wait_time=self._timeout_sec)
 
-        # Retrieve the <div> containing the JSON-encoded results
-        elements = self._splinter_browser.find_by_id(self.RESULTS_DIV_ID)
-
-        # Raise an error if we can't find the div we expect
-        if elements.is_empty():
-            msg = "Could not find test results on page at '{}'".format(url)
-            raise BrowserError(msg)
+        if not is_done:
+            raise BrowserError("Timed out waiting for test results.")
 
         else:
-            # Try to JSON-decode the contents of the <div>
-            contents = elements.first.html
+            # Retrieve the <div> containing the JSON-encoded results
+            elements = self._splinter_browser.find_by_id(self.RESULTS_DIV_ID)
 
-            try:
-                return self._parse_runner_output(contents)
-
-            # Raise an error if invalid JSON
-            except ValueError:
-                msg = "Could not decode JSON test results for '{}'".format(url)
+            # Raise an error if we can't find the div we expect
+            if elements.is_empty():
+                msg = "Could not find test results on page at '{}'".format(url)
                 raise BrowserError(msg)
+
+            else:
+                # Try to JSON-decode the contents of the <div>
+                contents = elements.first.html
+
+                try:
+                    return self._parse_runner_output(contents)
+
+                # Raise an error if invalid JSON
+                except ValueError:
+                    msg = "Could not decode JSON test results for '{}'".format(url)
+                    raise BrowserError(msg)
 
     def name(self):
         """
