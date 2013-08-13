@@ -111,6 +111,7 @@ class Browser(object):
                     css_sel, wait_time=self._timeout_sec)
 
         if not is_done:
+            self._raise_js_errors()
             raise BrowserError("Timed out waiting for test results.")
 
         else:

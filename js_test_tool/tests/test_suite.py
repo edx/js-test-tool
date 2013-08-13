@@ -400,31 +400,34 @@ class SuiteRendererTest(unittest.TestCase):
                     jasmineEnv.execute();
                 }
                 catch(err) {
-                    reportError(err);
+                    window.js_test_tool.reportError(err);
                 }
             }
 
-            function reportError(err) { 
-                var resultDiv = document.getElementById("js_test_tool_results");
-                var errDiv = document.getElementById("js_test_tool_error");
+            if (!window.js_test_tool) {
+                window.js_test_tool = {};
+                window.js_test_tool.reportError = function(err) {
+                    var resultDiv = document.getElementById("js_test_tool_results");
+                    var errDiv = document.getElementById("js_test_tool_error");
 
-                // If an error <div> is defined (e.g. not in dev mode)
-                // then write the error to that <div>
-                // so the Browser can report it
-                if (errDiv) {
-                    errDiv.innerHTML = err.toString()
-                    if ('stack' in err) {
-                        errDiv.innerHTML += "\\n" + err.stack
+                    // If an error <div> is defined (e.g. not in dev mode)
+                    // then write the error to that <div>
+                    // so the Browser can report it
+                    if (errDiv) {
+                        errDiv.innerHTML = err.toString()
+                        if ('stack' in err) {
+                            errDiv.innerHTML += "\\n" + err.stack
+                        }
+
+                        // Signal to the browser that we're done
+                        // to avoid blocking until timeout
+                        resultsDiv.className = "done";
                     }
 
-                    // Signal to the browser that we're done
-                    // to avoid blocking until timeout
-                    resultsDiv.className = "done";
-                }
-
-                // Re-throw the error (e.g. for dev mode)
-                else {
-                    throw err;
+                    // Re-throw the error (e.g. for dev mode)
+                    else {
+                        throw err;
+                    }
                 }
             }
 
