@@ -396,7 +396,39 @@ class SuiteRendererTest(unittest.TestCase):
             };
 
             function execJasmine() {
-                jasmineEnv.execute();
+                try {
+                    jasmineEnv.execute();
+                }
+                catch(err) {
+                    window.js_test_tool.reportError(err);
+                }
+            }
+
+            if (!window.js_test_tool) {
+                window.js_test_tool = {};
+                window.js_test_tool.reportError = function(err) {
+                    var resultDiv = document.getElementById("js_test_tool_results");
+                    var errDiv = document.getElementById("js_test_tool_error");
+
+                    // If an error <div> is defined (e.g. not in dev mode)
+                    // then write the error to that <div>
+                    // so the Browser can report it
+                    if (errDiv) {
+                        errDiv.innerHTML = err.toString()
+                        if ('stack' in err) {
+                            errDiv.innerHTML += "\\n" + err.stack
+                        }
+
+                        // Signal to the browser that we're done
+                        // to avoid blocking until timeout
+                        resultsDiv.className = "done";
+                    }
+
+                    // Re-throw the error (e.g. for dev mode)
+                    else {
+                        throw err;
+                    }
+                }
             }
 
         })();
@@ -475,6 +507,11 @@ class SuiteRendererTest(unittest.TestCase):
 
         # Expect that a <div> exists with the correct ID for the results
         div_id = SuiteRenderer.RESULTS_DIV_ID
+        elems = tree.xpath('//div[@id="{}"]'.format(div_id))
+        self.assertEqual(len(elems), 1)
+
+        # Expect that a <div> exists for reporting JS errors
+        div_id = SuiteRenderer.ERROR_DIV_ID
         elems = tree.xpath('//div[@id="{}"]'.format(div_id))
         self.assertEqual(len(elems), 1)
 

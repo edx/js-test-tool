@@ -50,7 +50,12 @@ jasmine.JsonReporter.prototype.reportRunnerResults = function(runner) {
         // at /jscoverage-store/{suite_num}
         // where {suite_num} is the argument to jscoverage_report.
         if (window.jscoverage_report) {
-            jscoverage_report(this._suiteNum)
+            try {
+                jscoverage_report(this._suiteNum)
+            }
+            catch(err) {
+                window.js_test_tool.reportError(err)
+            }
         }
 
         // Write the results to the specified div
@@ -63,7 +68,8 @@ jasmine.JsonReporter.prototype.reportRunnerResults = function(runner) {
 
     // If we could not find the <div>, throw an error.
     else {
-        throw "No element with CSS selector ID '" + this._divId + "' found";
+        var msg = "No element with CSS selector ID '" + this._divId + "' found";
+        window.js_test_tool.reportError(new Error(msg));
     }
 };
 

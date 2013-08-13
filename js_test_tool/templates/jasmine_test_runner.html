@@ -39,7 +39,7 @@ if (jasmine.getFixtures) {
     {% if dev_mode -%}
     var reporter = new jasmine.HtmlReporter();
     {% else -%}
-    var reporter = new jasmine.JsonReporter("{{ div_id }}", "{{ suite_num }}");
+    var reporter = new jasmine.JsonReporter("{{ results_div_id }}", "{{ suite_num }}");
     {% endif -%}
     jasmineEnv.addReporter(reporter);
 
@@ -58,7 +58,39 @@ if (jasmine.getFixtures) {
     };
 
     function execJasmine() {
-        jasmineEnv.execute();
+        try {
+            jasmineEnv.execute();
+        }
+        catch(err) {
+            window.js_test_tool.reportError(err);
+        }
+    }
+
+    if (!window.js_test_tool) {
+        window.js_test_tool = {};
+        window.js_test_tool.reportError = function(err) {
+            var resultDiv = document.getElementById("{{ results_div_id }}");
+            var errDiv = document.getElementById("{{ error_div_id }}");
+
+            // If an error <div> is defined (e.g. not in dev mode)
+            // then write the error to that <div>
+            // so the Browser can report it
+            if (errDiv) {
+                errDiv.innerHTML = err.toString()
+                if ('stack' in err) {
+                    errDiv.innerHTML += "\n" + err.stack
+                }
+
+                // Signal to the browser that we're done
+                // to avoid blocking until timeout
+                resultsDiv.className = "done";
+            }
+
+            // Re-throw the error (e.g. for dev mode)
+            else {
+                throw err;
+            }
+        }
     }
 
 })();
@@ -67,7 +99,10 @@ if (jasmine.getFixtures) {
 </head>
 
 <body>
-    <div style="display:none" id="{{ div_id }}"></div>
+    {% if not dev_mode %}
+    <div style="display:none" id="{{ results_div_id }}"></div>
+    <div style="display:none" id="{{ error_div_id }}"></div>
+    {% endif %}
     <div id="running_msg">Running Jasmine test suite...</div>
 </body>
 </html>

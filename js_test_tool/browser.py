@@ -13,6 +13,11 @@ class BrowserError(Exception):
     """
     pass
 
+class JavaScriptError(Exception):
+    """
+    JavaScript error occurred in the test runner page.
+    """
+    pass
 
 class Browser(object):
     """
@@ -26,6 +31,10 @@ class Browser(object):
     # Expect that the results <div> will have this
     # class when all the results are posted.
     DONE_DIV_CLASS = "done"
+
+    # Expect the results page to have a <div>
+    # with this ID to report JavaScript exceptions
+    ERROR_DIV_ID = 'js_test_tool_error'
 
     # Wait time for the DOM to load, in seconds
     # It could take a long time for all the tests to complete,
@@ -102,28 +111,14 @@ class Browser(object):
                     css_sel, wait_time=self._timeout_sec)
 
         if not is_done:
+            self._raise_js_errors()
             raise BrowserError("Timed out waiting for test results.")
 
         else:
-            # Retrieve the <div> containing the JSON-encoded results
-            elements = self._splinter_browser.find_by_id(self.RESULTS_DIV_ID)
-
-            # Raise an error if we can't find the div we expect
-            if elements.is_empty():
-                msg = "Could not find test results on page at '{}'".format(url)
-                raise BrowserError(msg)
-
-            else:
-                # Try to JSON-decode the contents of the <div>
-                contents = elements.first.html
-
-                try:
-                    return self._parse_runner_output(contents)
-
-                # Raise an error if invalid JSON
-                except ValueError:
-                    msg = "Could not decode JSON test results for '{}'".format(url)
-                    raise BrowserError(msg)
+            # Raise an exception if JavaScript errors reported
+            # (the test runner writes these to the DOM)
+            self._raise_js_errors()
+            return self._get_results_from_dom()
 
     def name(self):
         """
@@ -137,6 +132,55 @@ class Browser(object):
         the browser's resources.
         """
         self._splinter_browser.quit()
+
+    def _raise_js_errors(self):
+        """
+        Retrieve any JavaScript errors written by the test
+        runner to the DOM in the currently loaded browser
+        page.
+
+        If any errors are found, raise them as a
+        `JavaScriptException`.
+        """
+        # Retrieve the <div> containing the reported JS errors
+        elements = self._splinter_browser.find_by_id(self.ERROR_DIV_ID)
+
+        # Raise an error if the test runner reported any
+        if not elements.is_empty():
+            contents = elements.first.html
+            if contents:
+                raise JavaScriptError(contents)
+
+        # If no errors found, then do nothing
+
+    def _get_results_from_dom(self):
+        """
+        Retrieve the results from the DOM of the currently
+        loaded browser page.
+        """
+        # Retrieve the <div> containing the JSON-encoded results
+        elements = self._splinter_browser.find_by_id(self.RESULTS_DIV_ID)
+
+        # Raise an error if we can't find the div we expect
+        if elements.is_empty():
+            msg = "Could not find test results on page"
+            raise BrowserError(msg)
+
+        else:
+            # Try to JSON-decode the contents of the <div>
+            contents = elements.first.html
+
+            if contents == '':
+                msg = "No test results reported"
+                raise BrowserError(msg)
+
+            try:
+                return self._parse_runner_output(contents)
+
+            # Raise an error if invalid JSON
+            except ValueError:
+                msg = "Could not decode JSON test results"
+                raise BrowserError(msg)
 
     def _parse_runner_output(self, output):
         """
