@@ -1,7 +1,7 @@
 from unittest import TestCase
 import json
 from textwrap import dedent
-from js_test_tool.browser import Browser, BrowserError
+from js_test_tool.browser import Browser, BrowserError, JavaScriptError
 from js_test_tool.tests.helpers import StubServer
 
 
@@ -223,4 +223,26 @@ class BrowserTest(TestCase):
 
         # Expect the Browser to give an error when it times out
         with self.assertRaises(BrowserError):
+            self.browser.get_page_results(server_url)
+
+    def test_report_js_error(self):
+
+        # JavaScript error reported in the error <div>
+        # by the test runner script
+        # Assume that the test runner also sets the
+        # "done" class on error conditions.
+        content = dedent(u"""
+            <div id="{}" class="{}">[]</div>
+            <div id="{}">Error message</div>
+            """).strip().format(Browser.RESULTS_DIV_ID,
+                                Browser.DONE_DIV_CLASS,
+                                Browser.ERROR_DIV_ID)
+
+        self.stub_server.set_response(200, content)
+
+        # Use the browser to load the page and parse the results
+        # Expect that the browser raises an exception
+        # reporting the JavaScript error
+        with self.assertRaises(JavaScriptError):
+            server_url = self.stub_server.root_url()
             self.browser.get_page_results(server_url)

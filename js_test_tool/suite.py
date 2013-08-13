@@ -428,6 +428,10 @@ class SuiteRenderer(object):
     # The CSS ID of the <div> that will contain the output test results
     RESULTS_DIV_ID = 'js_test_tool_results'
 
+    # Expect the results page to have a <div>
+    # with this ID to report JavaScript exceptions
+    ERROR_DIV_ID = 'js_test_tool_error'
+
     def __init__(self, dev_mode=False):
         """
         If `dev_mode` is `True`, then display results in the browser
@@ -463,7 +467,8 @@ class SuiteRenderer(object):
                             'lib_path_list': suite_desc.lib_paths(only_in_page=True),
                             'src_path_list': suite_desc.src_paths(only_in_page=True),
                             'spec_path_list': suite_desc.spec_paths(only_in_page=True),
-                            'div_id': self.RESULTS_DIV_ID,
+                            'results_div_id': self.RESULTS_DIV_ID,
+                            'error_div_id': self.ERROR_DIV_ID,
                             'dev_mode': self._dev_mode}
 
         # Render the template
