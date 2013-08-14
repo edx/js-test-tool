@@ -89,6 +89,13 @@ class SuiteDescription(object):
         """
         return self._root_dir
 
+    def prepend_path(self):
+        """
+        Return a user-defined path prepended to source file
+        paths in reports.  May be an empty string.
+        """
+        return self._desc_dict.get('prepend_path', '')
+
     def lib_paths(self, only_in_page=False, enable_warnings=False):
         """
         Return a list of paths to the dependency files needed by
@@ -385,6 +392,13 @@ class SuiteDescription(object):
                 msg = ("Paths cannot use up-level references (e.g. ../path/to/dir).  " +
                       "Try using a symbolic link instead.")
                 raise SuiteDescriptionError(msg)
+
+        # Check that the prepend_path key is a string
+        prepend_path = desc_dict.get('prepend_path', '')
+        if not (isinstance(prepend_path, str) or
+                isinstance(prepend_path, unicode)):
+            msg = "Prepend path must be a string."
+            raise SuiteDescriptionError(msg)
 
     @staticmethod
     def _validate_root_dir(root_dir):

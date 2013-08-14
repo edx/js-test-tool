@@ -1,4 +1,5 @@
 ---
+prepend_path: base
 lib_paths:
     - lib
 spec_paths: 

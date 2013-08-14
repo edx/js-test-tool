@@ -292,7 +292,7 @@ class CoverageData(object):
         """
         self._suite_num_set.add(int(suite_num))
 
-    def load_from_dict(self, root_dir, cover_dict):
+    def load_from_dict(self, root_dir, prepend_path, cover_dict):
         """
         Load coverage data from `cover_dict`, which is in
         the format used by JSCover:
@@ -320,6 +320,11 @@ class CoverageData(object):
 
         `root_dir` is the root directory relative to which
         source paths in `cover_dict` are interpreted.
+
+        `prepend_path` is the user-specified path to prepend
+        to source files in the report.  This is useful for
+        controlling how filenames are reported in a project
+        with several test suites.
         """
 
         # Check that we got a dict (not a list)
@@ -338,7 +343,7 @@ class CoverageData(object):
             full_path = os.path.join(root_dir, rel_src)
 
             # Store the relative path
-            self._rel_path_dict[full_path] = rel_src
+            self._rel_path_dict[full_path] = os.path.join(prepend_path, rel_src)
 
             # Retrieve the line data (list in which None indicates
             # that the line is not executable and an integer indicates

@@ -317,7 +317,7 @@ class CoverageDataTest(unittest.TestCase):
 
         # Load the data
         coverage_data = CoverageData()
-        coverage_data.load_from_dict('/root_dir', self.TEST_COVERAGE_DICT)
+        coverage_data.load_from_dict('/root_dir', '', self.TEST_COVERAGE_DICT)
 
         # Check that it gets parsed correctly
         self.assertEqual(coverage_data.src_list(),
@@ -333,11 +333,11 @@ class CoverageDataTest(unittest.TestCase):
 
         # Load the data
         coverage_data = CoverageData()
-        coverage_data.load_from_dict('/root_dir', self.TEST_COVERAGE_DICT)
+        coverage_data.load_from_dict('/root_dir', '', self.TEST_COVERAGE_DICT)
 
         # Load additional data covering the lines that were uncovered
         lines = [0, 1, 0, 1, 1, None]
-        coverage_data.load_from_dict('/root_dir', {'/src1.js': {'lineData': lines}})
+        coverage_data.load_from_dict('/root_dir', '', {'/src1.js': {'lineData': lines}})
 
         # Check that the two sources are combined correctly
         expected = {0: True, 1: True, 2: True, 3: True, 4: True, 5: True}
@@ -347,8 +347,8 @@ class CoverageDataTest(unittest.TestCase):
 
         # Load data from two different root dirs
         coverage_data = CoverageData()
-        coverage_data.load_from_dict('/root_1', self.TEST_COVERAGE_DICT)
-        coverage_data.load_from_dict('/root_2', self.TEST_COVERAGE_DICT)
+        coverage_data.load_from_dict('/root_1', '', self.TEST_COVERAGE_DICT)
+        coverage_data.load_from_dict('/root_2', '', self.TEST_COVERAGE_DICT)
 
         # We should get two separate sources
         self.assertEqual(coverage_data.src_list(),
@@ -378,13 +378,13 @@ class CoverageDataTest(unittest.TestCase):
         for invalid in ["", "invalid", ["list"], 5, None]:
             with self.assertRaises(ValueError):
                 coverage_data = CoverageData()
-                coverage_data.load_from_dict('root_dir', invalid)
+                coverage_data.load_from_dict('root_dir', '', invalid)
 
     def test_missing_key(self):
 
         # Load data with a JSON dict that is missing the line keys
         coverage_data = CoverageData()
-        coverage_data.load_from_dict('root_dir',
+        coverage_data.load_from_dict('root_dir', '',
                                      {'/src1': {'missing key': True}})
 
         # Expect that no coverage information is loaded
@@ -393,14 +393,14 @@ class CoverageDataTest(unittest.TestCase):
 
     def test_coverage_for_src(self):
         coverage_data = CoverageData()
-        coverage_data.load_from_dict('root_dir', self.TEST_COVERAGE_DICT)
+        coverage_data.load_from_dict('root_dir', '', self.TEST_COVERAGE_DICT)
 
         # The coverage for root_dir/src1.js is 3/4 = 0.75
         self.assertEqual(coverage_data.coverage_for_src('root_dir/src1.js'), 0.75)
 
     def test_total_coverage(self):
         coverage_data = CoverageData()
-        coverage_data.load_from_dict('root_dir', self.TEST_COVERAGE_DICT)
+        coverage_data.load_from_dict('root_dir', '', self.TEST_COVERAGE_DICT)
 
         # Total coverage is 6/8 = 0.75
         self.assertEqual(coverage_data.total_coverage(), 0.75)
@@ -409,17 +409,19 @@ class CoverageDataTest(unittest.TestCase):
 
         # Load the data
         coverage_data = CoverageData()
-        coverage_data.load_from_dict('/root_dir', self.TEST_COVERAGE_DICT)
+        coverage_data.load_from_dict('/root_dir', 'prepend/to/path', self.TEST_COVERAGE_DICT)
 
         # Check that we can retrieve the relative source path
-        self.assertEqual(coverage_data.rel_src_path(u'/root_dir/src1.js'), 'src1.js')
-        self.assertEqual(coverage_data.rel_src_path(u'/root_dir/subdir/src2.js'), 'subdir/src2.js')
+        self.assertEqual(coverage_data.rel_src_path(u'/root_dir/src1.js'),
+                         'prepend/to/path/src1.js')
+        self.assertEqual(coverage_data.rel_src_path(u'/root_dir/subdir/src2.js'),
+                         'prepend/to/path/subdir/src2.js')
 
     def test_get_relative_unknown_path(self):
 
         # Load the data
         coverage_data = CoverageData()
-        coverage_data.load_from_dict('/root_dir', self.TEST_COVERAGE_DICT)
+        coverage_data.load_from_dict('/root_dir', '', self.TEST_COVERAGE_DICT)
 
         # Unknown path returns None, even if in the root dir
         self.assertIs(coverage_data.rel_src_path('unknown'), None)
@@ -459,7 +461,7 @@ class CoverageDataTest(unittest.TestCase):
 
         # Provide coverage info for other source files,
         # but not the one we passed to the constructor
-        coverage_data.load_from_dict('/root_dir', self.TEST_COVERAGE_DICT)
+        coverage_data.load_from_dict('/root_dir', '', self.TEST_COVERAGE_DICT)
 
         # Expect that all sources are reported (including the uncovered src)
         self.assertEqual(coverage_data.src_list(), 

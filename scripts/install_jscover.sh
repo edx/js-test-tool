@@ -7,7 +7,7 @@ LETTUCE_FIXTURES_DIR=js_test_tool/features/fixtures
 JS_LIB_DIR=$LETTUCE_FIXTURES_DIR/jasmine/lib
 JSCOVER_DIR=$LETTUCE_FIXTURES_DIR/jscover
 
-JSCOVER_URL=http://iweb.dl.sourceforge.net/project/jscover/JSCover-1.0.2.zip
+JSCOVER_URL=http://superb-dca2.dl.sourceforge.net/project/jscover/JSCover-1.0.2.zip
 JQUERY_URL=http://code.jquery.com/jquery-1.10.1.min.js
 JASMINE_JQUERY_URL=https://raw.github.com/velesin/jasmine-jquery/master/lib/jasmine-jquery.js 
 
