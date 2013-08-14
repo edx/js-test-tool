@@ -89,6 +89,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES)
         self.assertEqual(desc.fixture_paths(), self.FIXTURE_FILES)
         self.assertEqual(desc.test_runner(), self.YAML_DATA['test_runner'])
+        self.assertEqual(desc.prepend_path(), '')
 
     def test_different_working_dir(self):
         
@@ -169,6 +170,14 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.lib_paths(), self.LIB_FILES[0:3])
         self.assertEqual(desc.src_paths(), self.SRC_FILES[0:3])
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES[0:3])
+
+    def test_prepend_path_is_not_string(self):
+
+        # Set prepend_path to non-string values
+        for prepend_path in [42, ['list', 'of', 'items'], {'dict': 12}]:
+            yaml_data = copy.deepcopy(self.YAML_DATA)
+            yaml_data['prepend_path'] = prepend_path
+            self._assert_invalid_desc(yaml_data)
 
     def test_yaml_is_list_not_dict(self):
 
@@ -251,6 +260,21 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.src_paths(), self.SRC_FILES)
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES)
         self.assertEqual(desc.fixture_paths(), self.FIXTURE_FILES)
+
+    def test_prepend_path(self):
+
+        # Add a path to prepend to source paths in reports
+        yaml_data = copy.deepcopy(self.YAML_DATA)
+        yaml_data['prepend_path'] = 'base/path'
+
+        # Create an in-memory YAML file from the data
+        yaml_file = self._yaml_buffer(yaml_data)
+
+        # Create the suite description using the YAML file
+        desc = SuiteDescription(yaml_file, self.temp_dir)
+
+        # Check that the prepend path is stored
+        self.assertEqual(desc.prepend_path(), 'base/path')
 
     def test_exclude_from_page(self):
 

@@ -32,6 +32,14 @@ This will create a YAML file (``js_test.yml``) that looks like:
     # for the Jasmine documentation.
     test_runner: jasmine
 
+    # Path prepended to source files in the coverage report (optional)
+    # For example, if the source path
+    # is "src/source.js" (relative to this YAML file)
+    # and the prepend path is "base/dir"
+    # then the coverage report will show
+    # "base/src/source.js"
+    prepend_path: base/path
+
     # Paths to library JavaScript files (optional)
     lib_paths:
         - path/to/lib

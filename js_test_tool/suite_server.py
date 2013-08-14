@@ -646,7 +646,9 @@ class StoreCoveragePageHandler(BasePageHandler):
             # `CoverageData.load_from_dict()` is thread-safe, so it
             # is okay to write to this, even if the request handler
             # is running asynchronously.
-            self._coverage_data.load_from_dict(suite_desc.root_dir(), coverage_dict)
+            self._coverage_data.load_from_dict(suite_desc.root_dir(),
+                                               suite_desc.prepend_path(),
+                                               coverage_dict)
 
         except ValueError:
             msg = ("Could not interpret coverage data in POST request " +
