@@ -431,7 +431,8 @@ class CoverageDataTest(unittest.TestCase):
     def test_uncovered_src(self, mock_num_file_lines):
 
         # Set an expected source file
-        coverage_data = CoverageData(expected_src_list=['root_dir/src1.js'])
+        coverage_data = CoverageData()
+        coverage_data.add_expected_src('/root_dir', 'src1.js')
 
         # Configure the num file lines for the source file
         num_lines = 10
@@ -440,10 +441,11 @@ class CoverageDataTest(unittest.TestCase):
         # Provide no coverage information (did NOT call `load_from_dict()`)
 
         # Expect that the source is still reported
-        self.assertEqual(coverage_data.src_list(), ['root_dir/src1.js'])
+        self.assertEqual(coverage_data.src_list(), ['/root_dir/src1.js'])
+        self.assertEqual(coverage_data.rel_src_path('/root_dir/src1.js'), 'src1.js')
 
         # Expect that the source is reported as 0% covered
-        self.assertEqual(coverage_data.line_dict_for_src('root_dir/src1.js'),
+        self.assertEqual(coverage_data.line_dict_for_src('/root_dir/src1.js'),
                          {line_num: False for line_num in range(num_lines)})
 
         # Expect that total coverage is 0%
@@ -453,7 +455,8 @@ class CoverageDataTest(unittest.TestCase):
     def test_covered_and_uncovered_src(self, mock_num_file_lines):
 
         # Set an expected source file
-        coverage_data = CoverageData(expected_src_list=['/root_dir/uncovered.js'])
+        coverage_data = CoverageData()
+        coverage_data.add_expected_src('/root_dir', 'uncovered.js')
 
         # Configure the num file lines for the source file
         num_lines = 10

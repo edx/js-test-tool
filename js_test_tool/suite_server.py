@@ -83,17 +83,16 @@ class SuitePageServer(HTTPServer):
         # If we're collecting coverage information
         if self._jscover_path is not None:
 
-            # Create a list to hold the source paths
-            # from all the suite descriptions
-            # We will use this to initialize the CoverageData object.
-            all_src_paths = []
+            # Create an object to store coverage data we receive
+            self.coverage_data = CoverageData()
 
             # Start each SrcInstrumenter instance if we know where JSCover is
             for desc in self.desc_list:
 
-                # Store the source paths for this description
-                all_src_paths.extend([os.path.join(desc.root_dir(), src_path)
-                                      for src_path in desc.src_paths()])
+                # Inform the coverage data that we expect this source
+                # (report it as 0% if no info received).
+                for rel_path in desc.src_paths():
+                    self.coverage_data.add_expected_src(desc.root_dir(), rel_path)
 
                 # Create an instrumenter serving files
                 # in the suite description root directory
@@ -105,9 +104,6 @@ class SuitePageServer(HTTPServer):
 
                 # Associate the instrumenter with its suite description
                 self._instr_list.append(instr)
-
-            # Create an object to store coverage data we receive
-            self.coverage_data = CoverageData(all_src_paths)
 
         else:
             self._instr_list = []

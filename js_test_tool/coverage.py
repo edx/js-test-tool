@@ -251,17 +251,9 @@ class CoverageData(object):
     """
     Load coverage data from JSON.
     """
-    def __init__(self, expected_src_list=None):
+    def __init__(self):
         """
-        Initialize to report data for all source paths in 
-        `expected_src_list` (a list of absolute paths).
-
-        All source information loaded using `load_from_dict()`
-        will be stored and reported.  If a source is 
-        in `expected_src_list`, then it will *always* be reported,
-        even if no coverage information is received for
-        that source.  If no coverage information is received,
-        the source is reported as 0% covered.
+        Initialize the coverage data instance.
         """
 
         # Create a dict mapping source file names to coverage
@@ -269,11 +261,6 @@ class CoverageData(object):
         # as a dict mapping line numbers to True/False values
         # indicating whether the line is covered.
         self._src_dict = dict()
-
-        # Create entries for all expected sources
-        if expected_src_list is not None:
-            for expected_src in expected_src_list:
-                self._src_dict[expected_src] = None
 
         # Create a dict mapping absolute source paths
         # to the path relative to the test suite root directory
@@ -291,6 +278,20 @@ class CoverageData(object):
         coverage data for every test suite.
         """
         self._suite_num_set.add(int(suite_num))
+
+    def add_expected_src(self, root_dir, rel_path):
+        """
+        Add an expected source to the coverage data.
+        If no information is received for the source,
+        it will be reported as 0% covered.
+
+        `root_dir` is an absolute path to a directory
+        from which to interpret `rel_path`.
+        """
+        full_path = os.path.join(root_dir, rel_path)
+        if not full_path in self._src_dict:
+            self._src_dict[full_path] = None
+            self._rel_path_dict[full_path] = rel_path
 
     def load_from_dict(self, root_dir, prepend_path, cover_dict):
         """
