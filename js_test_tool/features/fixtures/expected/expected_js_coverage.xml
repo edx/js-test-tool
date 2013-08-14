@@ -2,7 +2,7 @@
 <!DOCTYPE coverage
   SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
 <packages>
-    <package branch-rate="0" complexity="0" line-rate="1.0" name="">
+    <package branch-rate="0" complexity="0" line-rate="1.0" name="javascript">
         <class branch-rate="0" complexity="0"
                filename="base/src/Adder.js" line-rate="1.0"
                name="base/src/Adder.js">
