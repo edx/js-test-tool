@@ -346,7 +346,7 @@ class XmlCoverageReporterTest(BaseCoverageReporterTest):
             <!DOCTYPE coverage
               SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
             <packages>
-                <package branch-rate="0" complexity="0" line-rate="0.75" name="">
+                <package branch-rate="0" complexity="0" line-rate="0.75" name="javascript">
                     <class branch-rate="0" complexity="0"
                            filename="src1.js" line-rate="0.75"
                            name="src1.js">
@@ -371,7 +371,7 @@ class XmlCoverageReporterTest(BaseCoverageReporterTest):
             <!DOCTYPE coverage
               SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
             <packages>
-                <package branch-rate="0" complexity="0" line-rate="0.8333" name="">
+                <package branch-rate="0" complexity="0" line-rate="0.8333" name="javascript">
                     <class branch-rate="0" complexity="0"
                            filename="src1.js" line-rate="0.75"
                            name="src1.js">
@@ -405,7 +405,7 @@ class XmlCoverageReporterTest(BaseCoverageReporterTest):
             <!DOCTYPE coverage
               SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
             <packages>
-                <package branch-rate="0" complexity="0" line-rate="1.0" name="">
+                <package branch-rate="0" complexity="0" line-rate="1.0" name="javascript">
                     <class branch-rate="0" complexity="0"
                            filename="src1.js" line-rate="1.0"
                            name="src1.js">
@@ -437,7 +437,7 @@ class XmlCoverageReporterTest(BaseCoverageReporterTest):
             <!DOCTYPE coverage
               SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
             <packages>
-                <package branch-rate="0" complexity="0" line-rate="0.0" name="">
+                <package branch-rate="0" complexity="0" line-rate="0.0" name="javascript">
                     <class branch-rate="0" complexity="0"
                            filename="src1.js" line-rate="0.0"
                            name="src1.js">
