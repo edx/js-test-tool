@@ -332,8 +332,9 @@ class XmlCoverageReporterTest(BaseCoverageReporterTest):
             <?xml version="1.0" ?>
             <!DOCTYPE coverage
               SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
-            <packages>
-            </packages>
+            <coverage branch-rate="0" line-rate="0" timestamp="" version="0.0.1">
+            <packages></packages>
+            </coverage>
         """).strip()
 
         self.assert_output_equals(coverage, expected)
@@ -345,21 +346,25 @@ class XmlCoverageReporterTest(BaseCoverageReporterTest):
             <?xml version="1.0" ?>
             <!DOCTYPE coverage
               SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
-            <packages>
-                <package branch-rate="0" complexity="0" line-rate="0.75" name="javascript">
-                    <class branch-rate="0" complexity="0"
-                           filename="src1.js" line-rate="0.75"
-                           name="src1.js">
-                        <methods />
-                        <lines>
-                            <line hits="1" number="1" />
-                            <line hits="1" number="2" />
-                            <line hits="0" number="3" />
-                            <line hits="1" number="5" />
-                        </lines>
-                    </class>
-                </package>
-            </packages>
+            <coverage branch-rate="0" line-rate="0.75" timestamp="" version="0.0.1">
+                <packages>
+                    <package branch-rate="0" complexity="0" line-rate="0.75" name="javascript">
+                        <classes>
+                            <class branch-rate="0" complexity="0"
+                                   filename="src1.js" line-rate="0.75"
+                                   name="src1.js">
+                                <methods />
+                                <lines>
+                                    <line hits="1" number="1" />
+                                    <line hits="1" number="2" />
+                                    <line hits="0" number="3" />
+                                    <line hits="1" number="5" />
+                                </lines>
+                            </class>
+                        </classes>
+                    </package>
+                </packages>
+            </coverage>
         """).strip()
 
         self.assert_output_equals(coverage, expected)
@@ -370,30 +375,34 @@ class XmlCoverageReporterTest(BaseCoverageReporterTest):
             <?xml version="1.0" ?>
             <!DOCTYPE coverage
               SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
-            <packages>
-                <package branch-rate="0" complexity="0" line-rate="0.8333" name="javascript">
-                    <class branch-rate="0" complexity="0"
-                           filename="src1.js" line-rate="0.75"
-                           name="src1.js">
-                        <methods />
-                        <lines>
-                            <line hits="1" number="1" />
-                            <line hits="1" number="2" />
-                            <line hits="0" number="3" />
-                            <line hits="1" number="5" />
-                        </lines>
-                    </class>
-                    <class branch-rate="0" complexity="0"
-                           filename="src2.js" line-rate="1.0"
-                           name="src2.js">
-                        <methods />
-                        <lines>
-                            <line hits="1" number="0" />
-                            <line hits="1" number="1" />
-                        </lines>
-                    </class>
-                </package>
-            </packages>
+            <coverage branch-rate="0" line-rate="0.8333" timestamp="" version="0.0.1">
+                <packages>
+                    <package branch-rate="0" complexity="0" line-rate="0.8333" name="javascript">
+                        <classes>
+                            <class branch-rate="0" complexity="0"
+                                   filename="src1.js" line-rate="0.75"
+                                   name="src1.js">
+                                <methods />
+                                <lines>
+                                    <line hits="1" number="1" />
+                                    <line hits="1" number="2" />
+                                    <line hits="0" number="3" />
+                                    <line hits="1" number="5" />
+                                </lines>
+                            </class>
+                            <class branch-rate="0" complexity="0"
+                                   filename="src2.js" line-rate="1.0"
+                                   name="src2.js">
+                                <methods />
+                                <lines>
+                                    <line hits="1" number="0" />
+                                    <line hits="1" number="1" />
+                                </lines>
+                            </class>
+                        </classes>
+                    </package>
+                </packages>
+            </coverage>
         """).strip()
 
         self.assert_output_equals(coverage, expected)
@@ -404,28 +413,32 @@ class XmlCoverageReporterTest(BaseCoverageReporterTest):
             <?xml version="1.0" ?>
             <!DOCTYPE coverage
               SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
-            <packages>
-                <package branch-rate="0" complexity="0" line-rate="1.0" name="javascript">
-                    <class branch-rate="0" complexity="0"
-                           filename="src1.js" line-rate="1.0"
-                           name="src1.js">
-                        <methods />
-                        <lines>
-                            <line hits="1" number="0" />
-                            <line hits="1" number="1" />
-                        </lines>
-                    </class>
-                    <class branch-rate="0" complexity="0"
-                           filename="src2.js" line-rate="1.0"
-                           name="src2.js">
-                        <methods />
-                        <lines>
-                            <line hits="1" number="0" />
-                            <line hits="1" number="1" />
-                        </lines>
-                    </class>
-                </package>
-            </packages>
+            <coverage branch-rate="0" line-rate="1.0" timestamp="" version="0.0.1">
+                <packages>
+                    <package branch-rate="0" complexity="0" line-rate="1.0" name="javascript">
+                        <classes>
+                            <class branch-rate="0" complexity="0"
+                                   filename="src1.js" line-rate="1.0"
+                                   name="src1.js">
+                                <methods />
+                                <lines>
+                                    <line hits="1" number="0" />
+                                    <line hits="1" number="1" />
+                                </lines>
+                            </class>
+                            <class branch-rate="0" complexity="0"
+                                   filename="src2.js" line-rate="1.0"
+                                   name="src2.js">
+                                <methods />
+                                <lines>
+                                    <line hits="1" number="0" />
+                                    <line hits="1" number="1" />
+                                </lines>
+                            </class>
+                        </classes>
+                    </package>
+                </packages>
+            </coverage>
         """).strip()
 
         self.assert_output_equals(coverage, expected)
@@ -436,28 +449,32 @@ class XmlCoverageReporterTest(BaseCoverageReporterTest):
             <?xml version="1.0" ?>
             <!DOCTYPE coverage
               SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
-            <packages>
-                <package branch-rate="0" complexity="0" line-rate="0.0" name="javascript">
-                    <class branch-rate="0" complexity="0"
-                           filename="src1.js" line-rate="0.0"
-                           name="src1.js">
-                        <methods />
-                        <lines>
-                            <line hits="0" number="0" />
-                            <line hits="0" number="1" />
-                        </lines>
-                    </class>
-                    <class branch-rate="0" complexity="0"
-                           filename="src2.js" line-rate="0.0"
-                           name="src2.js">
-                        <methods />
-                        <lines>
-                            <line hits="0" number="0" />
-                            <line hits="0" number="1" />
-                        </lines>
-                    </class>
-                </package>
-            </packages>
+            <coverage branch-rate="0" line-rate="0.0" timestamp="" version="0.0.1">
+                <packages>
+                    <package branch-rate="0" complexity="0" line-rate="0.0" name="javascript">
+                        <classes>
+                            <class branch-rate="0" complexity="0"
+                                   filename="src1.js" line-rate="0.0"
+                                   name="src1.js">
+                                <methods />
+                                <lines>
+                                    <line hits="0" number="0" />
+                                    <line hits="0" number="1" />
+                                </lines>
+                            </class>
+                            <class branch-rate="0" complexity="0"
+                                   filename="src2.js" line-rate="0.0"
+                                   name="src2.js">
+                                <methods />
+                                <lines>
+                                    <line hits="0" number="0" />
+                                    <line hits="0" number="1" />
+                                </lines>
+                            </class>
+                        </classes>
+                    </package>
+                </packages>
+            </coverage>
         """).strip()
 
         self.assert_output_equals(coverage, expected)
