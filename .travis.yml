@@ -7,7 +7,7 @@ before_install:
 install: 
   - "pip install -r requirements.txt --use-mirrors"
   - "pip install -r test-requirements.txt --use-mirrors"
-  - ./scripts/install_jscover.sh
+  - ./scripts/acceptance_reqs.sh
   - "pip install coveralls"
   - "python setup.py install"
 script:
