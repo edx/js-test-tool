@@ -39,7 +39,7 @@ test_runner: jasmine
 # is "src/source.js" (relative to this YAML file)
 # and the prepend path is "base/dir"
 # then the coverage report will show
-# "base/src/source.js"
+# "base/dir/src/source.js"
 prepend_path: base/path
 
 # Paths to library JavaScript files (optional)
@@ -70,7 +70,7 @@ fixture_paths:
 # appearing in the test runner page.
 # Files are included by default, which means that they
 # are loaded using a <script> tag in the test runner page.
-# When loading many files, this can be slow, so 
+# When loading many files, this can be slow, so
 # exclude any files you don't need.
 exclude_from_page:
     - path/to/lib/exclude/*

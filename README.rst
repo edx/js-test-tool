@@ -52,7 +52,7 @@ This will create a YAML file (``js_test.yml``) that looks like:
     # is "src/source.js" (relative to this YAML file)
     # and the prepend path is "base/dir"
     # then the coverage report will show
-    # "base/src/source.js"
+    # "base/dir/src/source.js"
     prepend_path: base/path
 
     # Paths to library JavaScript files (optional)
@@ -83,7 +83,7 @@ This will create a YAML file (``js_test.yml``) that looks like:
     # appearing in the test runner page.
     # Files are included by default, which means that they
     # are loaded using a <script> tag in the test runner page.
-    # When loading many files, this can be slow, so 
+    # When loading many files, this can be slow, so
     # exclude any files you don't need.
     exclude_from_page:
         - path/to/lib/exclude/*
@@ -98,7 +98,7 @@ This will create a YAML file (``js_test.yml``) that looks like:
         - path/to/lib/exclude/exception_*.js
 
 
-* All paths are specified relative 
+* All paths are specified relative
   to the location of the YAML file.
 
 * Directory paths are searched recursively.
@@ -161,7 +161,7 @@ __ http://tntim96.github.io/JSCover/
 
 .. code:: bash
 
-    export JSCOVER_JAR=~/jscover/target/dist/JSCover-all.jar 
+    export JSCOVER_JAR=~/jscover/target/dist/JSCover-all.jar
 
 3. Run ``js-test-tool`` with coverage:
 
