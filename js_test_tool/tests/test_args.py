@@ -81,7 +81,7 @@ class ParseArgsTest(unittest.TestCase):
 
         argv = [self.TOOL_NAME, 'run',
                 'test_suite.yaml', '--use-phantomjs',
-                '--timeout_sec', '5.3']
+                '--timeout-sec', '5.3']
 
         arg_dict = parse_args(argv)
         self.assertEqual(arg_dict.get('timeout_sec'), 5.3)
@@ -103,8 +103,8 @@ class ParseArgsTest(unittest.TestCase):
             [self.TOOL_NAME, 'invalid_cmd', 'js_suite.yml'],
 
             # Invalid or missing timeout values
-            [self.TOOL_NAME, 'run', '--use-chrome', '--timeout_sec', 'not_a_number', 'test.yml'],
-            [self.TOOL_NAME, 'run', 'test.yml', '--use-chrome', '--timeout_sec'],
+            [self.TOOL_NAME, 'run', '--use-chrome', '--timeout-sec', 'not_a_number', 'test.yml'],
+            [self.TOOL_NAME, 'run', 'test.yml', '--use-chrome', '--timeout-sec'],
 
             # No browser
             ['test_suite.yaml', '--coverage-xml', 'coverage.xml'],

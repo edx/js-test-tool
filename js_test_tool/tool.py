@@ -92,7 +92,7 @@ def parse_args(argv):
                             help=browser_help)
 
     # Timeout
-    parser.add_argument('--timeout_sec', type=float, help=TIMEOUT_HELP)
+    parser.add_argument('--timeout-sec', type=float, help=TIMEOUT_HELP)
 
     # Parse the arguments
     # Exclude the first argument, which is the name of the program

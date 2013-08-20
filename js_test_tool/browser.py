@@ -39,7 +39,7 @@ class Browser(object):
     # Wait time for the DOM to load, in seconds
     # It could take a long time for all the tests to complete,
     # so we set this number relatively high.
-    DEFAULT_TIMEOUT = 10
+    DEFAULT_TIMEOUT = 300 
 
     def __init__(self, browser_name, timeout_sec=None):
         """
