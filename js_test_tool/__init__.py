@@ -2,6 +2,9 @@
 Perform global initialization.
 """
 
+VERSION = '0.0.2'
+DESCRIPTION = 'Run JavaScript test suites and collect coverage information.'
+
 # Configure the logger
 import logging
 

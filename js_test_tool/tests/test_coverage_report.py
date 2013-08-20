@@ -332,7 +332,7 @@ class XmlCoverageReporterTest(BaseCoverageReporterTest):
             <?xml version="1.0" ?>
             <!DOCTYPE coverage
               SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
-            <coverage branch-rate="0" line-rate="0" timestamp="" version="0.0.1">
+            <coverage branch-rate="0" line-rate="0" timestamp="" version="">
             <packages></packages>
             </coverage>
         """).strip()
@@ -346,7 +346,7 @@ class XmlCoverageReporterTest(BaseCoverageReporterTest):
             <?xml version="1.0" ?>
             <!DOCTYPE coverage
               SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
-            <coverage branch-rate="0" line-rate="0.75" timestamp="" version="0.0.1">
+            <coverage branch-rate="0" line-rate="0.75" timestamp="" version="">
                 <packages>
                     <package branch-rate="0" complexity="0" line-rate="0.75" name="javascript">
                         <classes>
@@ -375,7 +375,7 @@ class XmlCoverageReporterTest(BaseCoverageReporterTest):
             <?xml version="1.0" ?>
             <!DOCTYPE coverage
               SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
-            <coverage branch-rate="0" line-rate="0.8333" timestamp="" version="0.0.1">
+            <coverage branch-rate="0" line-rate="0.8333" timestamp="" version="">
                 <packages>
                     <package branch-rate="0" complexity="0" line-rate="0.8333" name="javascript">
                         <classes>
@@ -413,7 +413,7 @@ class XmlCoverageReporterTest(BaseCoverageReporterTest):
             <?xml version="1.0" ?>
             <!DOCTYPE coverage
               SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
-            <coverage branch-rate="0" line-rate="1.0" timestamp="" version="0.0.1">
+            <coverage branch-rate="0" line-rate="1.0" timestamp="" version="">
                 <packages>
                     <package branch-rate="0" complexity="0" line-rate="1.0" name="javascript">
                         <classes>
@@ -449,7 +449,7 @@ class XmlCoverageReporterTest(BaseCoverageReporterTest):
             <?xml version="1.0" ?>
             <!DOCTYPE coverage
               SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
-            <coverage branch-rate="0" line-rate="0.0" timestamp="" version="0.0.1">
+            <coverage branch-rate="0" line-rate="0.0" timestamp="" version="">
                 <packages>
                     <package branch-rate="0" complexity="0" line-rate="0.0" name="javascript">
                         <classes>
