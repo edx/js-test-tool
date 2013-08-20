@@ -128,7 +128,7 @@ The default timeout is 5 minutes, but you can override this:
 
 .. code:: bash
 
-    js-test-tool run js_test.yml --use-chrome --timeout_sec 10
+    js-test-tool run js_test.yml --use-chrome --timeout-sec 10
 
 The above command sets the timeout to 10 seconds.
 
