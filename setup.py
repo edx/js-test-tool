@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
 from setuptools import setup
+from js_test_tool import VERSION, DESCRIPTION
 
 REQUIREMENTS = [line.strip() for line in 
                 open("requirements.txt").readlines()]
 
 setup(
     name='js_test_tool',
-    version='0.0.1',
-    description='Run JavaScript test suites and collect coverage information.',
+    version=VERSION,
+    description=DESCRIPTION,
     author='Will Daly',
     author_email='will@edx.org',
     packages=['js_test_tool'],

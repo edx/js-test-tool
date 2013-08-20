@@ -2,7 +2,7 @@
 <!DOCTYPE coverage
   SYSTEM 'http://cobertura.sourceforge.net/xml/coverage-03.dtd'>
 {% if sources %}
-<coverage branch-rate="0" line-rate="{{ total_coverage|round(4) }}" timestamp="" version="0.0.1">
+<coverage branch-rate="0" line-rate="{{ total_coverage|round(4) }}" timestamp="" version="">
     <packages>
         <package branch-rate="0" complexity="0" line-rate="{{ total_coverage|round(4) }}" name="javascript">
             <classes>
@@ -27,7 +27,7 @@
     </packages>
 </coverage>
 {% else %}
-<coverage branch-rate="0" line-rate="0" timestamp="" version="0.0.1">
+<coverage branch-rate="0" line-rate="0" timestamp="" version="">
 <packages></packages>
 </coverage>
 {% endif %}
