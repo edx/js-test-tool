@@ -7,14 +7,14 @@
 /*
  * Public Jasmine interface methods.
  */
-jasmine.JsonReporter = function(divId, suiteNum) {
+jasmine.JsonReporter = function(divId, suiteName) {
     // Create a JsonReporter
     // `divId` is the CSS ID selector in which to output JSON
     // test results.
-    // `suiteNum` is the suite number, used to report back
+    // `suiteName` is the unique suite name, used to report back
     // coverage information to the server (if JSCover is configured).
     this._divId = divId;
-    this._suiteNum = suiteNum;
+    this._suiteName = suiteName;
 
     // Create a list to hold test results
     this._testResultList = [];
@@ -51,7 +51,7 @@ jasmine.JsonReporter.prototype.reportRunnerResults = function(runner) {
         // where {suite_num} is the argument to jscoverage_report.
         if (window.jscoverage_report) {
             try {
-                jscoverage_report(this._suiteNum)
+                jscoverage_report(this._suiteName)
             }
             catch(err) {
                 window.js_test_tool.reportError(err)

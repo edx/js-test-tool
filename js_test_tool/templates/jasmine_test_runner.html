@@ -13,22 +13,22 @@
   {% endif %}
 
   {% for lib_path in lib_path_list %}
-  <script type="text/javascript" src="/suite/{{ suite_num }}/include/{{ lib_path }}"></script>
+  <script type="text/javascript" src="/suite/{{ suite_name }}/include/{{ lib_path }}"></script>
   {% endfor %}
 
   {% for src_path in src_path_list %}
-  <script type="text/javascript" src="/suite/{{ suite_num }}/include/{{ src_path }}"></script>
+  <script type="text/javascript" src="/suite/{{ suite_name }}/include/{{ src_path }}"></script>
   {% endfor %}
 
   <script type="text/javascript">
 // Load fixtures if using jasmine-jquery
 if (jasmine.getFixtures) {
-    jasmine.getFixtures().fixturesPath = "/suite/{{ suite_num }}/include/";
+    jasmine.getFixtures().fixturesPath = "/suite/{{ suite_name }}/include/";
 }
   </script>
 
   {% for spec_path in spec_path_list %}
-  <script type="text/javascript" src="/suite/{{ suite_num }}/include/{{ spec_path }}"></script>
+  <script type="text/javascript" src="/suite/{{ suite_name }}/include/{{ spec_path }}"></script>
   {% endfor %}
 
   <script type="text/javascript">
@@ -39,7 +39,7 @@ if (jasmine.getFixtures) {
     {% if dev_mode -%}
     var reporter = new jasmine.HtmlReporter();
     {% else -%}
-    var reporter = new jasmine.JsonReporter("{{ results_div_id }}", "{{ suite_num }}");
+    var reporter = new jasmine.JsonReporter("{{ results_div_id }}", "{{ suite_name }}");
     {% endif -%}
     jasmineEnv.addReporter(reporter);
 
