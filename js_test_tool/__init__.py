@@ -2,7 +2,7 @@
 Perform global initialization.
 """
 
-VERSION = '0.0.2'
+VERSION = '0.0.3'
 DESCRIPTION = 'Run JavaScript test suites and collect coverage information.'
 
 # Configure the logger
