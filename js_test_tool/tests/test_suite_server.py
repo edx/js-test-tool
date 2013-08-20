@@ -194,9 +194,9 @@ class SuitePageServerTest(TempWorkspaceTestCase):
             url = self.server.root_url() + 'suite/test-suite-0/include/' + path
             self._assert_page_equals(url, expected_page)
 
-    def test_serve_fixtures(self):
+    def test_serve_text_fixtures(self):
 
-        # Configure the suite description to contain fixture files
+        # Configure the suite description to contain test fixture files
         fixture_paths = ['fixtures/1.html', 'fixtures/subdir/2.html']
         self.suite_desc_list[0].fixture_paths.return_value = fixture_paths
 
@@ -209,6 +209,23 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         for path in fixture_paths:
             url = self.server.root_url() + 'suite/test-suite-0/include/' + path
             self._assert_page_equals(url, expected_page)
+
+    def test_serve_binary_fixtures(self):
+
+        # Configure the suite description to contain binary fixture files
+        fixture_paths = ['fixtures/test.mp4', 'fixtures/test.png']
+        self.suite_desc_list[0].fixture_paths.return_value = fixture_paths
+
+        # Create fake files to serve
+        os.mkdir('fixtures')
+        file_contents = '\x02\x03\x04\x05\x06'
+        self._create_fake_files(fixture_paths, file_contents, encoding=None)
+
+        # Expect that the server sends us the files as 
+        # an un-decoded byte stream
+        for path in fixture_paths:
+            url = self.server.root_url() + 'suite/test-suite-0/include/' + path
+            self._assert_page_equals(url, file_contents, encoding=None)
 
     def test_serve_iso_encoded_dependency(self):
         
@@ -300,11 +317,14 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         response = requests.get(self.server.root_url() + 'not_found.txt')
         self.assertEqual(response.status_code, requests.codes.not_found)
 
-    def _assert_page_equals(self, url, expected_content):
+    def _assert_page_equals(self, url, expected_content, encoding='utf-8'):
         """
         Assert that the page at `url` contains `expected_content`.
         Uses a GET HTTP request to retrieve the page and expects
         a 200 status code, with UTF-8 encoding.
+
+        `encoding` is the expected encoding.  If None, expect
+        an unencoded byte string.
         """
 
         # HTTP GET request for the page
@@ -314,11 +334,17 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         self.assertEqual(response.status_code, requests.codes.ok, msg=url)
 
         # Expect that the content is what we rendered
-        self.assertIn(expected_content,
-                      response.content.decode('utf8'), msg=url)
+        if encoding is not None:
+            self.assertIn(expected_content,
+                          response.content.decode(encoding), msg=url)
 
-        # Expect that the encoding is UTF-8
-        self.assertEqual(response.encoding, 'utf-8', msg=url)
+            # Expect that the encoding is UTF-8
+            self.assertEqual(response.encoding, encoding, msg=url)
+
+        # If no encoding, just expect the byte string
+        else:
+            self.assertIn(expected_content, response.content, msg=url)
+            self.assertIs(response.encoding, None)
 
     @staticmethod
     def _create_fake_files(path_list, contents, encoding='utf8'):
