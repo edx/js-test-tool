@@ -14,8 +14,9 @@ LOGGER = logging.getLogger(__name__)
 
 # Set up the template environment
 TEMPLATE_LOADER = PackageLoader(__package__)
-TEMPLATE_ENV = Environment(loader=TEMPLATE_LOADER,
-                           trim_blocks=True)
+TEMPLATE_ENV = Environment(
+    loader=TEMPLATE_LOADER, trim_blocks=True
+)
 
 
 class SuiteDescriptionError(Exception):
