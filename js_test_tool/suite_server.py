@@ -237,7 +237,10 @@ class BasePageHandler(object):
         """
         Returns a `(content, mime_type)` tuple if the page
         could be loaded.  Otherwise, returns `(None, None)`.
-        `content` is a unicode string representing the page contents;
+
+        `content` is a unicode (utf-8) or bytestring representing the page contents;
+        If unicode, it will be encoded to a bytestring before being served.
+
         `mime_type` is the MIME type to send as the Content-Header
         in the response.
 
@@ -275,6 +278,9 @@ class BasePageHandler(object):
 
         `method` is the HTTP method used to load the page (e.g. "GET" or "POST")
         `content` is the content of the HTTP request.
+
+        Can return either a unicode (utf-8) or byte string.
+        If unicode, then it will be decoded to a bytestring before being served.
         """
         pass
 
@@ -393,6 +399,14 @@ class DependencyPageHandler(BasePageHandler):
     # ignoring any GET parameters in the URL.
     PATH_REGEX = re.compile('^/suite/([^/]+)/include/([^?]+).*$')
 
+    # MIME types (in addition to text/* that we serve as UTF-8 encoded)
+    TEXT_MIME_TYPES = [
+        'application/json',
+        'application/javascript',
+        'application/ecmascript',
+        'application/xml',
+    ]
+
     def __init__(self, desc_dict):
         """
         Initialize the dependency page handler to serve dependencies
@@ -429,16 +443,23 @@ class DependencyPageHandler(BasePageHandler):
             except IOError:
                 return None
 
-            # Successfully loaded the file; return the contents as a unicode str
+            # Successfully loaded the file
             else:
 
-                # First try to decode as UTF-8
-                try:
-                    return contents.decode('utf-8')
+                # If serving text, guarantee that it is unicode UTF-8
+                if self.is_text_mime_type(rel_path):
 
-                # If we can't decode as UTF-8, try ISO-8859-1
-                except UnicodeDecodeError:
-                    return contents.decode('iso-8859-1')
+                    # First try to decode as UTF-8
+                    try:
+                        return contents.decode('utf-8')
+
+                    # If we can't decode as UTF-8, try ISO-8859-1
+                    except UnicodeDecodeError:
+                        return contents.decode('iso-8859-1')
+
+                    # Otherwise, serve the unencoded byte string
+                else:
+                    return str(contents)
 
         # If this is not one of our listed dependencies, return None
         else:
@@ -450,6 +471,14 @@ class DependencyPageHandler(BasePageHandler):
         """
         _, rel_path = args
         return self.guess_mime_type(rel_path)
+
+    def is_text_mime_type(self, rel_path):
+        """
+        Return True if we should serve the file as text,
+        False otherwise.
+        """
+        guessed_type = self.guess_mime_type(rel_path)
+        return 'text' in guessed_type or guessed_type in self.TEXT_MIME_TYPES
 
 
     def _dependency_path(self, suite_name, path):
@@ -751,14 +780,20 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         `content` can be empty, None, or a UTF-8 string.
         `mime_type` is sent as the Content-Type header.
         """
+        if isinstance(content, unicode):
+            content = content.encode('utf-8')
+            content_type = mime_type + '; charset=utf-8'
+
+        else:
+            content_type = mime_type
 
         self.send_response(status_code)
-        self.send_header('Content-Type', mime_type + '; charset=utf-8')
+        self.send_header('Content-Type', content_type)
         self.send_header('Content-Language', 'en')
         self.end_headers()
 
         if content:
-            self.wfile.write(content.encode('utf8'))
+            self.wfile.write(content)
 
     def _content(self):
         """
