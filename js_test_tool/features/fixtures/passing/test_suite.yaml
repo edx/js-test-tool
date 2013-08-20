@@ -1,4 +1,5 @@
 ---
+test_suite_name: jasmine
 spec_paths:
     - spec
 src_paths:

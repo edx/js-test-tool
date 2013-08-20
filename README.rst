@@ -27,6 +27,21 @@ This will create a YAML file (``js_test.yml``) that looks like:
 .. code:: yaml
 
     ---
+    # Name of the test suite, used to construct
+    # the URL from which pages are served.
+    #
+    # For example, if the suite name is "test_suite",
+    # then:
+    #
+    #   * /suite/test_suite
+    #     serves the test suite runner page
+    #   * /suite/test_suite/include/*
+    #     serves dependencies (src, spec, lib, and fixtures)
+    #
+    # Test suite names must be URL-encodable and unique
+    # among suite descriptions passed to js-test-tool
+    test_suite_name: test_suite
+
     # Currently, the only supported test runner is Jasmine
     # See http://pivotal.github.io/jasmine/
     # for the Jasmine documentation.

@@ -10,7 +10,8 @@ import os
 import pkg_resources
 import json
 from js_test_tool.suite import SuiteDescription, SuiteRenderer
-from js_test_tool.suite_server import SuitePageServer, TimeoutError
+from js_test_tool.suite_server import SuitePageServer, \
+    TimeoutError, DuplicateSuiteNameError
 from js_test_tool.coverage import SrcInstrumenter
 
 
@@ -24,23 +25,29 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         super(SuitePageServerTest, self).setUp()
 
         # Create mock suite descriptions
-        self.suite_desc_list = [mock.MagicMock(SuiteDescription)
-                                for _ in range(self.NUM_SUITE_DESC)]
+        self.suite_desc_list = [
+            mock.MagicMock(SuiteDescription)
+            for _ in range(self.NUM_SUITE_DESC)
+        ]
 
         # Configure the mock suite descriptions to have no dependencies
+        suite_num = 0
         for suite in self.suite_desc_list:
+            suite.suite_name.return_value = 'test-suite-{}'.format(suite_num)
             suite.lib_paths.return_value = []
             suite.src_paths.return_value = []
             suite.spec_paths.return_value = []
             suite.fixture_paths.return_value = []
             suite.root_dir.return_value = os.getcwd()
+            suite_num += 1
 
         # Create a mock suite renderer
         self.suite_renderer = mock.MagicMock(SuiteRenderer)
 
         # Create the server
-        self.server = SuitePageServer(self.suite_desc_list,
-                                      self.suite_renderer)
+        self.server = SuitePageServer(
+            self.suite_desc_list, self.suite_renderer
+        )
 
         # Start the server
         self.server.start()
@@ -69,8 +76,25 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Expect that the URLs have the correct form
         for suite_num in range(self.NUM_SUITE_DESC):
-            expected_url = self.server.root_url() + u'suite/{}'.format(suite_num)
+            expected_url = self.server.root_url() + u'suite/test-suite-{}'.format(suite_num)
             self.assertIn(expected_url, url_list)
+
+    def test_enforce_unique_suite_names(self):
+
+        # Try to create a suite server in which two suites have the same name
+        suite_desc_list = [
+            mock.MagicMock(SuiteDescription)
+            for _ in range(4)
+        ]
+
+        suite_desc_list[0].suite_name.return_value = 'test-suite-1'
+        suite_desc_list[1].suite_name.return_value = 'test-suite-2'
+        suite_desc_list[2].suite_name.return_value = 'test-suite-1'
+        suite_desc_list[3].suite_name.return_value = 'test-suite-3'
+
+        # Expect an error when initializing the server
+        with self.assertRaises(DuplicateSuiteNameError):
+            SuitePageServer(suite_desc_list, self.suite_renderer)
 
     def test_serve_suite_pages(self):
 
@@ -135,7 +159,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Expect that the server sends us the files
         for path in lib_paths:
-            url = self.server.root_url() + 'suite/0/include/' + path
+            url = self.server.root_url() + 'suite/test-suite-0/include/' + path
             self._assert_page_equals(url, expected_page)
 
     def test_serve_src_js(self):
@@ -151,7 +175,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Expect that the server sends us the files
         for path in src_paths:
-            url = self.server.root_url() + 'suite/0/include/' + path
+            url = self.server.root_url() + 'suite/test-suite-0/include/' + path
             self._assert_page_equals(url, expected_page)
 
     def test_serve_spec_js(self):
@@ -167,7 +191,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Expect that the server sends us the files
         for path in spec_paths:
-            url = self.server.root_url() + 'suite/0/include/' + path
+            url = self.server.root_url() + 'suite/test-suite-0/include/' + path
             self._assert_page_equals(url, expected_page)
 
     def test_serve_fixtures(self):
@@ -183,7 +207,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Expect that the server sends us the files
         for path in fixture_paths:
-            url = self.server.root_url() + 'suite/0/include/' + path
+            url = self.server.root_url() + 'suite/test-suite-0/include/' + path
             self._assert_page_equals(url, expected_page)
 
     def test_serve_iso_encoded_dependency(self):
@@ -204,7 +228,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         # ignoring any GET parameters we pass in the URL
         expected_page = u'\xf6 \x9a \xa0'
         for path in dependencies:
-            url = self.server.root_url() + 'suite/0/include/' + path + "?123456"
+            url = self.server.root_url() + 'suite/test-suite-0/include/' + path + "?123456"
             self._assert_page_equals(url, expected_page)
 
     def test_ignore_dependency_get_params(self):
@@ -223,7 +247,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         # Expect that the server sends us the files,
         # ignoring any GET parameters we pass in the URL
         for path in dependencies:
-            url = self.server.root_url() + 'suite/0/include/' + path + "?123456"
+            url = self.server.root_url() + 'suite/test-suite-0/include/' + path + "?123456"
             self._assert_page_equals(url, expected_page)
 
     def test_different_working_dir(self):
@@ -247,7 +271,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
 
         # Expect that we still get the files
         for path in spec_paths:
-            url = self.server.root_url() + 'suite/0/include/' + path
+            url = self.server.root_url() + 'suite/test-suite-0/include/' + path
             self._assert_page_equals(url, expected_page)
 
     def test_404_pages(self):
@@ -351,8 +375,8 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
         instrumenter_cls.side_effect = instr_mocks
 
         # Set up the descriptions
-        mock_desc_list = [self._mock_suite_desc('/root_1', ['src1.js', 'src2.js']),
-                          self._mock_suite_desc('/root_2', ['src3.js', 'src4.js'])]
+        mock_desc_list = [self._mock_suite_desc('test-suite-0', '/root_1', ['src1.js', 'src2.js']),
+                          self._mock_suite_desc('test-suite-1', '/root_2', ['src3.js', 'src4.js'])]
 
         # Create a suite page server for those descriptions
         server = SuitePageServer(mock_desc_list,
@@ -365,10 +389,10 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
 
         # Expect that there is a SrcInstrumenter for each suite,
         # and it has been started.
-        instr_list = server.src_instrumenter_list()
-        self.assertEqual(len(instr_list), len(mock_desc_list))
+        instr_dict = server.src_instr_dict
+        self.assertEqual(len(instr_dict), len(mock_desc_list))
 
-        for instr in instr_list:
+        for instr in instr_dict.values():
             instr.start.assert_called_once_with()
 
         # Stop the server
@@ -389,7 +413,7 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
         instr_mock.instrumented_src.return_value = fake_src
 
         # Create a mock description with one source file
-        mock_desc = self._mock_suite_desc('/root', ['src.js'])
+        mock_desc = self._mock_suite_desc('test-suite-0', '/root', ['src.js'])
 
         # Create a suite page server for those descriptions
         server = SuitePageServer([mock_desc],
@@ -401,7 +425,7 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
         self.addCleanup(server.stop)
 
         # Access the page, expecting to get the instrumented source
-        url = server.root_url() + "suite/0/include/src.js"
+        url = server.root_url() + "suite/test-suite-0/include/src.js"
         response = requests.get(url, timeout=0.1)
 
         self.assertEqual(response.text, fake_src)
@@ -414,9 +438,10 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
         instrumenter_cls.return_value = instr_mock
 
         # Create a mock description with lib and spec files
-        mock_desc = self._mock_suite_desc('/root', ['src.js'],
-                                          lib_paths=['lib.js'],
-                                          spec_paths=['spec.js'])
+        mock_desc = self._mock_suite_desc(
+            'test-suite-0', '/root', ['src.js'],
+            lib_paths=['lib.js'], spec_paths=['spec.js']
+        )
 
         # Create a suite page server for the description
         server = SuitePageServer([mock_desc],
@@ -428,8 +453,8 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
         self.addCleanup(server.stop)
 
         # Access the lib and spec pages
-        url_list = [server.root_url() + "suite/0/include/lib.js",
-                    server.root_url() + "suite/0/include/spec.js"]
+        url_list = [server.root_url() + "suite/test-suite-0/include/lib.js",
+                    server.root_url() + "suite/test-suite-0/include/spec.js"]
 
         for url in url_list:
             requests.get(url, timeout=0.1)
@@ -441,7 +466,7 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
     def test_collects_POST_coverage_info(self):
 
         # Start the page server
-        server = SuitePageServer([self._mock_suite_desc('/root', ['src.js'])],
+        server = SuitePageServer([self._mock_suite_desc('test-suite-0', '/root', ['src.js'])],
                                  mock.MagicMock(SuiteRenderer),
                                  jscover_path=self.JSCOVER_PATH)
         server.start()
@@ -454,7 +479,7 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
         # it is not worth the effort).
         coverage_data = {'/src.js': {'lineData': [1, 0, None, 2, 1, None, 0]}}
 
-        requests.post(server.root_url() + "jscoverage-store/0",
+        requests.post(server.root_url() + "jscoverage-store/test-suite-0",
                       data=json.dumps(coverage_data),
                       timeout=0.1)
 
@@ -479,7 +504,7 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
 
         # Start the page server
         root_dir = self.temp_dir
-        server = SuitePageServer([self._mock_suite_desc(root_dir, ['src.js'])],
+        server = SuitePageServer([self._mock_suite_desc('test-suite-0', root_dir, ['src.js'])],
                                  mock.MagicMock(SuiteRenderer),
                                  jscover_path=self.JSCOVER_PATH)
         server.start()
@@ -491,7 +516,7 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
         # reported as uncovered.
         coverage_data = {}
 
-        requests.post(server.root_url() + "jscoverage-store/0",
+        requests.post(server.root_url() + "jscoverage-store/test-suite-0",
                       data=json.dumps(coverage_data),
                       timeout=0.1)
 
@@ -509,8 +534,8 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
     def test_timeout_if_missing_coverage(self):
 
         # Start the page server with multiple descriptions
-        mock_desc_list = [self._mock_suite_desc('/root_1', ['src1.js', 'src2.js']),
-                          self._mock_suite_desc('/root_2', ['src.js'])]
+        mock_desc_list = [self._mock_suite_desc('test-suite-0', '/root_1', ['src1.js', 'src2.js']),
+                          self._mock_suite_desc('test-suite-1', '/root_2', ['src.js'])]
 
         server = SuitePageServer(mock_desc_list, mock.MagicMock(SuiteRenderer),
                                  jscover_path=self.JSCOVER_PATH)
@@ -518,8 +543,8 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
         self.addCleanup(server.stop)
 
         # POST coverage data to one of the sources, but not the other
-        coverage_data = {'/suite/0/include/src1.js': {'lineData': [1]}}
-        requests.post(server.root_url() + "jscoverage-store/0",
+        coverage_data = {'/suite/test-suite-0/include/src1.js': {'lineData': [1]}}
+        requests.post(server.root_url() + "jscoverage-store/test-suite-0",
                       data=json.dumps(coverage_data),
                       timeout=0.1)
 
@@ -530,16 +555,21 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
             server.all_coverage_data()
 
     @staticmethod
-    def _mock_suite_desc(root_dir, src_paths, lib_paths=None, spec_paths=None):
+    def _mock_suite_desc(suite_name, root_dir, src_paths,
+                         lib_paths=None, spec_paths=None):
         """
         Configure a mock `SuiteDescription` to have `root_dir` as its
         base directory and to list `src_paths` as its JavaScript
         sources.
 
+        `suite_name` is the name of the suite, which determines
+        the URL to access the suite pages.
+
         If `lib_paths` or `spec_paths` (lists of paths) are used,
         configure the description to use those lib and spec file paths.
         """
         mock_desc = mock.MagicMock(SuiteDescription)
+        mock_desc.suite_name.return_value = suite_name
         mock_desc.root_dir.return_value = root_dir
         mock_desc.src_paths.return_value = src_paths
 

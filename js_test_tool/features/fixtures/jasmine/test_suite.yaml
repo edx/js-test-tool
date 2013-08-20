@@ -1,4 +1,5 @@
 ---
+test_suite_name: jasmine
 prepend_path: base
 lib_paths:
     - lib

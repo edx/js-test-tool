@@ -7,14 +7,16 @@ import os.path
 from textwrap import dedent
 import re
 from jinja2 import Environment, PackageLoader
+import urllib
 
 import logging
 LOGGER = logging.getLogger(__name__)
 
 # Set up the template environment
 TEMPLATE_LOADER = PackageLoader(__package__)
-TEMPLATE_ENV = Environment(loader=TEMPLATE_LOADER,
-                           trim_blocks=True)
+TEMPLATE_ENV = Environment(
+    loader=TEMPLATE_LOADER, trim_blocks=True
+)
 
 
 class SuiteDescriptionError(Exception):
@@ -31,7 +33,12 @@ class SuiteDescription(object):
     Description of a JavaScript test suite loaded from a file.
     """
 
-    REQUIRED_KEYS = ['src_paths', 'spec_paths', 'test_runner']
+    REQUIRED_KEYS = [
+        'test_suite_name',
+        'src_paths',
+        'spec_paths',
+        'test_runner'
+    ]
 
     # Supported test runners
     TEST_RUNNERS = ['jasmine']
@@ -67,6 +74,9 @@ class SuiteDescription(object):
         # Validate the root directory
         self._validate_root_dir(self._root_dir)
 
+        # Validate that the suite name is acceptable
+        self._validate_suite_name(self.suite_name())
+
         # Compile exclude/include regular expressions
         rules = self._desc_dict.get('include_in_page', [])
         self._include_regex_list = [re.compile(r) for r in rules]
@@ -81,6 +91,12 @@ class SuiteDescription(object):
         self.spec_paths(enable_warnings=True)
         self.src_paths(enable_warnings=True)
         self.fixture_paths(enable_warnings=True)
+
+    def suite_name(self):
+        """
+        Return the unique identifier for the test suite.
+        """
+        return self._desc_dict.get('test_suite_name')
 
     def root_dir(self):
         """
@@ -401,6 +417,24 @@ class SuiteDescription(object):
             raise SuiteDescriptionError(msg)
 
     @staticmethod
+    def _validate_suite_name(name):
+        """
+        Suite name must be URL-encodable and not contain
+        any GET param characters.
+        """
+        # If the encoding is different then the name,
+        # then the name is not encoded.
+        if urllib.quote(name) != name:
+            msg = "'{}' must be URL-encoded.".format(name)
+            raise SuiteDescriptionError(msg)
+
+        # Also can't allow anything that will throw off
+        # our path parsing (slashes)
+        if '/' in name:
+            msg = "'{}' cannot contain slashes".format(name)
+            raise SuiteDescriptionError(msg)
+
+    @staticmethod
     def _validate_root_dir(root_dir):
         """
         Validate that the root directory exists and is a directory,
@@ -453,13 +487,13 @@ class SuiteRenderer(object):
         """
         self._dev_mode = dev_mode
 
-    def render_to_string(self, suite_num, suite_desc):
+    def render_to_string(self, suite_name, suite_desc):
         """
         Given a `test_suite_desc` (`TestSuiteDescription` instance),
         render a test runner page.  When loaded, this page will
         execute the JavaScript tests in the suite.
 
-        `suite_num` is the index of the suite, used to generate
+        `suite_name` is the unique name of the suite, used to generate
         links to that suite's dependencies.
 
         Returns a unicode string.
@@ -477,7 +511,7 @@ class SuiteRenderer(object):
             raise SuiteRendererError(msg)
 
         # Create the context for the template
-        template_context = {'suite_num': suite_num,
+        template_context = {'suite_name': suite_name,
                             'lib_path_list': suite_desc.lib_paths(only_in_page=True),
                             'src_path_list': suite_desc.src_paths(only_in_page=True),
                             'spec_path_list': suite_desc.spec_paths(only_in_page=True),

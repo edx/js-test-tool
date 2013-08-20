@@ -25,6 +25,13 @@ class TimeoutError(Exception):
     pass
 
 
+class DuplicateSuiteNameError(Exception):
+    """
+    Two or more suites have the same name.
+    """
+    pass
+
+
 class SuitePageServer(HTTPServer):
     """
     Serve test suite pages and included JavaScript files.
@@ -60,13 +67,13 @@ class SuitePageServer(HTTPServer):
         """
 
         # Store dependencies
-        self.desc_list = suite_desc_list
+        self.desc_dict = self._suite_dict_from_list(suite_desc_list)
         self.renderer = suite_renderer
         self._jscover_path = jscover_path
 
-        # Create a list for source instrumenter services
+        # Create a dict for source instrumenter services
         # (One for each suite description)
-        self._instr_list = []
+        self.src_instr_dict = {}
 
         # Using port 0 assigns us an unused port
         address = ('127.0.0.1', 0)
@@ -87,7 +94,7 @@ class SuitePageServer(HTTPServer):
             self.coverage_data = CoverageData()
 
             # Start each SrcInstrumenter instance if we know where JSCover is
-            for desc in self.desc_list:
+            for suite_name, desc in self.desc_dict.iteritems():
 
                 # Inform the coverage data that we expect this source
                 # (report it as 0% if no info received).
@@ -103,10 +110,10 @@ class SuitePageServer(HTTPServer):
                 instr.start()
 
                 # Associate the instrumenter with its suite description
-                self._instr_list.append(instr)
+                self.src_instr_dict[suite_name] = instr
 
         else:
-            self._instr_list = []
+            self.src_instr_dict = {}
 
     def stop(self):
         """
@@ -114,7 +121,7 @@ class SuitePageServer(HTTPServer):
         """
 
         # Stop each instrumenter service that we started
-        for instr in self._instr_list:
+        for instr in self.src_instr_dict.values():
             instr.stop()
 
         # Stop the page server and free the port
@@ -127,8 +134,8 @@ class SuitePageServer(HTTPServer):
         is a test suite page containing the JS code to run
         the JavaScript tests.
         """
-        return [self.root_url() + u'suite/{}'.format(suite_num)
-                for suite_num in range(len(self.desc_list))]
+        return [self.root_url() + u'suite/{}'.format(suite_name)
+                for suite_name in self.desc_dict.keys()]
 
     def root_url(self):
         """
@@ -137,16 +144,6 @@ class SuitePageServer(HTTPServer):
         """
         host, port = self.server_address
         return u"http://{}:{}/".format(host, port)
-
-    def src_instrumenter_list(self):
-        """
-        Return the list of `SrcInstrumenter` instances.
-        The instrumenters are indexed by suite number.
-
-        This is used to instrument JavaScript source files
-        to collect coverage information.
-        """
-        return self._instr_list
 
     def all_coverage_data(self):
         """
@@ -191,12 +188,32 @@ class SuitePageServer(HTTPServer):
         """
         # Retrieve the indices of each suite for which coverage
         # information was reported.
-        suite_num_list = self.coverage_data.suite_num_list()
+        suite_name_list = self.coverage_data.suite_name_list()
 
         # Check that we have an index for every suite
         # (This is not the most efficient way to do this --
         # if it becomes a bottleneck, we can revisit.)
-        return (suite_num_list == [x for x in range(len(self.desc_list))])
+        return (sorted(suite_name_list) == sorted(self.desc_dict.keys()))
+
+    @staticmethod
+    def _suite_dict_from_list(suite_desc_list):
+        """
+        Given a list of `SuiteDescription` instances, construct
+        a dictionary mapping suite names to the instances.
+
+        Raises a `DuplicateSuiteNameError` if two suites have
+        the same name.
+        """
+        suite_dict = {
+            suite.suite_name(): suite
+            for suite in suite_desc_list
+        }
+
+        # Check that we haven't repeated keys
+        if len(suite_dict) < len(suite_desc_list):
+            raise DuplicateSuiteNameError("Two or more test suites have the same name")
+
+        return suite_dict
 
 
 class BasePageHandler(object):
@@ -285,48 +302,43 @@ class BasePageHandler(object):
 
 class SuitePageHandler(BasePageHandler):
     """
-    Handle requests for paths of the form `/suite/SUITE_NUM`, where
-    `SUITE_NUM` is the index of the test suite description.
+    Handle requests for paths of the form `/suite/SUITE_NAME`, where
+    `SUITE_NAME` is the name of the test suite description.
     Serves the suite runner page.
     """
 
-    # Handle requests to /suite/#/
+    # Handle requests to /suite/NAME/
     # Ignore GET parameters
-    PATH_REGEX = re.compile(r'^/suite/([0-9])+/?(\?.*)?$')
+    PATH_REGEX = re.compile(r'^/suite/([^?/]+)/?(\?.*)?$')
 
-    def __init__(self, renderer, desc_list):
+    def __init__(self, renderer, desc_dict):
         """
         Initialize the `SuitePageHandler` to use `renderer`
-        (a `SuiteRenderer` instance) and `desc_list` (a list
-        of `SuiteDescription` instances).
+        (a `SuiteRenderer` instance) and `desc_dict` (a dict
+        mapping suite names to `SuiteDescription` instances).
         """
         super(SuitePageHandler, self).__init__()
         self._renderer = renderer
-        self._desc_list = desc_list
+        self._desc_dict = desc_dict
 
     def load_page(self, method, content, *args):
         """
         Render the suite runner page.
         """
 
-        # The only arg should be the suite number
-        try:
-            suite_num = int(args[0])
-
-        except (ValueError, IndexError):
-            return None
+        # The only arg should be the suite name
+        suite_name = args[0]
 
         # Try to find the suite description
-        try:
-            suite_desc = self._desc_list[suite_num]
+        suite_desc = self._desc_dict.get(suite_name)
 
-        # If the index is out of range, we can't serve this suite page
-        except IndexError:
+        # If we can't find it, don't serve it
+        if suite_desc is None:
             return None
 
         # Otherwise, render the page
         else:
-            return self._renderer.render_to_string(suite_num, suite_desc)
+            return self._renderer.render_to_string(suite_name, suite_desc)
 
     def mime_type(self, method, content, *args):
         """
@@ -377,17 +389,18 @@ class DependencyPageHandler(BasePageHandler):
     Load dependencies required by the test suite description.
     """
 
-    # Parse the suite number and relative path,
+    # Parse the suite name and relative path,
     # ignoring any GET parameters in the URL.
-    PATH_REGEX = re.compile('^/suite/([0-9]+)/include/([^?]+).*$')
+    PATH_REGEX = re.compile('^/suite/([^/]+)/include/([^?]+).*$')
 
-    def __init__(self, desc_list):
+    def __init__(self, desc_dict):
         """
         Initialize the dependency page handler to serve dependencies
-        specified by `desc_list` (a list of `SuiteDescription` instances).
+        specified by `desc_dict` (a dict mapping suite names to 
+        `SuiteDescription` instances).
         """
         super(DependencyPageHandler, self).__init__()
-        self._desc_list = desc_list
+        self._desc_dict = desc_dict
 
     def load_page(self, method, content, *args):
         """
@@ -398,18 +411,11 @@ class DependencyPageHandler(BasePageHandler):
         """
 
         # Interpret the arguments (from the regex)
-        suite_num, rel_path = args
-
-        # Try to parse the suite number
-        try:
-            suite_num = int(suite_num)
-
-        except ValueError:
-            return None
+        suite_name, rel_path = args
 
         # Retrieve the full path to the dependency, if it exists
         # and is specified in the test suite description
-        full_path = self._dependency_path(suite_num, rel_path)
+        full_path = self._dependency_path(suite_name, rel_path)
 
         if full_path is not None:
 
@@ -446,18 +452,18 @@ class DependencyPageHandler(BasePageHandler):
         return self.guess_mime_type(rel_path)
 
 
-    def _dependency_path(self, suite_num, path):
+    def _dependency_path(self, suite_name, path):
         """
         Return the full filesystem path to the dependency, if it
-        is specified in the test suite description with index `suite_num`.
+        is specified in the test suite description with name `suite_name`.
         Otherwise, return None.
         """
 
-        # Try to find the suite description with `suite_num`
-        try:
-            suite_desc = self._desc_list[suite_num]
+        # Try to find the suite description with `suite_name`
+        suite_desc = self._desc_dict.get(suite_name)
 
-        except IndexError:
+        # If we can't find it, give up
+        if suite_desc is None:
             return None
 
         # Get all dependency paths
@@ -483,19 +489,21 @@ class InstrumentedSrcPageHandler(BasePageHandler):
     Instrument the JavaScript source file to collect coverage information.
     """
 
-    PATH_REGEX = re.compile('^/suite/([0-9]+)/include/(.+)$')
+    PATH_REGEX = re.compile('^/suite/([^/]+)/include/([^?]+).*$')
 
-    def __init__(self, desc_list, instr_list):
+    def __init__(self, desc_dict, instr_dict):
         """
         Initialize the dependency page handler to serve dependencies
-        specified by `desc_list` (a list of `SuiteDescription` instances).
+        specified by `desc_dict` (a dict mapping suite names
+        to `SuiteDescription` instances).
 
-        `instr_list` is a list of `SrcInstrumenter` instances,
-        one for each suite description.
+        `instr_dict` is a dict mapping suite names to 
+        `SrcInstrumenter` instances.  There should be one
+        instrumenter for each suite.
         """
         super(InstrumentedSrcPageHandler, self).__init__()
-        self._desc_list = desc_list
-        self._instr_list = instr_list
+        self._desc_dict = desc_dict
+        self._instr_dict = instr_dict
 
     def load_page(self, method, content, *args):
         """
@@ -503,20 +511,13 @@ class InstrumentedSrcPageHandler(BasePageHandler):
         """
 
         # Interpret the arguments (from the regex)
-        suite_num, rel_path = args
-
-        # Try to parse the suite number
-        try:
-            suite_num = int(suite_num)
-
-        except ValueError:
-            return None
+        suite_name, rel_path = args
 
         # Check that this is a source file (not a lib or spec)
-        if self._is_src_file(suite_num, rel_path):
+        if self._is_src_file(suite_name, rel_path):
 
             # Send the instrumented source (delegating to JSCover)
-            return self._send_instrumented_src(suite_num, rel_path)
+            return self._send_instrumented_src(suite_name, rel_path)
 
         # If not a source file, do not handle it.
         # Expect the non-instrumenting page handler to serve
@@ -531,18 +532,27 @@ class InstrumentedSrcPageHandler(BasePageHandler):
         _, rel_path = args
         return self.guess_mime_type(rel_path)
 
-    def _send_instrumented_src(self, suite_num, rel_path):
+    def _send_instrumented_src(self, suite_name, rel_path):
         """
         Return an instrumented version of the JS source file at `rel_path`
-        for the suite numbered `suite_num`, or None if the source
+        for the suite with name `suite_name`, or None if the source
         could not be loaded.
         """
 
+        # Try to retrieve the instrumenter
+        instr = self._instr_dict.get(suite_name)
+
+        if instr is None:
+            msg = "Could not find instrumenter for '{}'".format(suite_name)
+            LOGGER.warning(msg)
+            return None
+
         try:
+
             # This performs a synchronous call to the instrumenter
             # service, raising an exception if it cannot retrieve
             # the instrumented version of the source.
-            return self._instr_list[suite_num].instrumented_src(rel_path)
+            return instr.instrumented_src(rel_path)
 
         # If we cannot get the instrumented source,
         # return None.  This should cause the un-instrumented
@@ -553,16 +563,15 @@ class InstrumentedSrcPageHandler(BasePageHandler):
             LOGGER.warning(msg)
             return None
 
-    def _is_src_file(self, suite_num, rel_path):
+    def _is_src_file(self, suite_name, rel_path):
         """
         Returns True only if the file at `rel_path` is a source file
-        in the suite `suite_num`.
+        in the suite named `suite_name`.
         """
 
-        try:
-            suite_desc = self._desc_list[suite_num]
+        suite_desc = self._desc_dict.get(suite_name)
 
-        except KeyError:
+        if suite_desc is None:
             return False
 
         return (rel_path in suite_desc.src_paths())
@@ -574,21 +583,22 @@ class StoreCoveragePageHandler(BasePageHandler):
     by clients running instrumented JavaScript sources.
     """
 
-    PATH_REGEX = re.compile('^/jscoverage-store/([0-9]+)/?$')
+    PATH_REGEX = re.compile('^/jscoverage-store/([^/]+)/?$')
 
     # Handle only POST
     HTTP_METHODS = ["POST"]
 
-    def __init__(self, desc_list, coverage_data):
+    def __init__(self, desc_dict, coverage_data):
         """
         Initialize the dependency page handler to serve dependencies
-        specified by `desc_list` (a list of `SuiteDescription` instances).
+        specified by `desc_dict` (a dict mapping suite names to 
+        `SuiteDescription` instances).
 
         `coverage_data` is the `CoverageData` instance to send
         any received coverage data to.
         """
         super(StoreCoveragePageHandler, self).__init__()
-        self._desc_list = desc_list
+        self._desc_dict = desc_dict
         self._coverage_data = coverage_data
 
     def load_page(self, method, content, *args):
@@ -596,15 +606,11 @@ class StoreCoveragePageHandler(BasePageHandler):
         Send the coverage information to the server.
         """
 
-        # Retrieve the suite number from the URL
-        try:
-            suite_num = int(args[0])
-
-        except ValueError:
-            return None
+        # Retrieve the suite name from the URL
+        suite_name = args[0]
 
         # Store the coverage data
-        return self._store_coverage_data(suite_num, content)
+        return self._store_coverage_data(suite_name, content)
 
     def mime_type(self, method, content, *args):
         """
@@ -612,10 +618,10 @@ class StoreCoveragePageHandler(BasePageHandler):
         """
         return 'text/plain'
 
-    def _store_coverage_data(self, suite_num, request_content):
+    def _store_coverage_data(self, suite_name, request_content):
         """
         Store received coverage data for the JS source file
-        in the suite numbered `suite_num`.
+        in the suite with name `suite_name`.
 
         `request_content` is the content of the HTTP POST request.
 
@@ -623,13 +629,13 @@ class StoreCoveragePageHandler(BasePageHandler):
         """
 
         # Record that we got a coverage report for this suite
-        self._coverage_data.add_suite_num(suite_num)
+        self._coverage_data.add_suite_name(suite_name)
 
         # Retrieve the root directory for this suite
-        try:
-            suite_desc = self._desc_list[suite_num]
+        suite_desc = self._desc_dict.get(suite_name)
 
-        except IndexError:
+        # If we can't find the suite description, give up
+        if suite_desc is None:
             return None
 
         try:
@@ -648,7 +654,7 @@ class StoreCoveragePageHandler(BasePageHandler):
 
         except ValueError:
             msg = ("Could not interpret coverage data in POST request " +
-                   "to suite {}: {}".format(suite_num, request_content))
+                   "to suite {}: {}".format(suite_name, request_content))
             LOGGER.warning(msg)
             return None
 
@@ -665,27 +671,24 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
 
     def __init__(self, request, client_address, server):
 
-        # Retrieve the list of source instrumenter services from the server
-        src_instr_list = server.src_instrumenter_list()
-
         # Initialize the page handlers
         # We always handle suite runner pages, and
         # the runner dependencies (e.g. jasmine.js)
-        self._page_handlers = [SuitePageHandler(server.renderer, server.desc_list),
+        self._page_handlers = [SuitePageHandler(server.renderer, server.desc_dict),
                                RunnerPageHandler()]
 
         # If we are configured for coverage, add another handler
         # to serve instrumented versions of the source files.
-        if len(src_instr_list) > 0:
+        if len(server.src_instr_dict) > 0:
 
             # Create the handler to serve instrumented JS pages
-            instr_src_handler = InstrumentedSrcPageHandler(server.desc_list,
-                                                           src_instr_list)
+            instr_src_handler = InstrumentedSrcPageHandler(server.desc_dict,
+                                                           server.src_instr_dict)
             self._page_handlers.append(instr_src_handler)
 
             # Create a handler to store coverage data POSTed back
             # to the server from the client.
-            store_coverage_handler = StoreCoveragePageHandler(server.desc_list,
+            store_coverage_handler = StoreCoveragePageHandler(server.desc_dict,
                                                               server.coverage_data)
             self._page_handlers.append(store_coverage_handler)
 
@@ -693,7 +696,7 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         # the instrumented src handler will intercept source files.
         # Serving the un-instrumented version is the fallback, and
         # will still be used for library/spec dependencies.
-        self._page_handlers.append(DependencyPageHandler(server.desc_list))
+        self._page_handlers.append(DependencyPageHandler(server.desc_dict))
 
         # Call the superclass implementation
         # This will immediately call do_GET() if the request is a GET

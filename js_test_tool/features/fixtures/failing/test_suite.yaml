@@ -1,4 +1,5 @@
 ---
+test_suite_name: failing
 spec_paths:
     - spec
 src_paths: 

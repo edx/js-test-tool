@@ -41,7 +41,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
     IGNORE_FILES = ['src/ignore.txt', 'spec/ignore.txt', 'lib/ignore.txt']
 
     # Valid data used to create the YAML file describing the test suite
-    YAML_DATA = {'name': 'test_suite',
+    YAML_DATA = {'test_suite_name': 'test_suite',
                  'lib_paths': ['lib', 'other_lib', 'single_file/lib.js'],
                  'src_paths': ['src', 'other_src', 'single_file/src.js'],
                  'spec_paths': ['spec', 'other_spec', 'single_file/spec.js'],
@@ -84,6 +84,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
         self.assertEqual(desc.root_dir(), self.temp_dir)
 
         # Check that we find the files we expect
+        self.assertEqual(desc.suite_name(), self.YAML_DATA['test_suite_name'])
         self.assertEqual(desc.lib_paths(), self.LIB_FILES)
         self.assertEqual(desc.src_paths(), self.SRC_FILES)
         self.assertEqual(desc.spec_paths(), self.SPEC_FILES)
@@ -331,7 +332,7 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
 
     def test_missing_required_data(self):
 
-        for key in ['src_paths', 'spec_paths', 'test_runner']:
+        for key in ['test_suite_name', 'src_paths', 'spec_paths', 'test_runner']:
 
             # Delete the required key from the description
             yaml_data = copy.deepcopy(self.YAML_DATA)
@@ -363,6 +364,23 @@ class SuiteDescriptionTest(TempWorkspaceTestCase):
 
         # Check that we get an exception
         self._assert_invalid_desc(yaml_data)
+
+    def test_invalid_suite_name(self):
+
+        invalid_names = [
+            'with a space',
+            'with/slash',
+            'with?question',
+            'with+plus',
+            'with&amp'
+        ]
+
+        # Suite names need to be URL-encodable
+        for invalid in invalid_names:
+            print invalid
+            yaml_data = copy.deepcopy(self.YAML_DATA)
+            yaml_data['test_suite_name'] = invalid
+            self._assert_invalid_desc(yaml_data)
 
     def _assert_invalid_desc(self, yaml_data):
         """
@@ -402,7 +420,7 @@ class SuiteRendererTest(unittest.TestCase):
             var jasmineEnv = jasmine.getEnv();
             jasmineEnv.updateInterval = 1000;
 
-            var reporter = new jasmine.JsonReporter("js_test_tool_results", "0");
+            var reporter = new jasmine.JsonReporter("js_test_tool_results", "test-suite");
             jasmineEnv.addReporter(reporter);
 
             jasmineEnv.specFilter = function(spec) {
@@ -461,7 +479,7 @@ class SuiteRendererTest(unittest.TestCase):
     JASMINE_LOAD_FIXTURES_SCRIPT = dedent("""
         // Load fixtures if using jasmine-jquery
         if (jasmine.getFixtures) {
-            jasmine.getFixtures().fixturesPath = "/suite/0/include/";
+            jasmine.getFixtures().fixturesPath = "/suite/test-suite/include/";
         }
     """).strip()
 
@@ -479,7 +497,7 @@ class SuiteRendererTest(unittest.TestCase):
                                'jasmine')
 
         # Render the description as HTML
-        html = self.renderer.render_to_string(0, desc)
+        html = self.renderer.render_to_string('test-suite', desc)
 
         # Expect that we get a `unicode` string
         self.assertTrue(isinstance(html, unicode))
@@ -524,7 +542,7 @@ class SuiteRendererTest(unittest.TestCase):
         desc = self._mock_desc([], [], [], 'jasmine')
 
         # Render the description to HTML
-        html = self.renderer.render_to_string(0, desc)
+        html = self.renderer.render_to_string('test-suite', desc)
 
         # Parse the HTML
         tree = etree.HTML(html)
@@ -570,7 +588,7 @@ class SuiteRendererTest(unittest.TestCase):
         desc = self._mock_desc([], [], [], 'jasmine')
 
         # Render the description to HTML, enabling dev mode
-        html = self.renderer.render_to_string(0, desc)
+        html = self.renderer.render_to_string('test-suite', desc)
 
         # Parse the HTML
         tree = etree.HTML(html)
@@ -589,7 +607,7 @@ class SuiteRendererTest(unittest.TestCase):
         # Should get the same script, except with an HTML reporter
         # instead of the custom JSON reporter
         expected_script = self.JASMINE_TEST_RUNNER_SCRIPT.replace(
-            'JsonReporter("js_test_tool_results", "0")',
+            'JsonReporter("js_test_tool_results", "test-suite")',
             'HtmlReporter()')
 
         # Expect that we're using the basic Jasmine HTML reporter
@@ -621,7 +639,7 @@ class SuiteRendererTest(unittest.TestCase):
 
         # Should get an exception that the template could not be found
         with self.assertRaises(SuiteRendererError):
-            self.renderer.render_to_string(0, desc)
+            self.renderer.render_to_string('test-suite', desc)
 
     def test_template_render_error(self):
 
@@ -636,7 +654,7 @@ class SuiteRendererTest(unittest.TestCase):
 
             # Expect that we get a `SuiteRendererError`
             with self.assertRaises(SuiteRendererError):
-                self.renderer.render_to_string(0, desc)
+                self.renderer.render_to_string('test-suite', desc)
 
     def _assert_js_includes(self, runner_includes, suite_includes, suite_desc):
         """
@@ -647,7 +665,7 @@ class SuiteRendererTest(unittest.TestCase):
         with a `/suite/include` prefix)
         """
         # Render the description as HTML
-        html = self.renderer.render_to_string(0, suite_desc)
+        html = self.renderer.render_to_string('test-suite', suite_desc)
 
         # Parse the HTML
         tree = etree.HTML(html)
@@ -658,7 +676,7 @@ class SuiteRendererTest(unittest.TestCase):
         # Prepend the runner and suite includes
         runner_includes = [os.path.join('/runner', path)
                            for path in runner_includes]
-        suite_includes = [os.path.join('/suite', '0', 'include', path)
+        suite_includes = [os.path.join('/suite', 'test-suite', 'include', path)
                           for path in suite_includes]
 
         # Check that they match the sources we provided, in order

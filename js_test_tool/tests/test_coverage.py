@@ -362,15 +362,15 @@ class CoverageDataTest(unittest.TestCase):
         self.assertEqual(coverage_data.line_dict_for_src('/root_2/src1.js'),
                          expected)
 
-    def test_suite_num_list(self):
+    def test_suite_name_list(self):
 
         # Report data from two suites
         coverage_data = CoverageData()
-        coverage_data.add_suite_num(2)
-        coverage_data.add_suite_num(3)
-        coverage_data.add_suite_num(3)
+        coverage_data.add_suite_name(2)
+        coverage_data.add_suite_name(3)
+        coverage_data.add_suite_name(3)
 
-        self.assertEqual(coverage_data.suite_num_list(), [2, 3])
+        self.assertEqual(coverage_data.suite_name_list(), [2, 3])
 
     def test_invalid_dict(self):
 

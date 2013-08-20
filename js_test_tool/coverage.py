@@ -266,18 +266,18 @@ class CoverageData(object):
         # to the path relative to the test suite root directory
         self._rel_path_dict = dict()
 
-        # Create a set to store the suite numbers we encounter
-        self._suite_num_set = set()
+        # Create a set to store the suite names we encounter
+        self._suite_name_set = set()
 
-    def add_suite_num(self, suite_num):
+    def add_suite_name(self, suite_name):
         """
         Record that we received information from the suite
-        with index `suite_num`.
+        with name `suite_name`.
 
         This is used to check whether we have gotten
         coverage data for every test suite.
         """
-        self._suite_num_set.add(int(suite_num))
+        self._suite_name_set.add(suite_name)
 
     def add_expected_src(self, root_dir, rel_path):
         """
@@ -487,12 +487,12 @@ class CoverageData(object):
 
             return float(lines_covered) / len(line_dict)
 
-    def suite_num_list(self):
+    def suite_name_list(self):
         """
-        Return the list of all test suite numbers for
+        Return the list of all test suite names for
         which we have coverage information.
         """
-        return sorted([num for num in self._suite_num_set])
+        return sorted([name for name in self._suite_name_set])
 
     @staticmethod
     def num_file_lines(file_path):
