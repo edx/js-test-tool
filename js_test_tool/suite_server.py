@@ -3,6 +3,7 @@ Serve test runner pages and included JavaScript files on a local port.
 """
 
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from SocketServer import ThreadingMixIn
 import threading
 import re
 import pkg_resources
@@ -12,6 +13,7 @@ import json
 import time
 import mimetypes
 import shutil
+import socket
 from StringIO import StringIO
 from abc import ABCMeta, abstractmethod
 from js_test_tool.coverage import SrcInstrumenter, SrcInstrumenterError, CoverageData
@@ -34,12 +36,15 @@ class DuplicateSuiteNameError(Exception):
     pass
 
 
-class SuitePageServer(HTTPServer):
+class SuitePageServer(ThreadingMixIn, HTTPServer):
     """
     Serve test suite pages and included JavaScript files.
     """
 
     protocol_version = 'HTTP/1.1'
+
+    # Request response timeout
+    timeout = 5
 
     # Amount of time to wait for clients to POST coverage info
     # back to the server before timing out.
@@ -706,6 +711,28 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         # Call the superclass implementation
         # This will immediately call do_GET() if the request is a GET
         BaseHTTPRequestHandler.__init__(self, request, client_address, server)
+
+    def finish(self):
+        """
+        Finish processing a request.
+        Override the superclass implementation to silence disconnect errors.
+        """
+        try:
+            BaseHTTPRequestHandler.finish(self)
+
+        except socket.error:
+            LOGGER.warning('client disconnected: {}'.format(self.path))
+
+    def handle_one_request(self):
+        """
+        Handle a request.
+        Override the superclass implementation to silence disconnect errors.
+        """
+        try:
+            BaseHTTPRequestHandler.handle_one_request(self)
+
+        except socket.error:
+            LOGGER.warning('client disconnected: {}'.format(self.path))
 
     def do_GET(self):
         """
