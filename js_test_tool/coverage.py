@@ -8,6 +8,7 @@ import logging
 import random
 import time
 import os.path
+import threading
 
 LOGGER = logging.getLogger(__name__)
 
@@ -293,6 +294,9 @@ class CoverageData(object):
             self._src_dict[full_path] = None
             self._rel_path_dict[full_path] = rel_path
 
+    # Ensure that `load_from_dict()` is isolated
+    LOAD_LOCK = threading.Lock()
+
     def load_from_dict(self, root_dir, prepend_path, cover_dict):
         """
         Load coverage data from `cover_dict`, which is in
@@ -326,6 +330,8 @@ class CoverageData(object):
         to source files in the report.  This is useful for
         controlling how filenames are reported in a project
         with several test suites.
+
+        This call is thread safe.
         """
 
         # Check that we got a dict (not a list)
@@ -365,23 +371,27 @@ class CoverageData(object):
                               for num in range(len(line_list))
                               if line_list[num] is not None}
 
-                # Combine the cover dict with any other dicts that we have
-                # for this source.
-                existing_dict = self._src_dict.get(full_path)
+                # Ensure that checking/updating the coverage info
+                # is isolated
+                with self.LOAD_LOCK:
 
-                if existing_dict is not None:
+                    # Combine the cover dict with any other dicts that we have
+                    # for this source.
+                    existing_dict = self._src_dict.get(full_path)
 
-                    for line_num, is_covered in cover_dict.iteritems():
+                    if existing_dict is not None:
 
-                        # If the line is covered anywhere, call it covered
-                        # Otherwise, call it uncovered
-                        already_covered = existing_dict.get(line_num, False)
-                        existing_dict[line_num] = is_covered or already_covered
+                        for line_num, is_covered in cover_dict.iteritems():
 
-                # If we haven't encountered this source before, then
-                # store the coverage information we just acquired.
-                else:
-                    self._src_dict[full_path] = cover_dict
+                            # If the line is covered anywhere, call it covered
+                            # Otherwise, call it uncovered
+                            already_covered = existing_dict.get(line_num, False)
+                            existing_dict[line_num] = is_covered or already_covered
+
+                    # If we haven't encountered this source before, then
+                    # store the coverage information we just acquired.
+                    else:
+                        self._src_dict[full_path] = cover_dict
 
     def src_list(self):
         """
