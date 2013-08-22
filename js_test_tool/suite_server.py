@@ -729,7 +729,7 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
             BaseHTTPRequestHandler.finish(self)
 
         except socket.error:
-            LOGGER.warning('client disconnected: {}'.format(self.path))
+            LOGGER.debug('client disconnected: {}'.format(self.path))
 
     def handle_one_request(self):
         """
@@ -740,7 +740,7 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
             BaseHTTPRequestHandler.handle_one_request(self)
 
         except socket.error:
-            LOGGER.warning('client disconnected: {}'.format(self.path))
+            LOGGER.debug('client disconnected: {}'.format(self.path))
 
     def do_GET(self):
         """
