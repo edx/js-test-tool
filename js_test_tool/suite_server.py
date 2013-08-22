@@ -3,6 +3,7 @@ Serve test runner pages and included JavaScript files on a local port.
 """
 
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from SocketServer import ThreadingMixIn
 import threading
 import re
 import pkg_resources
@@ -11,6 +12,9 @@ import logging
 import json
 import time
 import mimetypes
+import shutil
+import socket
+from StringIO import StringIO
 from abc import ABCMeta, abstractmethod
 from js_test_tool.coverage import SrcInstrumenter, SrcInstrumenterError, CoverageData
 
@@ -32,12 +36,15 @@ class DuplicateSuiteNameError(Exception):
     pass
 
 
-class SuitePageServer(HTTPServer):
+class SuitePageServer(ThreadingMixIn, HTTPServer):
     """
     Serve test suite pages and included JavaScript files.
     """
 
     protocol_version = 'HTTP/1.1'
+
+    # Request response timeout
+    timeout = 5
 
     # Amount of time to wait for clients to POST coverage info
     # back to the server before timing out.
@@ -238,8 +245,7 @@ class BasePageHandler(object):
         Returns a `(content, mime_type)` tuple if the page
         could be loaded.  Otherwise, returns `(None, None)`.
 
-        `content` is a unicode (utf-8) or bytestring representing the page contents;
-        If unicode, it will be encoded to a bytestring before being served.
+        `content` is a file-like object representing the page contents.
 
         `mime_type` is the MIME type to send as the Content-Header
         in the response.
@@ -279,8 +285,7 @@ class BasePageHandler(object):
         `method` is the HTTP method used to load the page (e.g. "GET" or "POST")
         `content` is the content of the HTTP request.
 
-        Can return either a unicode (utf-8) or byte string.
-        If unicode, then it will be decoded to a bytestring before being served.
+        Returns a file-like object from which to read the page content.
         """
         pass
 
@@ -344,7 +349,8 @@ class SuitePageHandler(BasePageHandler):
 
         # Otherwise, render the page
         else:
-            return self._renderer.render_to_string(suite_name, suite_desc)
+            page = self._renderer.render_to_string(suite_name, suite_desc)
+            return StringIO(page)
 
     def mime_type(self, method, content, *args):
         """
@@ -379,9 +385,10 @@ class RunnerPageHandler(BasePageHandler):
         except BaseException:
             return None
 
-        # If we successfully loaded it, return a unicode str
+        # If we successfully loaded it, return the content
+        # as a file-like object.
         else:
-            return content.decode()
+            return StringIO(content)
 
     def mime_type(self, method, content, *args):
         """
@@ -421,7 +428,7 @@ class DependencyPageHandler(BasePageHandler):
         Load the test suite dependency file, using a path relative
         to the description file.
 
-        Returns a `unicode` string of the page contents.
+        Returns the handle to the dependency file.
         """
 
         # Interpret the arguments (from the regex)
@@ -435,33 +442,15 @@ class DependencyPageHandler(BasePageHandler):
 
             # Load the file
             try:
-                with open(full_path) as file_handle:
-                    contents = file_handle.read()
+                return open(full_path, 'rb')
 
             # If we cannot load the file (probably because it doesn't exist)
-            # then return None
+            # then do not handle this request.
             except IOError:
                 return None
 
-            # Successfully loaded the file
-            else:
-
-                # If serving text, guarantee that it is unicode UTF-8
-                if self.is_text_mime_type(rel_path):
-
-                    # First try to decode as UTF-8
-                    try:
-                        return contents.decode('utf-8')
-
-                    # If we can't decode as UTF-8, try ISO-8859-1
-                    except UnicodeDecodeError:
-                        return contents.decode('iso-8859-1')
-
-                    # Otherwise, serve the unencoded byte string
-                else:
-                    return str(contents)
-
-        # If this is not one of our listed dependencies, return None
+        # If this is not one of our listed dependencies, 
+        # then do not handle this request.
         else:
             return None
 
@@ -471,15 +460,6 @@ class DependencyPageHandler(BasePageHandler):
         """
         _, rel_path = args
         return self.guess_mime_type(rel_path)
-
-    def is_text_mime_type(self, rel_path):
-        """
-        Return True if we should serve the file as text,
-        False otherwise.
-        """
-        guessed_type = self.guess_mime_type(rel_path)
-        return 'text' in guessed_type or guessed_type in self.TEXT_MIME_TYPES
-
 
     def _dependency_path(self, suite_name, path):
         """
@@ -546,7 +526,8 @@ class InstrumentedSrcPageHandler(BasePageHandler):
         if self._is_src_file(suite_name, rel_path):
 
             # Send the instrumented source (delegating to JSCover)
-            return self._send_instrumented_src(suite_name, rel_path)
+            contents = self._send_instrumented_src(suite_name, rel_path)
+            return StringIO(contents)
 
         # If not a source file, do not handle it.
         # Expect the non-instrumenting page handler to serve
@@ -688,7 +669,7 @@ class StoreCoveragePageHandler(BasePageHandler):
             return None
 
         else:
-            return "Success: coverage data received"
+            return StringIO("Success: coverage data received")
 
 
 class SuitePageRequestHandler(BaseHTTPRequestHandler):
@@ -730,6 +711,28 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         # Call the superclass implementation
         # This will immediately call do_GET() if the request is a GET
         BaseHTTPRequestHandler.__init__(self, request, client_address, server)
+
+    def finish(self):
+        """
+        Finish processing a request.
+        Override the superclass implementation to silence disconnect errors.
+        """
+        try:
+            BaseHTTPRequestHandler.finish(self)
+
+        except socket.error:
+            LOGGER.warning('client disconnected: {}'.format(self.path))
+
+    def handle_one_request(self):
+        """
+        Handle a request.
+        Override the superclass implementation to silence disconnect errors.
+        """
+        try:
+            BaseHTTPRequestHandler.handle_one_request(self)
+
+        except socket.error:
+            LOGGER.warning('client disconnected: {}'.format(self.path))
 
     def do_GET(self):
         """
@@ -777,23 +780,22 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
     def _send_response(self, status_code, content, mime_type):
         """
         Send a response to an HTTP request as UTF-8 encoded HTML.
-        `content` can be empty, None, or a UTF-8 string.
+        `content` is a file-like object.
         `mime_type` is sent as the Content-Type header.
+
+        If content is None, send a response with no content.
         """
-        if isinstance(content, unicode):
-            content = content.encode('utf-8')
-            content_type = mime_type + '; charset=utf-8'
-
-        else:
-            content_type = mime_type
-
         self.send_response(status_code)
-        self.send_header('Content-Type', content_type)
+        self.send_header('Content-Type', mime_type + '; charset=utf-8')
         self.send_header('Content-Language', 'en')
         self.end_headers()
 
+        # Send the content
+        # Copying the file objects ensures that
+        # (a) we don't store huge files in memory, and
+        # (b) we don't overload the network buffer
         if content:
-            self.wfile.write(content)
+            shutil.copyfileobj(content, self.wfile)
 
     def _content(self):
         """

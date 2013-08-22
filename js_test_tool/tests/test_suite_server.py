@@ -246,7 +246,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         expected_page = u'\xf6 \x9a \xa0'
         for path in dependencies:
             url = self.server.root_url() + 'suite/test-suite-0/include/' + path + "?123456"
-            self._assert_page_equals(url, expected_page)
+            self._assert_page_equals(url, expected_page, encoding='iso-8859-1')
 
     def test_ignore_dependency_get_params(self):
 
@@ -338,13 +338,9 @@ class SuitePageServerTest(TempWorkspaceTestCase):
             self.assertIn(expected_content,
                           response.content.decode(encoding), msg=url)
 
-            # Expect that the encoding is UTF-8
-            self.assertEqual(response.encoding, encoding, msg=url)
-
         # If no encoding, just expect the byte string
         else:
             self.assertIn(expected_content, response.content, msg=url)
-            self.assertIs(response.encoding, None)
 
     @staticmethod
     def _create_fake_files(path_list, contents, encoding='utf8'):
