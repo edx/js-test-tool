@@ -36,6 +36,14 @@ class DuplicateSuiteNameError(Exception):
     pass
 
 
+class RequestRangeError(Exception):
+    """
+    Client requested an invalid byte range.
+    (e.g. starting byte > ending byte)
+    """
+    pass
+
+
 class SuitePageServer(ThreadingMixIn, HTTPServer):
     """
     Serve test suite pages and included JavaScript files.
@@ -721,7 +729,7 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
             BaseHTTPRequestHandler.finish(self)
 
         except socket.error:
-            LOGGER.warning('client disconnected: {}'.format(self.path))
+            LOGGER.debug('client disconnected: {}'.format(self.path))
 
     def handle_one_request(self):
         """
@@ -732,7 +740,7 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
             BaseHTTPRequestHandler.handle_one_request(self)
 
         except socket.error:
-            LOGGER.warning('client disconnected: {}'.format(self.path))
+            LOGGER.debug('client disconnected: {}'.format(self.path))
 
     def do_GET(self):
         """
@@ -759,35 +767,191 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         """
         Handle an HTTP request of type `method` (e.g. "GET" or "POST")
         """
-
         # Get the request content
         request_content = self._content()
 
         for handler in self._page_handlers:
 
             # Try to retrieve the page
-            content, mime_type = handler.page_contents(self.path, method, request_content)
+            content, mime_type = handler.page_contents(
+                self.path, method, request_content
+            )
 
             # If we got a page, send the contents
             if content is not None:
-                self._send_response(200, content, mime_type)
-                return
+
+                try:
+                    byte_range = self._requested_byte_range(self.headers, content)
+
+                # The requested range is not satisfiable; send a 406
+                except RequestRangeError:
+                    self._send_response(406, None, 'text/plain')
+                    return
+
+                # If no byte range requested, send all the content
+                if byte_range is None:
+                    self._send_response(200, content, mime_type)
+                    return
+
+                # If a byte range was requested, send partial content
+                else:
+                    self._send_response(
+                        206, content, mime_type,
+                        byte_range=byte_range
+                    )
+                    return
 
         # If we could not retrieve the contents (e.g. because
         # the file does not exist), send an error response
         self._send_response(404, None, 'text/plain')
 
-    def _send_response(self, status_code, content, mime_type):
+    def _requested_byte_range(self, headers, content_file):
         """
-        Send a response to an HTTP request as UTF-8 encoded HTML.
+        Parse the requested byte range ('Range' header)
+        and return a `(start_pos, end_pos)` tuple indicating
+        the start/end bytes to transmit (inclusive).
+
+        `headers` represents the request headers
+        (a `mimetools.Message` instance).
+
+        `content_file` is the file to transmit
+        (used to determine the file size).
+
+        If no byte range requested, returns None.
+
+        Raises a `RequestRangeError` if the byte range is not satisfiable.
+        (in which case the server should send a 416 response).
+
+        See http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.1
+        """
+        range_header = headers.get('Range')
+
+        # No byte range specified, so send the whole file
+        if range_header is None or range_header == '':
+            return None
+
+        # Otherwise, parse the header
+        # Expect it to have the form: "bytes=byte-ranges"
+        elif range_header.startswith('bytes='):
+
+            # Get the file size
+            file_size = self._file_size(content_file)
+
+            # Chop off the "bytes=" part, so we just get the ranges
+            # Then split into individual ranges
+            # Example: "bytes=0-10,22-43" --> ["0-10", "22-43"]
+            range_str_list = range_header[len('bytes='):].split(",")
+
+            # We don't implement multiple byte ranges
+            # Just respond with a 200 and the full file instead
+            if len(range_str_list) > 1:
+                return None
+
+            # Parse the range
+            return self._parse_byte_range(range_str_list[0], file_size)
+
+        # Don't recognize the format
+        # The RFC says to return a 200 with the full file
+        else:
+            return None
+
+    @staticmethod
+    def _file_size(file_handle):
+        """
+        Return the size of `file_handle` (a file-like object) in bytes.
+        """
+        old_pos = file_handle.tell()
+
+        # Seek to the end of the file to find the last byte position
+        # (2 means relative to the end of the file)
+        file_handle.seek(0, 2)
+        size = file_handle.tell()
+
+        # Reset the old position
+        file_handle.seek(old_pos)
+
+        return size
+
+    def _parse_byte_range(self, range_str, file_size):
+        """
+        Return a `(start_pos, end_pos)` tuple by parsing `range_str`
+        which can take the form:
+
+            * START-END
+            * START-
+            * -LENGTH
+            * Comma-separated list of above options
+
+        `file_size` is the size of the file to serve in bytes.
+
+        Raises a `RequestRangeError` if the byte range is not satisfiable.
+        Returns None if the byte range could not be parsed (invalid format),
+        triggering a 200 with the full file.
+        """
+        try:
+            start_pos, end_pos = range_str.split("-")
+            start_pos = int(start_pos) if start_pos != '' else None
+            end_pos = int(end_pos) if end_pos != '' else None
+
+        # Can't interpret the start/end position,
+        # so trigger a 200 with the full file instead.
+        except ValueError:
+            return None
+
+        # There are three cases to handle here:
+        # 1) Both start and end specified: "0-10" (interpret as start/end byte indices)
+        # 2) Only start specified: "0-" (interpret as start index to the end of the file)
+        # 3) Only end specified: "-10" (interpret as length from the end)
+        if start_pos is not None and end_pos is not None:
+
+            # Verify that start <= end
+            if start_pos > end_pos:
+                msg = "Start byte > end byte in range {0}".format(range_str)
+                raise RequestRangeError(msg)
+
+            return (start_pos, min(end_pos, file_size - 1))
+
+        elif start_pos is not None and end_pos is None:
+            return (start_pos, file_size - 1)
+
+        elif start_pos is None and end_pos is not None:
+            # Interpret `end_pos` as length from end when only end position is provided
+            len_from_end = end_pos
+            return (file_size - len_from_end, file_size - 1)
+
+        # Neither start nor end specified -- invalid byte range, so
+        # trigger a 200 with the full file instead.
+        else:
+            return None
+
+    def _send_response(self, status_code, content, mime_type, byte_range=None):
+        """
+        Send a response to an HTTP request.
         `content` is a file-like object.
         `mime_type` is sent as the Content-Type header.
+
+        Supports byte-ranges (send partial content requested by the client).
+        `byte_range` is a `(start_pos, end_pos)` tuple indicating the first and last
+        byte (indexed from 0) to send to the client.
+
+        If no byte range is specified, sends the entire file.
 
         If content is None, send a response with no content.
         """
         self.send_response(status_code)
         self.send_header('Content-Type', mime_type + '; charset=utf-8')
         self.send_header('Content-Language', 'en')
+        self.send_header('Accept-Ranges', 'bytes')
+
+        if byte_range is not None:
+            start_pos, end_pos = byte_range
+            self.send_header(
+                'Content-Range',
+                'bytes {0}-{1}/{2}'.format(start_pos, end_pos, self._file_size(content))
+            )
+
+            self.send_header('Content-Length', end_pos - start_pos + 1)
+
         self.end_headers()
 
         # Send the content
@@ -795,7 +959,19 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
         # (a) we don't store huge files in memory, and
         # (b) we don't overload the network buffer
         if content:
-            shutil.copyfileobj(content, self.wfile)
+
+            # If no byte range specified, send the whole file
+            if byte_range is None:
+                shutil.copyfileobj(content, self.wfile)
+
+            # Otherwise, send just the range requested
+            else:
+                start_pos, end_pos = byte_range
+                copy_len = end_pos - start_pos
+
+                # Seek to the start of the file and send just the length requested
+                content.seek(start_pos)
+                shutil.copyfileobj(content, self.wfile, copy_len)
 
     def _content(self):
         """

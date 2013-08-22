@@ -227,6 +227,121 @@ class SuitePageServerTest(TempWorkspaceTestCase):
             url = self.server.root_url() + 'suite/test-suite-0/include/' + path
             self._assert_page_equals(url, file_contents, encoding=None)
 
+    def test_serve_byte_range_requests(self):
+
+        # Configure the suite description to contain a binary fixture file
+        fixture_paths = ['fixtures/test.mp4']
+        self.suite_desc_list[0].fixture_paths.return_value = fixture_paths
+
+        # Make this file fairly large, so we can access ranges of it
+        file_size = 10000
+
+        # Create a fake file to serve
+        os.mkdir('fixtures')
+        file_contents = '\x01' * file_size
+        self._create_fake_files(fixture_paths, file_contents, encoding=None)
+
+        # Check for byte range support
+        url = self.server.root_url() + 'suite/test-suite-0/include/fixtures/test.mp4'
+        resp = requests.get(url, headers={'Range': None})
+
+        # Expect that the server supports byte ranges
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.headers.get('Accept-Ranges'), 'bytes')
+
+        # Check that we can make requests for byte ranges
+        # Examples taken from the RFC:
+        # http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.1
+        test_cases = [
+            ('0-499', 0, 499),
+            ('0-', 0, 9999),
+            ('9000-9999', 9000, 9999),
+            ('9500-', 9500, 9999),
+            ('-500', 9500, 9999),
+        ]
+
+        for byte_range, content_start, content_end in test_cases:
+
+            print "Sending byte range '{0}'".format(byte_range)
+
+            resp = requests.get(url, headers={'Range': 'bytes=' + byte_range})
+
+            # Expect that we get a 206 (partial content)
+            self.assertEqual(resp.status_code, 206)
+
+            self.assertEqual(
+                resp.headers.get('Content-Range'),
+                'bytes {0}-{1}/{2}'.format(content_start, content_end, file_size)
+            )
+
+            content_len = content_end - content_start + 1
+            self.assertEqual(resp.headers.get('Content-Length'), str(content_len))
+            self.assertEqual(len(resp.content), content_len)
+
+    def test_serve_multiple_byte_ranges(self):
+
+        # Configure the suite description to contain a binary fixture file
+        fixture_paths = ['fixtures/test.mp4']
+        self.suite_desc_list[0].fixture_paths.return_value = fixture_paths
+
+        # Create a fake file to serve
+        # The file has \x01 as the first byte, \x02 as the middle bytes
+        # and \x03 as the last byte
+        os.mkdir('fixtures')
+        file_contents = '\x01' * 10
+        self._create_fake_files(fixture_paths, file_contents, encoding=None)
+
+        # Make a request for multiple byte range
+        byte_range = '0-3,4-7'
+        url = self.server.root_url() + 'suite/test-suite-0/include/fixtures/test.mp4'
+        resp = requests.get(url, headers={'Range': 'bytes=' + byte_range})
+
+        # Expect that the request for multiple ranges is ignored
+        # and the whole file is returned
+        # (we don't implement this part of the protocol)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.content, file_contents)
+
+    def test_invalid_byte_range(self):
+
+        # Configure the suite description to contain a binary fixture file
+        fixture_paths = ['fixtures/test.mp4']
+        self.suite_desc_list[0].fixture_paths.return_value = fixture_paths
+
+        # Make this file fairly large, so we can access ranges of it
+        file_size = 10000
+
+        # Create a fake file to serve
+        os.mkdir('fixtures')
+        file_contents = '\x01' * file_size
+        self._create_fake_files(fixture_paths, file_contents, encoding=None)
+
+        # Send invalid byte range headers and expect a 200 with the full file returned
+        url = self.server.root_url() + 'suite/test-suite-0/include/fixtures/test.mp4'
+        for invalid_range in ['not_bytes=0-10', 'bytes = space', 'bytes=text-text', 'bytes=-']:
+            resp = requests.get(url, headers={'Range': invalid_range})
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.content, file_contents)
+
+    def test_unsatisfiable_range(self):
+
+        # Configure the suite description to contain a binary fixture file
+        fixture_paths = ['fixtures/test.mp4']
+        self.suite_desc_list[0].fixture_paths.return_value = fixture_paths
+
+        # Make this file fairly large, so we can access ranges of it
+        file_size = 10000
+
+        # Create a fake file to serve
+        os.mkdir('fixtures')
+        file_contents = '\x01' * file_size
+        self._create_fake_files(fixture_paths, file_contents, encoding=None)
+
+        # Send unsatisfiable range (start > end) and expect a 406
+        url = self.server.root_url() + 'suite/test-suite-0/include/fixtures/test.mp4'
+        resp = requests.get(url, headers={'Range': 'bytes=10-2'})
+        self.assertEqual(resp.status_code, 406)
+
     def test_serve_iso_encoded_dependency(self):
         
         # Configure the suite description to contain dependency files

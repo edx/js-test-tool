@@ -3,5 +3,5 @@ nose
 coverage
 lettuce
 pep8
-pylint
+pylint<1.0
 diff_cover
