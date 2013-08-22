@@ -808,15 +808,8 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
     def _requested_byte_range(self, headers, content_file):
         """
         Parse the requested byte range ('Range' header)
-        and return a list of `(start_pos, end_pos)` tuples indicating
-        the start/end bytes to transmit.
-
-        The list of byte ranges is guaranteed to be in ascending
-        order and non-overlapping (overlaps will be merged):
-
-        For example, [(0, 10), (50, 100)] would mean
-        "send bytes 0-10 and 50-100"
-        (note that the range is inclusive).
+        and return a `(start_pos, end_pos)` tuple indicating
+        the start/end bytes to transmit (inclusive).
 
         `headers` represents the request headers
         (a `mimetools.Message` instance).
