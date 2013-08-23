@@ -318,6 +318,21 @@ class BasePageHandler(object):
             mime_type = 'text/plain'
         return mime_type
 
+    @staticmethod
+    def safe_str_buffer(content):
+        """
+        Return a file-like object containing the contents of `content`.
+        If `content` is unicode, it will be first encoded as UTF-8 bytestring.
+        """
+
+        # If content is unicode, encode it
+        if isinstance(content, unicode):
+            content = content.encode('utf-8')
+
+        # At this point, content should be a byte string,
+        # so we can create the buffer.
+        return StringIO(content)
+
 
 class SuitePageHandler(BasePageHandler):
     """
@@ -358,7 +373,7 @@ class SuitePageHandler(BasePageHandler):
         # Otherwise, render the page
         else:
             page = self._renderer.render_to_string(suite_name, suite_desc)
-            return StringIO(page)
+            return self.safe_str_buffer(page)
 
     def mime_type(self, method, content, *args):
         """
@@ -396,7 +411,7 @@ class RunnerPageHandler(BasePageHandler):
         # If we successfully loaded it, return the content
         # as a file-like object.
         else:
-            return StringIO(content)
+            return self.safe_str_buffer(content)
 
     def mime_type(self, method, content, *args):
         """
@@ -535,7 +550,7 @@ class InstrumentedSrcPageHandler(BasePageHandler):
 
             # Send the instrumented source (delegating to JSCover)
             contents = self._send_instrumented_src(suite_name, rel_path)
-            return StringIO(contents)
+            return self.safe_str_buffer(contents)
 
         # If not a source file, do not handle it.
         # Expect the non-instrumenting page handler to serve
