@@ -3,6 +3,7 @@ Tests for the suite page server.
 """
 
 from js_test_tool.tests.helpers import TempWorkspaceTestCase
+import unittest
 import mock
 import re
 import requests
@@ -10,7 +11,7 @@ import os
 import pkg_resources
 import json
 from js_test_tool.suite import SuiteDescription, SuiteRenderer
-from js_test_tool.suite_server import SuitePageServer, \
+from js_test_tool.suite_server import SuitePageServer, SuitePageHandler, \
     TimeoutError, DuplicateSuiteNameError
 from js_test_tool.coverage import SrcInstrumenter
 
@@ -546,7 +547,7 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
         instrumenter_cls.return_value = instr_mock
 
         # Configure the instrumenter to always return fake output
-        fake_src = u"instrumented src output"
+        fake_src = u"instr\u1205ented sr\u1239 output"
         instr_mock.instrumented_src.return_value = fake_src
 
         # Create a mock description with one source file
@@ -721,3 +722,25 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
             mock_desc.spec_paths.return_value = []
 
         return mock_desc
+
+
+class SuitePageHandlerTest(unittest.TestCase):
+    """
+    Tests for utility methods in `SuitePageHandler`.
+    """
+
+    def test_safe_str_buffer(self):
+
+        # We should be able to put in any bytestring and
+        # get a buffer that we can safely typecast to a bytestring
+        for str_input in [u'\u5890', u'\xf1\xfc]\x83', u'&R\xa2o']:
+
+            # Create the string buffer
+            str_buffer = SuitePageHandler.safe_str_buffer(str_input)
+
+            # Try to read it as a byte string
+            try:
+                typecast = str(str_buffer.getvalue())
+
+            except UnicodeEncodeError:
+                self.fail("Could not encode {}".format(repr(str_input)))
