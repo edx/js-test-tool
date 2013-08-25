@@ -2,10 +2,11 @@
 Load suite runner pages in a browser and parse the results.
 """
 
+from splinter.exceptions import DriverNotFoundError
 from splinter.browser import Browser as SplinterBrowser
 import json
 from urllib import unquote
-from util import retry
+from js_test_tool.util import retry
 import httplib
 
 import logging
@@ -91,7 +92,8 @@ class Browser(object):
             self.MAX_RESTARTS,
             self.RESTART_WAIT_SEC,
             recover_func=self._start_browser,
-            fail_fast_errors=[JavaScriptError]
+            fail_fast_errors=[JavaScriptError],
+            name="Get test results from browser {0}".format(self._name)
         )
 
     def name(self):
@@ -106,11 +108,14 @@ class Browser(object):
         the browser's resources.
         """
         try:
-            self._splinter_browser.quit()
+            self._safe_browser_call(
+                self._splinter_browser.quit,
+                name="quit"
+            )
 
         # We assume that if we can't contact the browser,
         # it isn't running (usually because it's crashed).
-        except (httplib.BadStatusLine, IOError):
+        except BrowserError:
             LOGGER.debug("Could not quit browser.")
 
     def _start_browser(self):
@@ -128,7 +133,7 @@ class Browser(object):
         try:
             self._splinter_browser = SplinterBrowser(self._name)
 
-        except:
+        except DriverNotFoundError:
             if self._name == 'chrome':
                 msg = ' '.join([
                     'Could not create a browser instance.',
@@ -137,6 +142,24 @@ class Browser(object):
                 ])
             else:
                 msg = 'Could not create a {} browser instance.  Is this browser installed?'.format(self._name)
+            raise BrowserError(msg)
+
+    def _safe_browser_call(self, call_func, name=""):
+        """
+        Execute `call_func` (function with no args)
+        but catch disconnect exceptions and reraise them as
+        `BrowserError`s.
+
+        `name` is a name used to identify the operation
+        when reporting errors.
+
+        If successful, return the result of the method call.
+        """
+        try:
+            return call_func()
+
+        except (httplib.BadStatusLine, IOError):
+            msg = "Could not connect to browser: {0}".format(name)
             raise BrowserError(msg)
 
     def _get_page_results(self, url):
@@ -162,22 +185,15 @@ class Browser(object):
             else:
                 raise BrowserError("Could not load page at '{}'".format(url))
 
-        # Check that we successfully loaded the page
-        try:
-            if not self._splinter_browser.status_code.is_success():
-                raise BrowserError("Could not load page at '{}'".format(url))
-
-        except (httplib.BadStatusLine, IOError):
-            raise BrowserError("Could not connect to browser.")
-
         # Wait for the DOM to load and for all tests to complete
         css_sel = "#{}.{}".format(self.RESULTS_DIV_ID, self.DONE_DIV_CLASS)
 
-        try:
-            is_done = self._splinter_browser.is_element_present_by_css(
-                        css_sel, wait_time=self._timeout_sec)
-        except (httplib.BadStatusLine, IOError):
-            raise BrowserError("Could not connect to browser.")
+        is_done = self._safe_browser_call(
+            lambda: self._splinter_browser.is_element_present_by_css(
+                css_sel, wait_time=self._timeout_sec
+            ),
+            name="check if tests finished"
+        )
 
         if not is_done:
             self._raise_js_errors()
@@ -199,10 +215,10 @@ class Browser(object):
         `JavaScriptException`.
         """
         # Retrieve the <div> containing the reported JS errors
-        try:
-            elements = self._splinter_browser.find_by_id(self.ERROR_DIV_ID)
-        except (httplib.BadStatusLine, IOError):
-            raise BrowserError("Could not connect to browser.")
+        elements = self._safe_browser_call(
+            lambda: self._splinter_browser.find_by_id(self.ERROR_DIV_ID),
+            name="check for JavaScript errors"
+        )
 
         # Raise an error if the test runner reported any
         if not elements.is_empty():
@@ -218,7 +234,10 @@ class Browser(object):
         loaded browser page.
         """
         # Retrieve the <div> containing the JSON-encoded results
-        elements = self._splinter_browser.find_by_id(self.RESULTS_DIV_ID)
+        elements = self._safe_browser_call(
+            lambda: self._splinter_browser.find_by_id(self.RESULTS_DIV_ID),
+            name="Get test results"
+        )
 
         # Raise an error if we can't find the div we expect
         if elements.is_empty():

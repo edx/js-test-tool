@@ -34,7 +34,7 @@ class SrcInstrumenter(object):
     # that has not yet become available.
     MAX_CONNECT_ATTEMPTS = 10
 
-    # Amount of time to wait before retrying
+    # Wait time between attempts
     WAIT_BETWEEN_ATTEMPTS = 0.4
 
     # Keep track of used ports across classes
@@ -80,7 +80,8 @@ class SrcInstrumenter(object):
                     self._start_jscover,
                     self.MAX_START_ATTEMPTS,
                     self.WAIT_BETWEEN_ATTEMPTS,
-                    fail_fast_errors=[OSError]
+                    fail_fast_errors=[OSError],
+                    name="Start JSCover"
                 )
             except OSError:
                 msg = "Could not find JSCover JAR file at '{}'".format(self._tool_path)
@@ -90,10 +91,6 @@ class SrcInstrumenter(object):
                 msg = "Could not start JSCover, most likely due to port conflicts."
                 raise SrcInstrumenterError(msg)
 
-        else:
-            msg = "start() called with an instance of JSCover already running."
-            LOGGER.warning(msg)
-
     def stop(self):
         """
         Stop the service.
@@ -101,7 +98,15 @@ class SrcInstrumenter(object):
 
         # Terminate the JSCover service
         if self._jscover is not None:
-            self._jscover.terminate()
+            try:
+                self._jscover.terminate()
+
+            except OSError:
+                LOGGER.debug("Could not terminate JSCover instance.")
+
+            finally:
+                self._jscover = None
+
         else:
             msg = "stop() called with no instance of JSCover running."
             LOGGER.warning(msg)
@@ -112,22 +117,23 @@ class SrcInstrumenter(object):
         file at `rel_path`, interpreted relative to the
         root URL (configured in the constructor).
 
-        If the source could not be retrieved, raises a `SrcInstrumenterError`.
-        If the service has not yet been started, this will start it.
+        Raises a `SrcInstrumenterError` is the service hasn't been
+        started or the source could not be retrieved.
         """
 
         # If have not started the service yet, do so now.
         if self._jscover is None:
-            self.start()
+            raise SrcInstrumenterError("You need to start the JSCover server first.")
 
         # Get the instrumented version of the source from JSCover
-        try_func = lambda: self._get_src_from_jscover(rel_path)
-
         try:
             return retry(
-                try_func,
+                lambda: self._get_src_from_jscover(rel_path),
                 self.MAX_CONNECT_ATTEMPTS,
-                self.WAIT_BETWEEN_ATTEMPTS
+                self.WAIT_BETWEEN_ATTEMPTS,
+                recover_func=self.start,
+                num_attempts_before_recover=2,
+                name="Get source from JSCover"
             )
 
         except requests.exceptions.ConnectionError:
