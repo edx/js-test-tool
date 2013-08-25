@@ -4,13 +4,18 @@ Utility functions.
 import time
 
 
-def retry(try_func, max_attempts, wait_sec, fail_fast_errors=None):
+def retry(try_func, max_attempts, wait_sec,
+          recover_func=None, fail_fast_errors=None):
     """
     Call `try_func` (lambda with no args) until it executes
     with no exception.  If the function does not succeed after
     `max_attempts` tries, re-raises the last exception.
 
     `wait_sec` is the number of seconds to wait between attempts.
+
+    `recover_func` is an optional function called
+    before retrying.  It should accept no arguments,
+    and its return value is ignored.
 
     `fail_fast_exceptions` is an optional list of exception types
     for which to fail immediately.
@@ -43,3 +48,7 @@ def retry(try_func, max_attempts, wait_sec, fail_fast_errors=None):
 
             # Otherwise, wait a bit and retry
             time.sleep(wait_sec)
+
+            # Perform the recover function if one is provided
+            if recover_func is not None:
+                recover_func()

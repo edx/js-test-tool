@@ -5,6 +5,11 @@ Load suite runner pages in a browser and parse the results.
 from splinter.browser import Browser as SplinterBrowser
 import json
 from urllib import unquote
+from util import retry
+import httplib
+
+import logging
+LOGGER = logging.getLogger(__name__)
 
 
 class BrowserError(Exception):
@@ -13,11 +18,13 @@ class BrowserError(Exception):
     """
     pass
 
+
 class JavaScriptError(Exception):
     """
     JavaScript error occurred in the test runner page.
     """
     pass
+
 
 class Browser(object):
     """
@@ -41,6 +48,12 @@ class Browser(object):
     # so we set this number relatively high.
     DEFAULT_TIMEOUT = 300 
 
+    # Maximum number of times to retry if the browser crashed
+    MAX_RESTARTS = 3
+
+    # Max time to wait between restarts in seconds
+    RESTART_WAIT_SEC = 1
+
     def __init__(self, browser_name, timeout_sec=None):
         """
         Initialize the browser to use `browser_name` (e.g. chrome).
@@ -54,21 +67,12 @@ class Browser(object):
         if timeout_sec is None:
             timeout_sec = self.DEFAULT_TIMEOUT
 
-        # Store the browser name
         self._name = browser_name
         self._timeout_sec = timeout_sec
+        self._splinter_browser = None
 
-        # Create a browser session
-        try:
-            self._splinter_browser = SplinterBrowser(browser_name)
-        except:
-            if browser_name == 'chrome':
-                msg = ' '.join(['Could not create a browser instance.',
-                                'Make sure you have both ChromeDriver and Chrome installed.',
-                                'See http://splinter.cobrateam.info/docs/drivers/chrome.html'])
-            else:
-                msg = 'Could not create a {} browser instance.  Is this browser installed?'.format(browser_name)
-            raise BrowserError(msg)
+        # Start the browser (raises an exception if the browser name is invalid)
+        self._start_browser()
 
     def get_page_results(self, url):
         """
@@ -82,7 +86,64 @@ class Browser(object):
              'status': pass | fail | error | skip,
              'detail': DETAILS}
         """
+        return retry(
+            lambda: self._get_page_results(url),
+            self.MAX_RESTARTS,
+            self.RESTART_WAIT_SEC,
+            recover_func=self._start_browser,
+            fail_fast_errors=[JavaScriptError]
+        )
 
+    def name(self):
+        """
+        Return the name of the browser (e.g. 'chrome')
+        """
+        return self._name
+
+    def quit(self):
+        """
+        Quit the browser.  This should be called to clean up
+        the browser's resources.
+        """
+        try:
+            self._splinter_browser.quit()
+
+        # We assume that if we can't contact the browser,
+        # it isn't running (usually because it's crashed).
+        except (httplib.BadStatusLine, IOError):
+            LOGGER.debug("Could not quit browser.")
+
+    def _start_browser(self):
+        """
+        Start the browser.  Raises a `BrowserError` if the browser
+        could not be started, usually because it isn't installed correctly
+        or is not supported.
+        """
+        # If there is already a browser, try to quit it
+        # The quit method catches exceptions that can occur
+        # if the browser crashed, so this is safe.
+        if self._splinter_browser is not None:
+            self.quit()
+
+        try:
+            self._splinter_browser = SplinterBrowser(self._name)
+
+        except:
+            if self._name == 'chrome':
+                msg = ' '.join([
+                    'Could not create a browser instance.',
+                    'Make sure you have both ChromeDriver and Chrome installed.',
+                    'See http://splinter.cobrateam.info/docs/drivers/chrome.html'
+                ])
+            else:
+                msg = 'Could not create a {} browser instance.  Is this browser installed?'.format(self._name)
+            raise BrowserError(msg)
+
+    def _get_page_results(self, url):
+        """
+        Version of `get_page_results` with no retry logic.
+        Raises a `BrowserError` is any browser operation fails.
+        """
         # Load the URL in the browser
         try:
             self._splinter_browser.visit(url)
@@ -102,13 +163,21 @@ class Browser(object):
                 raise BrowserError("Could not load page at '{}'".format(url))
 
         # Check that we successfully loaded the page
-        if not self._splinter_browser.status_code.is_success():
-            raise BrowserError("Could not load page at '{}'".format(url))
+        try:
+            if not self._splinter_browser.status_code.is_success():
+                raise BrowserError("Could not load page at '{}'".format(url))
+
+        except (httplib.BadStatusLine, IOError):
+            raise BrowserError("Could not connect to browser.")
 
         # Wait for the DOM to load and for all tests to complete
         css_sel = "#{}.{}".format(self.RESULTS_DIV_ID, self.DONE_DIV_CLASS)
-        is_done = self._splinter_browser.is_element_present_by_css(
-                    css_sel, wait_time=self._timeout_sec)
+
+        try:
+            is_done = self._splinter_browser.is_element_present_by_css(
+                        css_sel, wait_time=self._timeout_sec)
+        except (httplib.BadStatusLine, IOError):
+            raise BrowserError("Could not connect to browser.")
 
         if not is_done:
             self._raise_js_errors()
@@ -120,19 +189,6 @@ class Browser(object):
             self._raise_js_errors()
             return self._get_results_from_dom()
 
-    def name(self):
-        """
-        Return the name of the browser (e.g. 'chrome')
-        """
-        return self._name
-
-    def quit(self):
-        """
-        Quit the browser.  This should be called to clean up
-        the browser's resources.
-        """
-        self._splinter_browser.quit()
-
     def _raise_js_errors(self):
         """
         Retrieve any JavaScript errors written by the test
@@ -143,7 +199,10 @@ class Browser(object):
         `JavaScriptException`.
         """
         # Retrieve the <div> containing the reported JS errors
-        elements = self._splinter_browser.find_by_id(self.ERROR_DIV_ID)
+        try:
+            elements = self._splinter_browser.find_by_id(self.ERROR_DIV_ID)
+        except (httplib.BadStatusLine, IOError):
+            raise BrowserError("Could not connect to browser.")
 
         # Raise an error if the test runner reported any
         if not elements.is_empty():
