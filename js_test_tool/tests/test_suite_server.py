@@ -449,10 +449,24 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         # Expect that we get a success result code
         self.assertEqual(response.status_code, requests.codes.ok, msg=url)
 
+        # Expect that we got an accurate content length
+        if encoding is None:
+            expected_len = len(expected_content)
+        else:
+            expected_len = len(expected_content.encode(encoding))
+
+        self.assertEqual(
+            str(expected_len),
+            response.headers.get('content-length')
+        )
+
         # Expect that the content is what we rendered
         if encoding is not None:
-            self.assertIn(expected_content,
-                          response.content.decode(encoding), msg=url)
+            self.assertIn(
+                expected_content,
+                response.content.decode(encoding),
+                msg=url
+            )
 
         # If no encoding, just expect the byte string
         else:

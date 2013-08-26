@@ -967,6 +967,10 @@ class SuitePageRequestHandler(BaseHTTPRequestHandler):
 
             self.send_header('Content-Length', end_pos - start_pos + 1)
 
+        else:
+            content_length = self._file_size(content) if content is not None else 0
+            self.send_header('Content-Length', content_length)
+
         self.end_headers()
 
         # Send the content
