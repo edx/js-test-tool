@@ -1,13 +1,42 @@
 from unittest import TestCase
+import mock
 import json
 from textwrap import dedent
+import splinter
 from js_test_tool.browser import Browser, BrowserError, JavaScriptError
 from js_test_tool.tests.helpers import StubServer
 
 
-class BrowserTest(TestCase):
+class FastBrowserTest(TestCase):
+    """
+    Base class for speeding up browser tests.
+    """
 
     def setUp(self):
+        """
+        Speed up the tests by reducing retry between attempts.
+        """
+        self._old_restart = Browser.RESTART_WAIT_SEC
+        self._old_attempts = Browser.MAX_RESTARTS
+        Browser.RESTART_WAIT_SEC = 0.001
+        Browser.MAX_RESTARTS = 1
+
+    def tearDown(self):
+        """
+        Restore the old restart wait time.
+        """
+        Browser.RESTART_WAIT_SEC = self._old_restart
+        Browser.MAX_RESTARTS = self._old_attempts
+
+
+class BrowserTest(FastBrowserTest):
+    """
+    Integration tests using a stub server.
+    """
+
+    def setUp(self):
+
+        super(BrowserTest, self).setUp()
 
         # Create a stub server on a local port
         self.stub_server = StubServer()
@@ -17,6 +46,8 @@ class BrowserTest(TestCase):
         self.browser = Browser('phantomjs', timeout_sec=0.3)
 
     def tearDown(self):
+
+        super(BrowserTest, self).tearDown()
 
         # Stop the server and free the port
         self.stub_server.stop()
@@ -246,3 +277,44 @@ class BrowserTest(TestCase):
         with self.assertRaises(JavaScriptError):
             server_url = self.stub_server.root_url()
             self.browser.get_page_results(server_url)
+
+
+class BrowserUninstalled(FastBrowserTest):
+    """
+    Test that mocks the Splinter browser to simulate
+    not being able to create the browser instance.
+    """
+
+    @mock.patch('js_test_tool.browser.SplinterBrowser')
+    def test_disconnect(self, mock_class):
+
+        # Install a mock splinter browser
+        # and configure it to raise an error
+        mock_class.side_effect = splinter.exceptions.DriverNotFoundError
+
+        for browser_name in ['chrome', 'firefox', 'phantomjs']:
+            with self.assertRaises(BrowserError):
+                Browser(browser_name, timeout_sec=0.3)
+
+
+class BrowserDisconnectTest(FastBrowserTest):
+    """
+    Test that mocks the Splinter browser to simulate
+    a disconnect.
+    """
+
+    @mock.patch('js_test_tool.browser.SplinterBrowser')
+    def test_disconnect(self, mock_class):
+
+        # Install a mock splinter browser
+        # and configure it to raise disconnect exceptions
+        mock_browser = mock.MagicMock()
+        mock_browser.is_element_present_by_css.side_effect = IOError
+        mock_class.return_value = mock_browser
+
+        browser = Browser('phantomjs', timeout_sec=0.3)
+
+        # Expect an error
+        # Since we are mocking the browser, the URL doesn't matter
+        with self.assertRaises(BrowserError):
+            browser.get_page_results('http://www.example.com')

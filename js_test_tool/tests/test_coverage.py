@@ -80,6 +80,7 @@ class SrcInstrumenterTest(unittest.TestCase):
         self._configure_http_response(200, self.TEST_INSTRUMENTED_SRC)
 
         # Try to instrument a source
+        self.instrumenter.start()
         result = self.instrumenter.instrumented_src('src.js')
 
         # Expect that the type we get back is unicode
@@ -93,7 +94,10 @@ class SrcInstrumenterTest(unittest.TestCase):
         self.assertEqual(len(args), 1)
 
         matches = re.match(r'http://127.0.0.1:\d+/src.js', args[0])
-        self.assertIsNot(matches, None)
+        self.assertIsNot(
+            matches, None,
+            msg="URL not in expected form: {}".format(args[0])
+        )
 
     def test_instrumenter_returns_unicode(self):
 
@@ -104,6 +108,7 @@ class SrcInstrumenterTest(unittest.TestCase):
         self._configure_http_response(200, instrumented_unicode)
 
         # Try to instrument a source
+        self.instrumenter.start()
         result = self.instrumenter.instrumented_src('src.js')
 
         # Expect that we get the right source back
@@ -191,6 +196,7 @@ class SrcInstrumenterTest(unittest.TestCase):
                                          self.requests.get.return_value]
 
         # Get the instrumented source (expect a retry on the first failure)
+        self.instrumenter.start()
         result = self.instrumenter.instrumented_src('/src.js')
 
         # Expect that we get the right source back
@@ -202,6 +208,16 @@ class SrcInstrumenterTest(unittest.TestCase):
         self.requests.get.side_effect = requests.exceptions.ConnectionError
 
         # Expect that the instrumenter eventually gives up and raises an error
+        with self.assertRaises(SrcInstrumenterError):
+            self.instrumenter.instrumented_src('/src.js')
+
+    def test_error_when_not_started(self):
+
+        # Set up a valid response, so we don't fail for other reasons
+        self._configure_http_response(200, self.TEST_INSTRUMENTED_SRC)
+
+        # Expect that the instrumenter gives an error
+        # if we do not call `start()` first
         with self.assertRaises(SrcInstrumenterError):
             self.instrumenter.instrumented_src('/src.js')
 

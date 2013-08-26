@@ -6,9 +6,9 @@ import subprocess
 import requests
 import logging
 import random
-import time
 import os.path
 import threading
+from js_test_tool.util import retry
 
 LOGGER = logging.getLogger(__name__)
 
@@ -76,9 +76,13 @@ class SrcInstrumenter(object):
         if self._jscover is None:
 
             try:
-                self._port_num, self._jscover = self._retry(self._start_jscover,
-                                                            self.MAX_START_ATTEMPTS,
-                                                            fail_fast_errors=[OSError])
+                self._port_num, self._jscover = retry(
+                    self._start_jscover,
+                    self.MAX_START_ATTEMPTS,
+                    self.WAIT_BETWEEN_ATTEMPTS,
+                    fail_fast_errors=[OSError],
+                    name="Start JSCover"
+                )
             except OSError:
                 msg = "Could not find JSCover JAR file at '{}'".format(self._tool_path)
                 raise SrcInstrumenterError(msg)
@@ -87,10 +91,6 @@ class SrcInstrumenter(object):
                 msg = "Could not start JSCover, most likely due to port conflicts."
                 raise SrcInstrumenterError(msg)
 
-        else:
-            msg = "start() called with an instance of JSCover already running."
-            LOGGER.warning(msg)
-
     def stop(self):
         """
         Stop the service.
@@ -98,7 +98,15 @@ class SrcInstrumenter(object):
 
         # Terminate the JSCover service
         if self._jscover is not None:
-            self._jscover.terminate()
+            try:
+                self._jscover.terminate()
+
+            except OSError:
+                LOGGER.debug("Could not terminate JSCover instance.")
+
+            finally:
+                self._jscover = None
+
         else:
             msg = "stop() called with no instance of JSCover running."
             LOGGER.warning(msg)
@@ -109,60 +117,27 @@ class SrcInstrumenter(object):
         file at `rel_path`, interpreted relative to the
         root URL (configured in the constructor).
 
-        If the source could not be retrieved, raises a `SrcInstrumenterError`.
-        If the service has not yet been started, this will start it.
+        Raises a `SrcInstrumenterError` is the service hasn't been
+        started or the source could not be retrieved.
         """
 
         # If have not started the service yet, do so now.
         if self._jscover is None:
-            self.start()
+            raise SrcInstrumenterError("You need to start the JSCover server first.")
 
         # Get the instrumented version of the source from JSCover
-        try_func = lambda: self._get_src_from_jscover(rel_path)
-
         try:
-            return self._retry(try_func, self.MAX_CONNECT_ATTEMPTS)
+            return retry(
+                lambda: self._get_src_from_jscover(rel_path),
+                self.MAX_CONNECT_ATTEMPTS,
+                self.WAIT_BETWEEN_ATTEMPTS,
+                recover_func=self.start,
+                num_attempts_before_recover=2,
+                name="Get source from JSCover"
+            )
 
         except requests.exceptions.ConnectionError:
             raise SrcInstrumenterError("Could not connect to JSCover server.")
-
-    def _retry(self, try_func, max_attempts, fail_fast_errors=None):
-        """
-        Call `try_func` (lambda with no args) until it executes
-        with no exception.  If the function does not succeed after
-        `max_attempts` tries, re-raises the last exception.
-
-        `fail_fast_exceptions` is an optional list of exception types
-        for which to fail immediately.
-
-        Returns the output of the successful call to `try_func`.
-        """
-
-        # Keep track of how many attempts we've made
-        num_attempts = 0
-
-        # Retry until we're successful or run out of attempts
-        while True:
-
-            try:
-                return try_func()
-
-            except BaseException as ex:
-
-                # Check if this is a fail fast exception
-                # If it is, re-raise the exception immediately
-                if fail_fast_errors is not None:
-                    for exception_class in fail_fast_errors:
-                        if isinstance(ex, exception_class):
-                            raise ex
-
-                # Check if we are out of attempts
-                num_attempts += 1
-                if num_attempts >= max_attempts:
-                    raise ex
-
-                # Otherwise, wait a bit and retry
-                time.sleep(self.WAIT_BETWEEN_ATTEMPTS)
 
     @classmethod
     def _random_unused_port(cls):
