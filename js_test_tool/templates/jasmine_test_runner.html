@@ -5,6 +5,14 @@
   <title>Jasmine Spec Runner</title>
 
   <link rel="stylesheet" type="text/css" href="/runner/jasmine/jasmine.css">
+
+  <script type="text/javascript">
+// Stub out modal dialog alerts, which will prevent
+// us from accessing the test results in the DOM
+window.confirm = function(){return true;};
+window.alert = function(){return;};
+  </script>
+
   <script type="text/javascript" src="/runner/jasmine/jasmine.js"></script>
   {% if dev_mode %}
   <script type="text/javascript" src="/runner/jasmine/jasmine-html.js"></script>
