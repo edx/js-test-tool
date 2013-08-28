@@ -483,6 +483,13 @@ class SuiteRendererTest(unittest.TestCase):
         }
     """).strip()
 
+    ALERT_STUB_SCRIPT = dedent("""
+        // Stub out modal dialog alerts, which will prevent
+        // us from accessing the test results in the DOM
+        window.confirm = function(){return true;};
+        window.alert = function(){return;};
+    """).strip()
+
     def setUp(self):
 
         # Create the renderer we will use
@@ -538,14 +545,8 @@ class SuiteRendererTest(unittest.TestCase):
 
     def test_render_jasmine_runner(self):
 
-        # Create a mock test suite description with no includes
-        desc = self._mock_desc([], [], [], 'jasmine')
-
-        # Render the description to HTML
-        html = self.renderer.render_to_string('test-suite', desc)
-
-        # Parse the HTML
-        tree = etree.HTML(html)
+        # Create a test runner page
+        tree = self._test_runner_html()
 
         # Expect that a <div> exists with the correct ID for the results
         div_id = SuiteRenderer.RESULTS_DIV_ID
@@ -557,52 +558,14 @@ class SuiteRendererTest(unittest.TestCase):
         elems = tree.xpath('//div[@id="{}"]'.format(div_id))
         self.assertEqual(len(elems), 1)
 
-        # Retrieve the script elements
-        script_elems = tree.xpath('/html/head/script')
-
-        # Expect at least two element
-        self.assertTrue(len(script_elems) >= 2)
-
-        # Retrieve the last script element, which should be the inline
-        # test runner code
-        runner_script = script_elems[-1].text
-        runner_script = runner_script.strip()
-
-        # Check that it is the Jasmine test runner script
-        self.assertEqual(runner_script, self.JASMINE_TEST_RUNNER_SCRIPT)
-
-        # Retrieve the second-to-last script element, which should
-        # set the fixture path
-        fixture_script = script_elems[-2].text
-        fixture_script = fixture_script.strip()
-
-        # Check that it is the fixture path setting script
-        self.assertEqual(fixture_script, self.JASMINE_LOAD_FIXTURES_SCRIPT)
+        # Expect that the right scripts are available
+        self._assert_script(tree, self.JASMINE_TEST_RUNNER_SCRIPT, -1)
+        self._assert_script(tree, self.JASMINE_LOAD_FIXTURES_SCRIPT, -2)
 
     def test_render_jasmine_dev_mode(self):
 
-        # Configure the renderer to use dev mode
-        self.renderer = SuiteRenderer(dev_mode=True)
-
-        # Create a mock test suite description
-        desc = self._mock_desc([], [], [], 'jasmine')
-
-        # Render the description to HTML, enabling dev mode
-        html = self.renderer.render_to_string('test-suite', desc)
-
-        # Parse the HTML
-        tree = etree.HTML(html)
-
-        # Retrieve the script elements
-        script_elems = tree.xpath('/html/head/script')
-
-        # Expect at least one element
-        self.assertTrue(len(script_elems) > 0)
-
-        # Retrieve the last script element, which should be the inline
-        # test runner code
-        runner_script = script_elems[-1].text
-        runner_script = runner_script.strip()
+        # Create a test runner page in dev mode
+        tree = self._test_runner_html(dev_mode=True)
 
         # Should get the same script, except with an HTML reporter
         # instead of the custom JSON reporter
@@ -610,8 +573,8 @@ class SuiteRendererTest(unittest.TestCase):
             'JsonReporter("js_test_tool_results", "test-suite")',
             'HtmlReporter()')
 
-        # Expect that we're using the basic Jasmine HTML reporter
-        self.assertEqual(runner_script, expected_script)
+        # Check that we have the right script available
+        self._assert_script(tree, expected_script, -1)
 
     def test_jasmine_dev_mode_includes(self):
 
@@ -631,6 +594,16 @@ class SuiteRendererTest(unittest.TestCase):
         # Check that we get the right script includes
         suite_includes = lib_paths + src_paths + spec_paths
         self._assert_js_includes(jasmine_libs, suite_includes, desc)
+
+    def test_stub_alerts(self):
+
+        tree = self._test_runner_html()
+        self._assert_script(tree, self.ALERT_STUB_SCRIPT, 0)
+
+    def test_stub_alerts_dev_mode(self):
+
+        tree = self._test_runner_html(dev_mode=True)
+        self._assert_script(tree, self.ALERT_STUB_SCRIPT, 0)
 
     def test_undefined_template(self):
 
@@ -655,6 +628,39 @@ class SuiteRendererTest(unittest.TestCase):
             # Expect that we get a `SuiteRendererError`
             with self.assertRaises(SuiteRendererError):
                 self.renderer.render_to_string('test-suite', desc)
+
+    def _test_runner_html(self, dev_mode=False):
+        """
+        Return a parsed tree of the test runner page HTML.
+        """
+        # Configure the renderer to use dev mode
+        self.renderer = SuiteRenderer(dev_mode=dev_mode)
+
+        # Create a mock test suite description
+        desc = self._mock_desc([], [], [], 'jasmine')
+
+        # Render the description to HTML, enabling dev mode
+        html = self.renderer.render_to_string('test-suite', desc)
+
+        # Parse the HTML
+        return etree.HTML(html)
+
+    def _assert_script(self, html_tree, expected_script, script_index):
+        """
+        Assert that the parsed HTML tree `html_tree` contains
+        `expected_script` in a <script> tag at `script_index` (starting at 0).
+        """
+        # Retrieve the script elements
+        script_elems = html_tree.xpath('/html/head/script')
+
+        # Expect there are enough elements to retrieve the index
+        self.assertTrue(len(script_elems) > abs(script_index))
+
+        # Retrieve the script element
+        actual_script = script_elems[script_index].text.strip()
+
+        # Expect that we got the right script
+        self.assertEqual(actual_script, expected_script)
 
     def _assert_js_includes(self, runner_includes, suite_includes, suite_desc):
         """

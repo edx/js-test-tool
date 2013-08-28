@@ -55,10 +55,6 @@ class Browser(object):
     # Max time to wait between restarts in seconds
     RESTART_WAIT_SEC = 1
 
-    # Script to stub alerts
-    DISABLE_ALERT_SCRIPT = 'window.confirm = function(){return true;} ; window.alert = function(){return;}'
-
-
     def __init__(self, browser_name, timeout_sec=None):
         """
         Initialize the browser to use `browser_name` (e.g. chrome).
@@ -160,9 +156,6 @@ class Browser(object):
         If successful, return the result of the method call.
         """
         try:
-            # Ensure that we disable any modal dialogs that pop up
-            # since these can prevent us from retrieving the test results
-            self._splinter_browser.execute_script(self.DISABLE_ALERT_SCRIPT)
             return call_func()
 
         except (httplib.BadStatusLine, IOError):
