@@ -12,6 +12,7 @@ import tempfile
 from splinter import Browser
 from nose.tools import assert_equal, assert_false, assert_true
 from js_test_tool import tool
+from js_test_tool.tests.helpers import assert_long_str_equal
 
 
 EXPECTED_DIR_NAME = 'expected'
@@ -107,8 +108,10 @@ def compare_files_at_paths(actual_filename, expected_filename):
     # Open both files and compare the contents
     with open(actual_filename) as actual_file:
         with open(expected_filename) as expected_file:
-            assert_equal(actual_file.read().strip(),
-                         expected_file.read().strip())
+            assert_long_str_equal(
+                expected_file.read().strip(),
+                actual_file.read().strip()
+            )
 
 
 @world.absorb
@@ -142,7 +145,7 @@ def assert_tool_stdout(expected_filename):
     # Open the file containing the expected report
     # and check that it matches the stdout captured by the tool
     with open(expected_filename) as expected_file:
-        assert_equal(captured_stdout, expected_file.read())
+        assert_long_str_equal(expected_file.read(), captured_stdout)
 
 
 @world.absorb

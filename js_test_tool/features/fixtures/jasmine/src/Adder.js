@@ -7,5 +7,5 @@ Adder.prototype.add = function(num) {
 };
 
 Adder.prototype.output = function() {
-    $('#adder_output').html(this.sum)
+    //$('#adder_output').html(this.sum)
 }

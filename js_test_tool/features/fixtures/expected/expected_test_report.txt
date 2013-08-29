@@ -3,28 +3,30 @@ JavaScript test results
 =======================
 Browser: firefox
 -----------------------
-Adder: should start at zero [pass]
-Adder: should add to the sum [pass]
-Adder: should keep a running total [pass]
-Adder: should output to the DOM [pass]
+...F
+
+Adder: should output to the DOM [fail]
+    Expected '' to equal '3'.
+
 
 -----------------------
-Failed:  0
+Failed:  1
 Error:   0
 Skipped: 0
-Passed:  4
+Passed:  3
 =======================
 =======================
 Browser: phantomjs
 -----------------------
-Adder: should start at zero [pass]
-Adder: should add to the sum [pass]
-Adder: should keep a running total [pass]
-Adder: should output to the DOM [pass]
+...F
+
+Adder: should output to the DOM [fail]
+    Expected '' to equal '3'.
+
 
 -----------------------
-Failed:  0
+Failed:  1
 Error:   0
 Skipped: 0
-Passed:  4
+Passed:  3
 =======================
