@@ -8,9 +8,34 @@ import shutil
 import os
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 import threading
+import difflib
+from nose.tools import ok_
 
 import logging
 LOGGER = logging.getLogger(__name__)
+
+
+def assert_long_str_equal(expected, actual, strip=False):
+    """
+    Assert that two strings are equal and
+    print the diff if they are not.
+
+    If `strip` is True, strip both strings before comparing.
+    """
+    if strip:
+        expected = expected.strip()
+        actual = actual.strip()
+
+    if expected != actual:
+
+        # Print a human-readable diff
+        diff = difflib.Differ().compare(
+            expected.split('\n'), actual.split('\n')
+        )
+
+        # Fail the test
+        ok_(False, '\n\n' + '\n'.join(diff))
+
 
 class TempWorkspaceTestCase(unittest.TestCase):
     """

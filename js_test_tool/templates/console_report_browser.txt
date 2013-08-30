@@ -2,9 +2,26 @@
 Browser: {{ browser_name }}
 {%- endmacro %}
 
+{% macro symbol(result_dict) -%}
+{%- if result_dict.status == "pass" -%}
+.
+{%- elif result_dict.status == "skip" -%}
+S
+{%- elif result_dict.status == "fail" -%}
+F
+{%- elif result_dict.status == "error" -%}
+E
+{%- endif -%}
+{%- endmacro %}
+
 {% macro results(test_results) -%}
+{% for result_dict in test_results %}{{ symbol(result_dict) }}{% endfor %}
+
+
 {% for result_dict in test_results %}
+{% if result_dict.status in ["fail", "error", "skip"] %}
 {{ result_dict.test_group }}: {{ result_dict.test_name }} [{{ result_dict.status }}]
+{% endif %}
 {% if result_dict.detail -%}
 {{ result_dict.detail|indent(4, true) }}
 

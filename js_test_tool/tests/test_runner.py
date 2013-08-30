@@ -9,7 +9,7 @@ from js_test_tool.suite import SuiteDescription, SuiteRenderer
 from js_test_tool.suite_server import SuitePageServer
 from js_test_tool.coverage import CoverageData
 from js_test_tool.coverage_report import HtmlCoverageReporter, XmlCoverageReporter
-from js_test_tool.tests.helpers import TempWorkspaceTestCase
+from js_test_tool.tests.helpers import TempWorkspaceTestCase, assert_long_str_equal
 
 
 class SuiteRunnerTest(TestCase):
@@ -87,9 +87,8 @@ class SuiteRunnerTest(TestCase):
         =======================
         Browser: chrome
         -----------------------
-        Adder test: it should start at zero [pass]
-        Adder test: it should add to the sum [pass]
-        Multiplier test: it should multiply [pass]
+        ...
+
 
         -----------------------
         Failed:  0
@@ -125,12 +124,12 @@ class SuiteRunnerTest(TestCase):
         =======================
         Browser: chrome
         -----------------------
-        Adder test: it should start at zero [pass]
+        .F.
+
         Adder test: it should add to the sum [fail]
             Stack trace
             Can go here
 
-        Multiplier test: it should multiply [pass]
 
         -----------------------
         Failed:  1
@@ -166,6 +165,8 @@ class SuiteRunnerTest(TestCase):
         =======================
         Browser: chrome
         -----------------------
+        FFF
+
         Adder test: it should start at zero [fail]
             Desc
 
@@ -210,11 +211,11 @@ class SuiteRunnerTest(TestCase):
         =======================
         Browser: chrome
         -----------------------
-        Adder test: it should start at zero [pass]
+        .E.
+
         Adder test: it should add to the sum [error]
             Desc
 
-        Multiplier test: it should multiply [pass]
 
         -----------------------
         Failed:  0
@@ -250,11 +251,11 @@ class SuiteRunnerTest(TestCase):
         =======================
         Browser: chrome
         -----------------------
-        Adder test: it should start at zero [pass]
+        .S.
+
         Adder test: it should add to the sum [skip]
             Desc
 
-        Multiplier test: it should multiply [pass]
 
         -----------------------
         Failed:  0
@@ -292,8 +293,8 @@ class SuiteRunnerTest(TestCase):
         =======================
         Browser: chrome
         -----------------------
-        Adder test: it should start at zero [pass]
-        Adder test: it should start at zero [pass]
+        ..
+
 
         -----------------------
         Failed:  0
@@ -366,8 +367,8 @@ class SuiteRunnerTest(TestCase):
         =======================
         Browser: chrome
         -----------------------
-        Adder test: it should start at zero [pass]
-        Adder test: it should add to the sum [pass]
+        ..
+
 
         -----------------------
         Failed:  0
@@ -378,8 +379,8 @@ class SuiteRunnerTest(TestCase):
         =======================
         Browser: firefox
         -----------------------
-        Adder test: it should start at zero [pass]
-        Adder test: it should add to the sum [pass]
+        ..
+
 
         -----------------------
         Failed:  0
@@ -430,8 +431,8 @@ class SuiteRunnerTest(TestCase):
         =======================
         Browser: chrome
         -----------------------
-        Adder test: it should start at zero [pass]
-        Adder test: it should add to the sum [pass]
+        ..
+
 
         -----------------------
         Failed:  0
@@ -442,10 +443,11 @@ class SuiteRunnerTest(TestCase):
         =======================
         Browser: firefox
         -----------------------
+        F.
+
         Adder test: it should start at zero [fail]
             Desc
 
-        Adder test: it should add to the sum [pass]
 
         -----------------------
         Failed:  1
@@ -503,10 +505,7 @@ class SuiteRunnerTest(TestCase):
         Strips the strings to avoid failures due to starting/ending
         newline issues.
         """
-        if report.strip() != expected_report.strip():
-            print "Expected: \n\n" + expected_report.strip() + "\n\n"
-            print "Actual: \n\n" + report.strip() + "\n\n"
-            self.assertEqual(report, expected_report)
+        assert_long_str_equal(report, expected_report, strip=True)
 
 
 class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
