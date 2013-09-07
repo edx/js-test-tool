@@ -1,1 +1,1 @@
-
+* Graceful handling of when JSCover won't start because not enough memory is available.
