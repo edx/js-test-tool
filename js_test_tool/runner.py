@@ -2,7 +2,7 @@
 Run test suites and generate coverage reports.
 """
 from js_test_tool.suite import SuiteDescription, SuiteRenderer
-from js_test_tool.suite_server import SuitePageServer
+from js_test_tool.suite_server import SuitePageServer, TimeoutError
 from js_test_tool.coverage_report import HtmlCoverageReporter, XmlCoverageReporter
 from js_test_tool.browser import Browser
 from textwrap import dedent
@@ -49,6 +49,9 @@ class SuiteRunner(object):
         self._suite_page_server = suite_page_server
         self._coverage_reporters = coverage_reporters
 
+        # Will store the coverage data we get from the suite server
+        self._report_coverage_data = None
+
     def run(self):
         """
         Execute each available test suite page and record whether
@@ -83,7 +86,16 @@ class SuiteRunner(object):
             # Block until all coverage data received
             # (if coverage is not configured, this will
             # not do anything).
-            self._suite_page_server.all_coverage_data()
+            try:
+                self._report_coverage_data = self._suite_page_server.all_coverage_data()
+
+            # If we timed out, log it, but don't exit with failure
+            except TimeoutError:
+                msg = dedent("""
+                Did not receive all coverage data.  No coverage reports will be written.
+                (This sometimes occurs when JSCover does not have enough memory to run.)
+                """).strip()
+                LOGGER.warning(msg)
 
         # Re-raise any exceptions that occur
         except:
@@ -108,11 +120,9 @@ class SuiteRunner(object):
         Note: this may not create any reports if JSCover is not configured
         or no report paths were specified.
         """
-        data = self._suite_page_server.all_coverage_data()
-
-        if data is not None:
+        if self._report_coverage_data is not None:
             for reporter in self._coverage_reporters:
-                reporter.write_report(data)
+                reporter.write_report(self._report_coverage_data)
 
     def _run_with_browser(self, browser):
         """

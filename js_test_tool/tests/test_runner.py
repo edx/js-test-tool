@@ -6,7 +6,7 @@ from js_test_tool.runner import SuiteRunner, SuiteRunnerFactory, \
     UnknownBrowserError
 from js_test_tool.browser import Browser
 from js_test_tool.suite import SuiteDescription, SuiteRenderer
-from js_test_tool.suite_server import SuitePageServer
+from js_test_tool.suite_server import SuitePageServer, TimeoutError
 from js_test_tool.coverage import CoverageData
 from js_test_tool.coverage_report import HtmlCoverageReporter, XmlCoverageReporter
 from js_test_tool.tests.helpers import TempWorkspaceTestCase, assert_long_str_equal
@@ -19,8 +19,10 @@ class SuiteRunnerTest(TestCase):
         # Create mock dependencies
         self.mock_browser = mock.MagicMock(Browser)
         self.mock_page_server = mock.MagicMock(SuitePageServer)
-        self.mock_coverage_reporters = [mock.MagicMock(HtmlCoverageReporter),
-                                        mock.MagicMock(XmlCoverageReporter)]
+        self.mock_coverage_reporters = [
+            mock.MagicMock(HtmlCoverageReporter),
+            mock.MagicMock(XmlCoverageReporter)
+        ]
 
         # Configure the page server to provide a suite page URL
         self._set_suite_urls(['http://127.0.0.1:8080/suite/0'])
@@ -34,9 +36,11 @@ class SuiteRunnerTest(TestCase):
         self.mock_browser.name.return_value = 'chrome'
 
         # Create a SuiteRunner instance
-        self.runner = SuiteRunner([self.mock_browser],
-                                  self.mock_page_server,
-                                  self.mock_coverage_reporters)
+        self.runner = SuiteRunner(
+            [self.mock_browser],
+            self.mock_page_server,
+            self.mock_coverage_reporters
+        )
 
     def test_page_server_started_and_stopped(self):
 
@@ -462,6 +466,9 @@ class SuiteRunnerTest(TestCase):
 
     def test_write_coverage_reports(self):
 
+        # Get the coverage data by running the test suite
+        self.runner.run()
+
         # Trigger the runner to write coverage reports to an output file
         self.runner.write_coverage_reports()
 
@@ -469,6 +476,22 @@ class SuiteRunnerTest(TestCase):
         # with the data returned by the suite page server.
         for reporter in self.mock_coverage_reporters:
             reporter.write_report.assert_called_with(self.mock_coverage_data)
+
+    def test_coverage_timeout(self):
+
+        # Simulate `all_coverage_data()` timeout
+        self.mock_page_server.all_coverage_data.side_effect = TimeoutError
+
+        # Load all the suite pages
+        # This should not raise an exception
+        self.runner.run()
+
+        # Expect that when we write the coverage report
+        # nothing happens
+        self.runner.write_coverage_reports()
+
+        for reporter in self.mock_coverage_reporters:
+            self.assertEqual(reporter.write_report.call_args_list, list())
 
     def _set_suite_urls(self, url_list):
         """
