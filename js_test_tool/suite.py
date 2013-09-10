@@ -41,7 +41,7 @@ class SuiteDescription(object):
     ]
 
     # Supported test runners
-    TEST_RUNNERS = ['jasmine']
+    TEST_RUNNERS = ['jasmine', 'jasmine_requirejs']
 
     def __init__(self, file_handle, root_dir):
         """
@@ -238,7 +238,7 @@ class SuiteDescription(object):
         """
         paths = self._file_paths(path_list,
                                  enable_warnings,
-                                 include_func=self._is_js_file) 
+                                 include_func=self._is_js_file)
         if only_in_page:
             return filter(self._include_in_page, paths)
         else:
@@ -471,7 +471,10 @@ class SuiteRenderer(object):
 
     # Dictionary mapping test runner names (e.g. 'jasmine') to
     # templates used to render the test runner page.
-    TEMPLATE_DICT = {'jasmine': 'jasmine_test_runner.html'}
+    TEMPLATE_DICT = {
+        'jasmine': 'jasmine_test_runner.html',
+        'jasmine_requirejs': 'jasmine_requirejs_test_runner.html',
+    }
 
     # The CSS ID of the <div> that will contain the output test results
     RESULTS_DIV_ID = 'js_test_tool_results'
