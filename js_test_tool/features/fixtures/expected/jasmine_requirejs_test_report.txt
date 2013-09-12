@@ -1,0 +1,12 @@
+=======================
+JavaScript test results
+=======================
+Browser: firefox
+-----------------------
+Warning: No test results reported.
+=======================
+=======================
+Browser: phantomjs
+-----------------------
+Warning: No test results reported.
+=======================

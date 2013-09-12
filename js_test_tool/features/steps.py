@@ -18,14 +18,14 @@ def config_path(runner="jasmine", suite="base"):
 
 def test_report_path(runner="jasmine"):
     normalized = RUNNER_ALIASES.get(runner.lower(), runner.lower())
-    return "{runner}/expected/test_report.txt".format(runner=normalized)
+    return "expected/{runner}_test_report.txt".format(runner=normalized)
 
 
 def coverage_path(runner="jasmine", format="xml", actual=False):
     if actual:
         tpl = "js_coverage.{format}"
     else:
-        tpl = "{runner}/expected/js_coverage.{format}"
+        tpl = "expected/{runner}_js_coverage.{format}"
     normalized = RUNNER_ALIASES.get(runner.lower(), runner.lower())
     return tpl.format(runner=normalized, format=format.lower())
 
