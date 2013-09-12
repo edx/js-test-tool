@@ -5,71 +5,72 @@ Steps for the Lettuce BDD specs.
 from lettuce import step, world
 from nose.tools import assert_true
 
-SUITE_PATH = {
-    "jasmine": 'jasmine/test_suite.yaml',
-    "requirejs": 'jasmine_requirejs/test_suite.yaml',
-    "pass": 'passing/test_suite.yaml',
-    "fail": 'failing/test_suite.yaml',
+RUNNER_ALIASES = {
+    "requirejs": "jasmine_requirejs",
 }
 
-ACTUAL_COVERAGE_XML = 'js_coverage.xml'
-ACTUAL_COVERAGE_HTML = 'js_coverage.html'
-EXPECTED_COVERAGE_XML = 'expected/expected_js_coverage.xml'
-EXPECTED_COVERAGE_HTML = 'expected/expected_js_coverage.html'
-EXPECTED_TEST_REPORT = 'expected/expected_test_report.txt'
+
+def config_path(runner="jasmine", suite="base"):
+    normalized = RUNNER_ALIASES.get(runner.lower(), runner.lower())
+    return "{runner}/{suite}/test_suite.yaml".format(
+        runner=normalized, suite=suite)
+
+
+def test_report_path(runner="jasmine"):
+    normalized = RUNNER_ALIASES.get(runner.lower(), runner.lower())
+    return "{runner}/expected/test_report.txt".format(runner=normalized)
+
+
+def coverage_path(runner="jasmine", format="xml", actual=False):
+    if actual:
+        tpl = "js_coverage.{format}"
+    else:
+        tpl = "{runner}/expected/js_coverage.{format}"
+    normalized = RUNNER_ALIASES.get(runner.lower(), runner.lower())
+    return tpl.format(runner=normalized, format=format.lower())
 
 
 @step(u'When I run js-test-tool on (Jasmine|requirejs) without coverage')
-def run_tool_with_no_coverage(step, suite):
-    path = SUITE_PATH[suite.lower()]
-    world.run_tool_with_args(['run', path,
+def run_tool_with_no_coverage(step, runner):
+    world.scenario["runner"] = runner
+    world.run_tool_with_args(['run', config_path(runner),
                               '--timeout', '2'])
 
 
-@step(u'When I run js-test-tool on (Jasmine|requirejs) with XML coverage')
-def run_tool_with_xml_coverage(step, suite):
-    path = SUITE_PATH[suite.lower()]
-    args = ['run', path,
-            '--coverage-xml', ACTUAL_COVERAGE_XML,
+@step(u'When I run js-test-tool on (Jasmine|requirejs) with (XML|HTML) coverage')
+def run_tool_with_coverage(step, runner, format):
+    world.scenario["runner"] = runner
+    args = ['run', config_path(runner),
+            '--coverage-{format}'.format(format=format.lower()),
+            coverage_path(runner, format),
             '--timeout', '2']
     world.run_tool_with_args(args)
 
 
-@step(u'When I run js-test-tool on (Jasmine|requirejs) with HTML coverage')
-def run_tool_with_html_coverage(step, suite):
-    path = SUITE_PATH[suite.lower()]
-    args = ['run', path,
-            '--coverage-html', ACTUAL_COVERAGE_HTML,
-            '--timeout', '2']
-    world.run_tool_with_args(args)
-
-
-@step(u'When I run js-test-tool on (Jasmine|requirejs) with XML and HTML coverage')
-def run_tool_with_html_xml_coverage(step, suite):
-    path = SUITE_PATH[suite.lower()]
-    args = ['run', path,
-            '--coverage-html', ACTUAL_COVERAGE_HTML,
-            '--coverage-xml', ACTUAL_COVERAGE_XML,
+@step(u'When I run js-test-tool on (Jasmine|requirejs) with (XML and HTML|HTML and XML) coverage')
+def run_tool_with_html_xml_coverage(step, runner, _ordering):
+    world.scenario["runner"] = runner
+    args = ['run', config_path(runner),
+            '--coverage-html', coverage_path(runner, "html"),
+            '--coverage-xml', coverage_path(runner, "xml"),
             '--timeout', '2']
     world.run_tool_with_args(args)
 
 
 @step(u'When I run js-test-tool with a passing test suite')
 def run_tool_with_passing_test_suite(step):
-    path = SUITE_PATH["pass"]
-    world.run_tool_with_args(['run', path])
+    world.run_tool_with_args(['run', config_path("jasmine", "passing")])
 
 
 @step(u'When I run js-test-tool with a failing test suite')
 def run_tool_with_failing_test_suite(step):
-    path = SUITE_PATH["fail"]
-    world.run_tool_with_args(['run', path,
+    world.run_tool_with_args(['run', config_path("jasmine", "failing"),
                               '--timeout', '2'])
 
 
 @step(u'When I run js-test-tool on (Jasmine|requirejs) in dev mode')
-def run_tool_in_dev_mode(step, suite):
-    path = SUITE_PATH[suite.lower()]
+def run_tool_in_dev_mode(step, runner):
+    world.scenario["runner"] = runner
 
     # Patch the call to webbrowser.open_new()
     # Use this to raise a KeyboardInterrupt (so the tool terminates)
@@ -79,28 +80,29 @@ def run_tool_in_dev_mode(step, suite):
         raise KeyboardInterrupt
 
     world.mock_webbrowser.open_new.side_effect = load_page_and_exit
-    world.run_tool_with_args(['dev', path])
+    world.run_tool_with_args(['dev', config_path(runner)])
 
 
-@step(u'Then An XML coverage report is generated')
-def check_xml_coverage_report(step):
-    world.compare_files_at_paths(ACTUAL_COVERAGE_XML, EXPECTED_COVERAGE_XML)
-
-
-@step(u'Then An HTML coverage report is generated')
-def check_html_coverage_report(step):
-    world.compare_files_at_paths(ACTUAL_COVERAGE_HTML, EXPECTED_COVERAGE_HTML)
+@step(u'Then An? (XML|HTML) coverage report is generated')
+def check_coverage_report(step, format):
+    runner = world.scenario["runner"]
+    world.compare_files_at_paths(
+        coverage_path(runner, format, actual=False),
+        coverage_path(runner, format, actual=True),
+    )
 
 
 @step(u'Then No coverage reports are generated')
 def check_no_coverage_report(step):
-    world.assert_no_file(ACTUAL_COVERAGE_XML)
-    world.assert_no_file(ACTUAL_COVERAGE_HTML)
+    runner = world.scenario["runner"]
+    world.assert_no_file(coverage_path(runner, "xml", actual=True))
+    world.assert_no_file(coverage_path(runner, "html", actual=True))
 
 
 @step(u'Then I see the test suite results')
 def check_test_suite_results(step):
-    world.assert_tool_stdout(EXPECTED_TEST_REPORT)
+    runner = world.scenario["runner"]
+    world.assert_tool_stdout(test_report_path(runner))
 
 
 @step(u'Given Coverage dependencies are configured')

@@ -64,12 +64,17 @@ def setup_scenario(scenario):
     # Mock the webbrowser (for use with dev mode)
     world.mock_webbrowser = patch('js_test_tool.dev_runner.webbrowser').start()
 
+    # dictionary to hold variables that persist only through the scenario
+    world.scenario = {}
+
 
 @after.each_scenario
 def teardown_scenario(scenario):
     """
     Empty the temporary directory and restore the working directory.
     """
+    # remove the scenario variables
+    del world.scenario
 
     # Remove the fixtures directory
     shutil.rmtree(world.fixtures_dir)
