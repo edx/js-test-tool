@@ -5,10 +5,12 @@ Steps for the Lettuce BDD specs.
 from lettuce import step, world
 from nose.tools import assert_true
 
-
-TEST_SUITE_DESC_PATH = 'jasmine/test_suite.yaml'
-PASSING_SUITE_DESC_PATH = 'passing/test_suite.yaml'
-FAILING_SUITE_DESC_PATH = 'failing/test_suite.yaml'
+SUITE_PATH = {
+    "jasmine": 'jasmine/test_suite.yaml',
+    "requirejs": 'jasmine_requirejs/test_suite.yaml',
+    "pass": 'passing/test_suite.yaml',
+    "fail": 'failing/test_suite.yaml',
+}
 
 ACTUAL_COVERAGE_XML = 'js_coverage.xml'
 ACTUAL_COVERAGE_HTML = 'js_coverage.html'
@@ -17,31 +19,35 @@ EXPECTED_COVERAGE_HTML = 'expected/expected_js_coverage.html'
 EXPECTED_TEST_REPORT = 'expected/expected_test_report.txt'
 
 
-@step(u'When I run js-test-tool without coverage')
-def run_tool_with_no_coverage(step):
-    world.run_tool_with_args(['run', TEST_SUITE_DESC_PATH,
+@step(u'When I run js-test-tool on (Jasmine|requirejs) without coverage')
+def run_tool_with_no_coverage(step, suite):
+    path = SUITE_PATH[suite.lower()]
+    world.run_tool_with_args(['run', path,
                               '--timeout', '2'])
 
 
-@step(u'When I run js-test-tool with XML coverage')
-def run_tool_with_xml_coverage(step):
-    args = ['run', TEST_SUITE_DESC_PATH,
+@step(u'When I run js-test-tool on (Jasmine|requirejs) with XML coverage')
+def run_tool_with_xml_coverage(step, suite):
+    path = SUITE_PATH[suite.lower()]
+    args = ['run', path,
             '--coverage-xml', ACTUAL_COVERAGE_XML,
             '--timeout', '2']
     world.run_tool_with_args(args)
 
 
-@step(u'When I run js-test-tool with HTML coverage')
-def run_tool_with_html_coverage(step):
-    args = ['run', TEST_SUITE_DESC_PATH,
+@step(u'When I run js-test-tool on (Jasmine|requirejs) with HTML coverage')
+def run_tool_with_html_coverage(step, suite):
+    path = SUITE_PATH[suite.lower()]
+    args = ['run', path,
             '--coverage-html', ACTUAL_COVERAGE_HTML,
             '--timeout', '2']
     world.run_tool_with_args(args)
 
 
-@step(u'When I run js-test-tool with XML and HTML coverage')
-def run_tool_with_html_coverage(step):
-    args = ['run', TEST_SUITE_DESC_PATH,
+@step(u'When I run js-test-tool on (Jasmine|requirejs) with XML and HTML coverage')
+def run_tool_with_html_xml_coverage(step, suite):
+    path = SUITE_PATH[suite.lower()]
+    args = ['run', path,
             '--coverage-html', ACTUAL_COVERAGE_HTML,
             '--coverage-xml', ACTUAL_COVERAGE_XML,
             '--timeout', '2']
@@ -50,17 +56,20 @@ def run_tool_with_html_coverage(step):
 
 @step(u'When I run js-test-tool with a passing test suite')
 def run_tool_with_passing_test_suite(step):
-    world.run_tool_with_args(['run', PASSING_SUITE_DESC_PATH])
+    path = SUITE_PATH["pass"]
+    world.run_tool_with_args(['run', path])
 
 
 @step(u'When I run js-test-tool with a failing test suite')
 def run_tool_with_failing_test_suite(step):
-    world.run_tool_with_args(['run', FAILING_SUITE_DESC_PATH,
+    path = SUITE_PATH["fail"]
+    world.run_tool_with_args(['run', path,
                               '--timeout', '2'])
 
 
-@step(u'When I run js-test-tool in dev mode')
-def run_tool_in_dev_mode(step):
+@step(u'When I run js-test-tool on (Jasmine|requirejs) in dev mode')
+def run_tool_in_dev_mode(step, suite):
+    path = SUITE_PATH[suite.lower()]
 
     # Patch the call to webbrowser.open_new()
     # Use this to raise a KeyboardInterrupt (so the tool terminates)
@@ -70,7 +79,7 @@ def run_tool_in_dev_mode(step):
         raise KeyboardInterrupt
 
     world.mock_webbrowser.open_new.side_effect = load_page_and_exit
-    world.run_tool_with_args(['dev', TEST_SUITE_DESC_PATH])
+    world.run_tool_with_args(['dev', path])
 
 
 @step(u'Then An XML coverage report is generated')

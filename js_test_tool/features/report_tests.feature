@@ -4,5 +4,10 @@ Feature: Report test suite results
     I want to run JavaScript unit tests and view test results.
 
     Scenario: Jasmine tests
-        When I run js-test-tool without coverage
+        When I run js-test-tool on Jasmine without coverage
         Then I see the test suite results
+
+    Scenario: Jasmine-Requirejs tests
+        When I run js-test-tool on requirejs without coverage
+        Then I see the test suite results
+
