@@ -42,7 +42,7 @@ def run_tool_with_coverage(step, runner, format):
     world.scenario["runner"] = runner
     args = ['run', config_path(runner),
             '--coverage-{format}'.format(format=format.lower()),
-            coverage_path(runner, format),
+            coverage_path(runner, format, actual=True),
             '--timeout', '2']
     world.run_tool_with_args(args)
 
@@ -51,8 +51,8 @@ def run_tool_with_coverage(step, runner, format):
 def run_tool_with_html_xml_coverage(step, runner, _ordering):
     world.scenario["runner"] = runner
     args = ['run', config_path(runner),
-            '--coverage-html', coverage_path(runner, "html"),
-            '--coverage-xml', coverage_path(runner, "xml"),
+            '--coverage-html', coverage_path(runner, "html", actual=True),
+            '--coverage-xml', coverage_path(runner, "xml", actual=True),
             '--timeout', '2']
     world.run_tool_with_args(args)
 
