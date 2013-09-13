@@ -210,8 +210,8 @@ class SuitePageServer(ThreadingMixIn, HTTPServer):
         # if it becomes a bottleneck, we can revisit.)
         return (sorted(suite_name_list) == sorted(self.desc_dict.keys()))
 
-    @staticmethod
-    def _suite_dict_from_list(suite_desc_list):
+    @classmethod
+    def _suite_dict_from_list(cls, suite_desc_list):
         """
         Given a list of `SuiteDescription` instances, construct
         a dictionary mapping suite names to the instances.
@@ -225,10 +225,34 @@ class SuitePageServer(ThreadingMixIn, HTTPServer):
         }
 
         # Check that we haven't repeated keys
-        if len(suite_dict) < len(suite_desc_list):
-            raise DuplicateSuiteNameError("Two or more test suites have the same name")
+        duplicates = cls._duplicates([suite.suite_name() for suite in suite_desc_list])
+
+        if len(duplicates) > 0:
+            msg = "Duplicate suite name(s): {}".format(",".join(duplicates))
+            raise DuplicateSuiteNameError(msg)
 
         return suite_dict
+
+    @classmethod
+    def _duplicates(cls, name_list):
+        """
+        Given a list of strings, return a set of duplicates in the list.
+        """
+        seen = set()
+        duplicates = set()
+
+        for name in name_list:
+
+            # Check if we've already seen the name; if so, add it
+            # to the list of duplicates
+            if name in seen:
+                duplicates.add(name)
+
+            # Add the name to the list of names we've already seen
+            else:
+                seen.add(name)
+
+        return duplicates
 
 
 class BasePageHandler(object):
