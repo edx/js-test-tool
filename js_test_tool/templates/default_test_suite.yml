@@ -68,10 +68,13 @@ fixture_paths:
 
 # Regular expressions used to exclude *.js files from
 # appearing in the test runner page.
-# Files are included by default, which means that they
-# are loaded using a <script> tag in the test runner page.
-# When loading many files, this can be slow, so
+# Some test runners (like the jasmine runner) include files by default,
+# which means that they are loaded using a <script> tag in the test
+# runner page. When loading many files, this can be slow, so
 # exclude any files you don't need.
+# Note that not all runners behave the same way: for example, the
+# jasmine_requirejs runner does not include files using <script> tags
+# by default, and so will ignore this directive.
 exclude_from_page:
     - path/to/lib/exclude/*
 
