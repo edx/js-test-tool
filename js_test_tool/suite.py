@@ -236,9 +236,10 @@ class SuiteDescription(object):
         If `enable_warnings` is true, then log a warning whenever
         we can't find a file we expect.
         """
-        paths = self._file_paths(path_list,
-                                 enable_warnings,
-                                 include_func=self._is_js_file)
+        paths = self._file_paths(
+            path_list, enable_warnings,
+            include_func=self._is_js_file
+        )
         if only_in_page:
             return filter(self._include_in_page, paths)
         else:
