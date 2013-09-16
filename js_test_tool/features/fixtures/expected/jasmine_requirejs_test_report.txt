@@ -3,10 +3,24 @@ JavaScript test results
 =======================
 Browser: firefox
 -----------------------
-Warning: No test results reported.
+..
+
+
+-----------------------
+Failed:  0
+Error:   0
+Skipped: 0
+Passed:  2
 =======================
 =======================
 Browser: phantomjs
 -----------------------
-Warning: No test results reported.
+..
+
+
+-----------------------
+Failed:  0
+Error:   0
+Skipped: 0
+Passed:  2
 =======================
