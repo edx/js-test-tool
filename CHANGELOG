@@ -1,1 +1,6 @@
+
+v0.1.0
+* Added support for RequireJS
+
+v0.0.10
 * Graceful handling of when JSCover won't start because not enough memory is available.
