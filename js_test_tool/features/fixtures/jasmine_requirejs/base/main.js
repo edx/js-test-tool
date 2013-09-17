@@ -1,1 +1,1 @@
-require(["spec/mainSpec"]);
+define(["spec/mainSpec"]);
