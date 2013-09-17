@@ -1,0 +1,1 @@
+define(["spec/mainSpec"]);

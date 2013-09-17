@@ -3,7 +3,7 @@
 from setuptools import setup
 from js_test_tool import VERSION, DESCRIPTION
 
-REQUIREMENTS = [line.strip() for line in 
+REQUIREMENTS = [line.strip() for line in
                 open("requirements.txt").readlines()]
 
 setup(
@@ -21,7 +21,7 @@ setup(
                  'Topic :: Software Development :: Testing',
                  'Topic :: Software Development :: Quality Assurance'],
     packages=['js_test_tool'],
-    package_data={'js_test_tool': ['templates/*', 'runner/jasmine/*']},
+    package_data={'js_test_tool': ['templates/*', 'runner/*/*']},
     install_requires=['setuptools'] + REQUIREMENTS,
     entry_points={
         'console_scripts': ['js-test-tool = js_test_tool.tool:main']

@@ -1,0 +1,9 @@
+test_suite_name: requirejs_test
+test_runner: jasmine_requirejs
+lib_paths:
+  - lib
+src_paths:
+  - src
+spec_paths:
+  - spec
+  - main.js
