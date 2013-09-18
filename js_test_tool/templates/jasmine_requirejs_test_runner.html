@@ -4,6 +4,12 @@
   <title>Jasmine-RequireJS Spec Runner</title>
 
   <link rel="stylesheet" type="text/css" href="/runner/jasmine_requirejs/jasmine.css">
+  {% for src_path in src_path_list %}
+  <script type="text/javascript" src="{{ src_path }}"></script>
+  {% endfor %}
+  {% for lib_path in lib_path_list %}
+  <script type="text/javascript" src="{{ src_path }}"></script>
+  {% endfor %}
   <script type="text/javascript" src="/runner/jasmine_requirejs/require.js"></script>
 
   <script type="text/javascript">
@@ -31,7 +37,10 @@ var runnerRequire = require.config({
     }
 });
 var specRequire = require.config({
-    baseUrl: "/suite/{{ suite_name }}/include"
+    baseUrl: "/suite/{{ suite_name }}/include{{ requirejs_baseUrl }}",
+    {% if requirejs_path_map %}
+    paths: {{ requirejs_path_map|tojson }}
+    {% endif %}
 });
 
 {% set report_type = "html" if dev_mode else "json" %}
