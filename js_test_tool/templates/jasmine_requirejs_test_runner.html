@@ -31,7 +31,10 @@ var runnerRequire = require.config({
     }
 });
 var specRequire = require.config({
-    baseUrl: "/suite/{{ suite_name }}/include"
+    baseUrl: "/suite/{{ suite_name }}/include{{ requirejs_baseUrl }}",
+    {% if requirejs_path_map %}
+    paths: {{ requirejs_path_map|tojson }}
+    {% endif %}
 });
 
 {% set report_type = "html" if dev_mode else "json" %}

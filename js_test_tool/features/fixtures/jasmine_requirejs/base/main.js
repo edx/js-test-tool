@@ -1,1 +1,1 @@
-define(["spec/mainSpec"]);
+define(["spec/mainSpec", "mySpecialName"]);

@@ -24,6 +24,9 @@ venv
 # Installer logs
 pip-log.txt
 
+# jscover
+js_test_tool/features/fixtures/jscover
+
 # Unit test / coverage reports
 .coverage
 .tox

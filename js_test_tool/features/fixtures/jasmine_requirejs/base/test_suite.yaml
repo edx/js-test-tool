@@ -7,3 +7,6 @@ src_paths:
 spec_paths:
   - spec
   - main.js
+requirejs:
+  paths:
+    mySpecialName: spec/failSpec

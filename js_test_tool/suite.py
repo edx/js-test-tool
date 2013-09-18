@@ -6,6 +6,7 @@ import os
 import os.path
 from textwrap import dedent
 import re
+import json
 from jinja2 import Environment, PackageLoader
 import urllib
 
@@ -17,6 +18,7 @@ TEMPLATE_LOADER = PackageLoader(__package__)
 TEMPLATE_ENV = Environment(
     loader=TEMPLATE_LOADER, trim_blocks=True
 )
+TEMPLATE_ENV.filters["tojson"] = json.dumps
 
 
 class SuiteDescriptionError(Exception):
@@ -191,6 +193,22 @@ class SuiteDescription(object):
                                     enable_warnings)
         else:
             return []
+
+    def requirejs_path_map(self):
+        """
+        Returns a map of aliases to paths, used by requirejs in loading files.
+        """
+        if not "requirejs" in self._desc_dict:
+            return {}
+        return self._desc_dict["requirejs"].get("paths", {})
+
+    def requirejs_baseUrl(self):
+        """
+        Returns a baseUrl to be appended onto the default requirejs baseUrl.
+        """
+        if not "requirejs" in self._desc_dict:
+            return ""
+        return self._desc_dict["requirejs"].get("baseUrl", "")
 
     def test_runner(self):
         """
@@ -515,13 +533,17 @@ class SuiteRenderer(object):
             raise SuiteRendererError(msg)
 
         # Create the context for the template
-        template_context = {'suite_name': suite_name,
-                            'lib_path_list': suite_desc.lib_paths(only_in_page=True),
-                            'src_path_list': suite_desc.src_paths(only_in_page=True),
-                            'spec_path_list': suite_desc.spec_paths(only_in_page=True),
-                            'results_div_id': self.RESULTS_DIV_ID,
-                            'error_div_id': self.ERROR_DIV_ID,
-                            'dev_mode': self._dev_mode}
+        template_context = {
+            'suite_name': suite_name,
+            'lib_path_list': suite_desc.lib_paths(only_in_page=True),
+            'src_path_list': suite_desc.src_paths(only_in_page=True),
+            'spec_path_list': suite_desc.spec_paths(only_in_page=True),
+            'requirejs_path_map': suite_desc.requirejs_path_map(),
+            'requirejs_baseUrl': suite_desc.requirejs_baseUrl(),
+            'results_div_id': self.RESULTS_DIV_ID,
+            'error_div_id': self.ERROR_DIV_ID,
+            'dev_mode': self._dev_mode,
+        }
 
         # Render the template
         try:
