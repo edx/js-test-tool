@@ -269,6 +269,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         }
 
         $(selector).on(eventName, handler)
+        if(window.jQuery && window.jQuery !== $) {
+          window.jQuery(selector).on(eventName, handler)
+        }
         data.handlers.push(handler)
 
         return {
@@ -484,6 +487,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       jasmine.JQuery.matchersClass[methodName] = function () {
         if (this.actual
           && (this.actual instanceof $
+            || this.actual instanceof window.jQuery
             || jasmine.isDomNode(this.actual))) {
               this.actual = $(this.actual)
               var result = jQueryMatchers[methodName].apply(this, arguments)
