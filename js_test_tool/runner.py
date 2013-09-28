@@ -5,6 +5,7 @@ from js_test_tool.suite import SuiteDescription, SuiteRenderer
 from js_test_tool.suite_server import SuitePageServer, TimeoutError
 from js_test_tool.coverage_report import HtmlCoverageReporter, XmlCoverageReporter
 from js_test_tool.browser import Browser
+from js_test_tool.result_report import ResultData
 from textwrap import dedent
 import os.path
 from jinja2 import Environment, PackageLoader
@@ -65,22 +66,18 @@ class SuiteRunner(object):
         # Start the suite page server running on a local port
         self._suite_page_server.start()
 
-        # Create a dictionary to store context passed to the template
-        context_dict = {'browser_results': [],
-                        'all_passed': True}
+        # Create an object to hold results data for all browsers
+        results_data = ResultData()
 
         try:
 
             for browser in self._browser_list:
 
                 # Run the test suite with one of our browsers
-                browser_results = self._run_with_browser(browser)
-                context_dict['browser_results'].append(browser_results)
-
-                # Check whether any of the tests failed
-                stats = browser_results['stats']
-                if (stats['num_failed'] + stats['num_error']) > 0:
-                    context_dict['all_passed'] = False
+                results_data.add_results(
+                    browser.name(),
+                    self._run_with_browser(browser)
+                )
 
             # After all browsers have loaded their pages,
             # Block until all coverage data received
@@ -105,11 +102,9 @@ class SuiteRunner(object):
         finally:
             self._suite_page_server.stop()
 
-        # Render the console report
-        template = TEMPLATE_ENV.get_template(self.REPORT_TEMPLATE_NAME)
-        report_str = template.render(context_dict)
+        report_str = self._render_console_report(results_data)
 
-        return (context_dict['all_passed'], report_str)
+        return (results_data.all_passed(), report_str)
 
     def write_coverage_reports(self):
         """
@@ -127,23 +122,7 @@ class SuiteRunner(object):
     def _run_with_browser(self, browser):
         """
         Load all test suite pages in `browser` (a `Browser` instance)
-        and return a dictionary describing the results.
-
-        The returned dictionary has the following form:
-
-            {
-                'browser_name': BROWSER_NAME,
-
-                'test_results': [ {'test_group': TEST_GROUP,
-                                   'test_name': TEST_NAME,
-                                   'status': "pass" | "fail" | "skip" | "error",
-                                   'detail': DETAILS }, ...],
-
-                'stats': {'num_failed': NUM_FAILED,
-                          'num_error': NUM_ERROR,
-                          'num_skipped': NUM_SKIPPED,
-                          'num_passed': NUM_PASSED}
-            }
+        and returns a `ResultData` instance.
 
         If an error occurs when retrieving or parsing the page,
         raises a `BrowserError`.
@@ -155,62 +134,27 @@ class SuiteRunner(object):
         for url in self._suite_page_server.suite_url_list():
 
             # Use the browser to load the page and parse the results
-            suite_results = browser.get_page_results(url)
+            all_results.extend(browser.get_page_results(url))
 
-            # Store the results and keep loading pages
-            all_results.extend(suite_results)
+        return all_results
 
-        # Calculate statistics
-        stats = self._result_stats(all_results)
-
-        # Construct the context dict
-        return {'browser_name': browser.name(),
-                'test_results': all_results,
-                'stats': stats}
-
-    def _result_stats(self, all_results):
+    def _render_console_report(self, results_data):
         """
-        Calculate totals for each status in `all_results`.
-
-        `all_results` is a list of result dictionaries.  See
-        `Browser.get_page_results()` for the format of the dictionary items.
-
-        Returns a dictionary of the form
-
-            {'num_failed': NUM_FAILED,
-             'num_error': NUM_ERROR,
-             'num_skipped': NUM_SKIPPED,
-             'num_passed': NUM_PASSED}
+        Return a string representing the console report.
+        `results_data` is a `ResultData` object.
         """
-        stats_dict = {'num_failed': 0,
-                      'num_error': 0,
-                      'num_skipped': 0,
-                      'num_passed': 0}
-
-        # For each test that we ran, across all test suites
-        for result_dict in all_results:
-
-            # Get the result status (assumed to be defined)
-            status = result_dict['status']
-
-            # Determine which value to increment
-            if status == 'fail':
-                key = 'num_failed'
-            elif status == 'error':
-                key = 'num_error'
-            elif status == 'skip':
-                key = 'num_skipped'
-            elif status == 'pass':
-                key = 'num_passed'
-            else:
-                msg = '{} is not a valid result status'.format(status)
-                raise ValueError(msg)
-
-            # Increment the appropriate count
-            stats_dict[key] += 1
-
-        # Return the stats we collected
-        return stats_dict
+        context_dict = {
+            'browser_results':[
+                {
+                    'browser_name': browser_name,
+                    'test_results': results_data.test_results(browser_name),
+                    'stats': results_data.stats(browser_name)
+                } for browser_name in results_data.browsers()
+            ],
+            'all_passed': results_data.all_passed()
+        }
+        template = TEMPLATE_ENV.get_template(self.REPORT_TEMPLATE_NAME)
+        return template.render(context_dict)
 
 
 class SuiteRunnerFactory(object):
