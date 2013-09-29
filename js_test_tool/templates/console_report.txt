@@ -4,7 +4,7 @@ JavaScript test results
 {% for results in browser_results %}
 =======================
 {{ report.header(results.browser_name) }}
------------------------
+
 {% if results.test_results %}
 {{ report.results(results.test_results) }}
 -----------------------

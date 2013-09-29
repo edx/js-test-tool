@@ -2,7 +2,7 @@
 JavaScript test results
 =======================
 Browser: firefox
------------------------
+
 ...F
 
 Adder: should output to the DOM [fail]
@@ -17,7 +17,7 @@ Passed:  3
 =======================
 =======================
 Browser: phantomjs
------------------------
+
 ...F
 
 Adder: should output to the DOM [fail]

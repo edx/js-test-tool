@@ -215,7 +215,7 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         JavaScript test results
         =======================
         Browser: chrome
-        -----------------------
+
         ...
 
 
@@ -253,7 +253,7 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         JavaScript test results
         =======================
         Browser: chrome
-        -----------------------
+
         .F.
 
         Adder test: it should add to the sum [fail]
@@ -295,7 +295,7 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         JavaScript test results
         =======================
         Browser: chrome
-        -----------------------
+
         FFF
 
         Adder test: it should start at zero [fail]
@@ -342,7 +342,7 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         JavaScript test results
         =======================
         Browser: chrome
-        -----------------------
+
         .E.
 
         Adder test: it should add to the sum [error]
@@ -383,7 +383,7 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         JavaScript test results
         =======================
         Browser: chrome
-        -----------------------
+
         .S.
 
         Adder test: it should add to the sum [skip]
@@ -411,7 +411,7 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         JavaScript test results
         =======================
         Browser: chrome
-        -----------------------
+
         Warning: No test results reported.
         =======================
         """)
@@ -449,7 +449,7 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         JavaScript test results
         =======================
         Browser: chrome
-        -----------------------
+
         ..
 
 
@@ -461,7 +461,7 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         =======================
         =======================
         Browser: firefox
-        -----------------------
+
         ..
 
 
@@ -506,7 +506,7 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         JavaScript test results
         =======================
         Browser: chrome
-        -----------------------
+
         ..
 
 
@@ -518,7 +518,7 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         =======================
         =======================
         Browser: firefox
-        -----------------------
+
         F.
 
         Adder test: it should start at zero [fail]
@@ -530,6 +530,37 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         Error:   0
         Skipped: 0
         Passed:  1
+        =======================
+        """)
+
+        self.assert_report(expected_report)
+
+    def test_long_results(self):
+
+        # Add many results, all of which pass
+        for i in range(47):
+            self.add_result(
+                'chrome',
+                 'Foo', 'Bar {0}'.format(i),
+                 'pass', ''
+            )
+
+        expected_report = dedent("""
+        =======================
+        JavaScript test results
+        =======================
+        Browser: chrome
+
+        ....................
+        ....................
+        .......
+
+
+        -----------------------
+        Failed:  0
+        Error:   0
+        Skipped: 0
+        Passed:  47
         =======================
         """)
 
