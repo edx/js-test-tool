@@ -145,21 +145,22 @@ class BaseResultReporter(object):
         """
         self._output_file = output_file
 
-    def write_report(self, test_results):
+    def write_report(self, result_data):
         """
         Create a report of test results.
-        `test_results` is a list of `ResultData` objects.
+        `result_data` is a `ResultData` object.
 
         Writes the report to the `output_file` configured
         in the initializer
         """
-        pass
+        report_str = self.generate_report(result_data)
+        self._output_file.write(report_str)
 
     @abstractmethod
-    def generate_report(self, test_results):
+    def generate_report(self, results_data):
         """
         Return a unicode string representation of
-        `test_results`, a list of `ResultData` objects.
+        `results_data`, a `ResultData` object.
 
         Concrete subclasses implement this.
         """
@@ -170,7 +171,24 @@ class ConsoleResultReporter(BaseResultReporter):
     """
     Generate a report that can be printed to the console.
     """
-    pass
+    REPORT_TEMPLATE_NAME = 'console_report.txt'
+
+    def generate_report(self, results_data):
+        """
+        See base class.
+        """
+        context_dict = {
+            'browser_results':[
+                {
+                    'browser_name': browser_name,
+                    'test_results': results_data.test_results(browser_name),
+                    'stats': results_data.stats(browser_name)
+                } for browser_name in results_data.browsers()
+            ],
+            'all_passed': results_data.all_passed()
+        }
+        template = TEMPLATE_ENV.get_template(self.REPORT_TEMPLATE_NAME)
+        return template.render(context_dict)
 
 
 class XUnitResultReporter(BaseResultReporter):

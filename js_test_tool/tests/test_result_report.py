@@ -1,7 +1,9 @@
 from unittest import TestCase
 from js_test_tool.result_report \
     import ResultData, ConsoleResultReporter, XUnitResultReporter
+from js_test_tool.tests.helpers import assert_long_str_equal
 from StringIO import StringIO
+from textwrap import dedent
 
 
 import logging
@@ -110,7 +112,374 @@ class ResultDataTest(TestCase):
 
 
 class ConsoleResultReporterTest(TestCase):
-    pass
+
+    def setUp(self):
+        self.result_data = ResultData()
+
+    def test_all_results_pass(self):
+
+        # All tests pass
+        self._add_result(
+            'chrome',
+             'Adder test', 'it should start at zero',
+             'pass', ''
+        )
+        self._add_result(
+            'chrome',
+             'Adder test', 'it should add to the sum',
+             'pass', ''
+        )
+        self._add_result(
+            'chrome',
+             'Multiplier test', 'it should multiply',
+             'pass', ''
+        )
+
+        expected_report = dedent("""
+        =======================
+        JavaScript test results
+        =======================
+        Browser: chrome
+        -----------------------
+        ...
+
+
+        -----------------------
+        Failed:  0
+        Error:   0
+        Skipped: 0
+        Passed:  3
+        =======================
+        """)
+
+        self._assert_report(expected_report)
+
+    def test_some_results_fail(self):
+
+        # Some tests fail
+        self._add_result('chrome',
+                                 'Adder test', 'it should start at zero',
+                                 'pass', '')
+        self._add_result('chrome',
+                                 'Adder test', 'it should add to the sum',
+                                 'fail', 'Stack trace\nCan go here')
+        self._add_result('chrome',
+                                 'Multiplier test', 'it should multiply',
+                                 'pass', '')
+
+        expected_report = dedent("""
+        =======================
+        JavaScript test results
+        =======================
+        Browser: chrome
+        -----------------------
+        .F.
+
+        Adder test: it should add to the sum [fail]
+            Stack trace
+            Can go here
+
+
+        -----------------------
+        Failed:  1
+        Error:   0
+        Skipped: 0
+        Passed:  2
+        =======================
+        """)
+
+        self._assert_report(expected_report)
+
+    def test_all_results_fail(self):
+
+        # All tests fail
+        self._add_result(
+            'chrome',
+            'Adder test', 'it should start at zero',
+            'fail', 'Desc'
+        )
+        self._add_result(
+            'chrome',
+            'Adder test', 'it should add to the sum',
+            'fail', 'Desc'
+        )
+        self._add_result(
+            'chrome',
+            'Multiplier test', 'it should multiply',
+            'fail', 'Desc'
+        )
+
+        expected_report = dedent("""
+        =======================
+        JavaScript test results
+        =======================
+        Browser: chrome
+        -----------------------
+        FFF
+
+        Adder test: it should start at zero [fail]
+            Desc
+
+        Adder test: it should add to the sum [fail]
+            Desc
+
+        Multiplier test: it should multiply [fail]
+            Desc
+
+
+        -----------------------
+        Failed:  3
+        Error:   0
+        Skipped: 0
+        Passed:  0
+        =======================
+        """)
+
+        self._assert_report(expected_report)
+
+    def test_results_error(self):
+
+        # Some tests have error
+        self._add_result(
+            'chrome',
+            'Adder test', 'it should start at zero',
+            'pass', ''
+        )
+        self._add_result(
+            'chrome',
+            'Adder test', 'it should add to the sum',
+            'error', 'Desc'
+        )
+        self._add_result(
+            'chrome',
+            'Multiplier test', 'it should multiply',
+            'pass', ''
+        )
+
+        expected_report = dedent("""
+        =======================
+        JavaScript test results
+        =======================
+        Browser: chrome
+        -----------------------
+        .E.
+
+        Adder test: it should add to the sum [error]
+            Desc
+
+
+        -----------------------
+        Failed:  0
+        Error:   1
+        Skipped: 0
+        Passed:  2
+        =======================
+        """)
+
+        self._assert_report(expected_report)
+
+    def test_results_skip(self):
+
+        # Some tests skipped
+        self._add_result(
+            'chrome',
+             'Adder test', 'it should start at zero',
+             'pass', ''
+        )
+        self._add_result(
+            'chrome',
+             'Adder test', 'it should add to the sum',
+             'skip', 'Desc'
+        )
+        self._add_result(
+            'chrome',
+            'Multiplier test', 'it should multiply',
+            'pass', ''
+        )
+
+        expected_report = dedent("""
+        =======================
+        JavaScript test results
+        =======================
+        Browser: chrome
+        -----------------------
+        .S.
+
+        Adder test: it should add to the sum [skip]
+            Desc
+
+
+        -----------------------
+        Failed:  0
+        Error:   0
+        Skipped: 1
+        Passed:  2
+        =======================
+        """)
+
+        self._assert_report(expected_report)
+
+    def test_no_results(self):
+
+        # Do not add any test results
+        self.result_data.add_results('chrome', [])
+
+        # Expect a special message in the report
+        expected_report = dedent("""
+        =======================
+        JavaScript test results
+        =======================
+        Browser: chrome
+        -----------------------
+        Warning: No test results reported.
+        =======================
+        """)
+
+        self._assert_report(expected_report)
+
+    def test_multiple_browsers_all_pass(self):
+
+        # Add test results for the Chrome browser
+        self._add_result(
+            'chrome',
+             'Adder test', 'it should start at zero',
+             'pass', ''
+        )
+        self._add_result(
+            'chrome',
+             'Adder test', 'it should add to the sum',
+             'pass', ''
+        )
+
+        # Add test results for the Firefox browser
+        self._add_result(
+            'firefox',
+             'Adder test', 'it should start at zero',
+             'pass', ''
+        )
+        self._add_result(
+            'firefox',
+            'Adder test', 'it should add to the sum',
+            'pass', ''
+        )
+
+        expected_report = dedent("""
+        =======================
+        JavaScript test results
+        =======================
+        Browser: chrome
+        -----------------------
+        ..
+
+
+        -----------------------
+        Failed:  0
+        Error:   0
+        Skipped: 0
+        Passed:  2
+        =======================
+        =======================
+        Browser: firefox
+        -----------------------
+        ..
+
+
+        -----------------------
+        Failed:  0
+        Error:   0
+        Skipped: 0
+        Passed:  2
+        =======================
+        """)
+
+        self._assert_report(expected_report)
+
+    def test_multiple_browsers_some_fail(self):
+
+        # Add test results for the Chrome browser
+        self._add_result(
+            'chrome',
+             'Adder test', 'it should start at zero',
+             'pass', ''
+        )
+        self._add_result(
+            'chrome',
+             'Adder test', 'it should add to the sum',
+             'pass', ''
+        )
+
+        # Add test results for the Firefox browser
+        self._add_result(
+            'firefox',
+             'Adder test', 'it should start at zero',
+             'fail', 'Desc'
+        )
+        self._add_result(
+            'firefox',
+             'Adder test', 'it should add to the sum',
+             'pass', ''
+        )
+
+        expected_report = dedent("""
+        =======================
+        JavaScript test results
+        =======================
+        Browser: chrome
+        -----------------------
+        ..
+
+
+        -----------------------
+        Failed:  0
+        Error:   0
+        Skipped: 0
+        Passed:  2
+        =======================
+        =======================
+        Browser: firefox
+        -----------------------
+        F.
+
+        Adder test: it should start at zero [fail]
+            Desc
+
+
+        -----------------------
+        Failed:  1
+        Error:   0
+        Skipped: 0
+        Passed:  1
+        =======================
+        """)
+
+        self._assert_report(expected_report)
+
+    def _add_result(self, browser_name, group_name, test_name, status, detail):
+        """
+        Add test results for the browser with `browser_name`.
+
+        `group_name`: name of the test group (e.g. 'Adder tests')
+        `test_name`: name of the specific test case
+                     (e.g. 'it should start at zero')
+        `status`: pass | fail | skip
+        `detail`: details of the test case (e.g. a stack trace)
+        """
+        self.result_data.add_results(
+            browser_name, [{
+                'test_group': group_name,
+                'test_name': test_name,
+                'status': status,
+                'detail': detail
+            }]
+        )
+
+    def _assert_report(self, expected_report):
+        """
+        Assert that the console report matches `expected_report`.
+        """
+        output = StringIO()
+        ConsoleResultReporter(output).write_report(self.result_data)
+        assert_long_str_equal(output.getvalue(), expected_report, strip=True)
 
 
 class XUnitResultReporterTest(TestCase):

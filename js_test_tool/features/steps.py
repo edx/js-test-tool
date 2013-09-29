@@ -33,8 +33,9 @@ def coverage_path(runner="jasmine", format="xml", actual=False):
 @step(u'When I run js-test-tool on (Jasmine|requirejs) without coverage')
 def run_tool_with_no_coverage(step, runner):
     world.scenario["runner"] = runner
-    world.run_tool_with_args(['run', config_path(runner),
-                              '--timeout', '2'])
+    world.run_tool_with_args(
+        ['run', config_path(runner), '--timeout', '2']
+    )
 
 
 @step(u'When I run js-test-tool on (Jasmine|requirejs) with (XML|HTML) coverage')

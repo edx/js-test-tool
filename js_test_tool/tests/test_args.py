@@ -36,6 +36,14 @@ class ParseArgsTest(unittest.TestCase):
         self.assertEqual(arg_dict.get('test_suite_paths'),
                          ['test_suite_1.yaml', 'test_suite_2.yaml'])
 
+    def test_parse_xunit_path(self):
+        argv = [
+            self.TOOL_NAME, 'run', 'test_suite.yaml',
+            '--xunit-report', 'xunit.xml', '--use-firefox'
+        ]
+        arg_dict = parse_args(argv)
+        self.assertEqual(arg_dict.get('xunit_report'), 'xunit.xml')
+
     def test_parse_coverage_xml(self):
         argv = [self.TOOL_NAME, 'run', 'test_suite.yaml', '--coverage-xml',
                 'coverage.xml', '--use-firefox']

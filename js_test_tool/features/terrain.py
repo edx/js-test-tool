@@ -59,7 +59,10 @@ def setup_scenario(scenario):
 
     # Mock the system, so we can pass in arguments and capture stdout
     world.mock_sys = patch('js_test_tool.tool.sys').start()
-    world.mock_sys.stdout = StringIO()
+
+    # Capture stdout (configured in the runner)
+    world.mock_sys_runner = patch('js_test_tool.runner.sys').start()
+    world.mock_sys_runner.stdout = StringIO()
 
     # Mock the webbrowser (for use with dev mode)
     world.mock_webbrowser = patch('js_test_tool.dev_runner.webbrowser').start()
@@ -145,7 +148,7 @@ def assert_tool_stdout(expected_filename):
     """
 
     # Retrieve captured stdout from our mock system
-    captured_stdout = world.mock_sys.stdout.getvalue()
+    captured_stdout = world.mock_sys_runner.stdout.getvalue()
 
     # Open the file containing the expected report
     # and check that it matches the stdout captured by the tool
