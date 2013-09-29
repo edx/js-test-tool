@@ -20,6 +20,7 @@ TEMPLATE_ENV = Environment(
     extensions=['jinja2.ext.with_']
 )
 
+
 class ResultData(object):
     """
     Test result data.
@@ -72,7 +73,6 @@ class ResultData(object):
         """
         return self._result_dict[browser_name]
 
-
     # Dict mapping status values to the counter
     # that should be incremented in the stats dict
     STATS_KEY_MAP = {
@@ -81,7 +81,6 @@ class ResultData(object):
         'error': 'num_error',
         'skip': 'num_skipped'
     }
-
 
     def stats(self, browser_name):
         """
@@ -202,7 +201,7 @@ class TemplateResultReporter(BaseResultReporter):
         See base class.
         """
         context_dict = {
-            'browser_results':[
+            'browser_results': [
                 {
                     'browser_name': browser_name,
                     'test_results': results_data.test_results(browser_name),

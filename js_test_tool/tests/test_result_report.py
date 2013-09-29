@@ -196,18 +196,18 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         # All tests pass
         self.add_result(
             'chrome',
-             'Adder test', 'it should start at zero',
-             'pass', ''
+            'Adder test', 'it should start at zero',
+            'pass', ''
         )
         self.add_result(
             'chrome',
-             'Adder test', 'it should add to the sum',
-             'pass', ''
+            'Adder test', 'it should add to the sum',
+            'pass', ''
         )
         self.add_result(
             'chrome',
-             'Multiplier test', 'it should multiply',
-             'pass', ''
+            'Multiplier test', 'it should multiply',
+            'pass', ''
         )
 
         expected_report = dedent("""
@@ -364,13 +364,13 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         # Some tests skipped
         self.add_result(
             'chrome',
-             'Adder test', 'it should start at zero',
-             'pass', ''
+            'Adder test', 'it should start at zero',
+            'pass', ''
         )
         self.add_result(
             'chrome',
-             'Adder test', 'it should add to the sum',
-             'skip', 'Desc'
+            'Adder test', 'it should add to the sum',
+            'skip', 'Desc'
         )
         self.add_result(
             'chrome',
@@ -423,20 +423,20 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         # Add test results for the Chrome browser
         self.add_result(
             'chrome',
-             'Adder test', 'it should start at zero',
-             'pass', ''
+            'Adder test', 'it should start at zero',
+            'pass', ''
         )
         self.add_result(
             'chrome',
-             'Adder test', 'it should add to the sum',
-             'pass', ''
+            'Adder test', 'it should add to the sum',
+            'pass', ''
         )
 
         # Add test results for the Firefox browser
         self.add_result(
             'firefox',
-             'Adder test', 'it should start at zero',
-             'pass', ''
+            'Adder test', 'it should start at zero',
+            'pass', ''
         )
         self.add_result(
             'firefox',
@@ -480,25 +480,25 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         # Add test results for the Chrome browser
         self.add_result(
             'chrome',
-             'Adder test', 'it should start at zero',
-             'pass', ''
+            'Adder test', 'it should start at zero',
+            'pass', ''
         )
         self.add_result(
             'chrome',
-             'Adder test', 'it should add to the sum',
-             'pass', ''
+            'Adder test', 'it should add to the sum',
+            'pass', ''
         )
 
         # Add test results for the Firefox browser
         self.add_result(
             'firefox',
-             'Adder test', 'it should start at zero',
-             'fail', 'Desc'
+            'Adder test', 'it should start at zero',
+            'fail', 'Desc'
         )
         self.add_result(
             'firefox',
-             'Adder test', 'it should add to the sum',
-             'pass', ''
+            'Adder test', 'it should add to the sum',
+            'pass', ''
         )
 
         expected_report = dedent("""
@@ -541,8 +541,8 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         for i in range(47):
             self.add_result(
                 'chrome',
-                 'Foo', 'Bar {0}'.format(i),
-                 'pass', ''
+                'Foo', 'Bar {0}'.format(i),
+                'pass', ''
             )
 
         expected_report = dedent("""
@@ -571,24 +571,23 @@ class XUnitResultReporterTest(ResultReporterTestCase):
 
     REPORTER_CLASS = XUnitResultReporter
 
-
     def test_all_results_pass(self):
 
         # All tests pass
         self.add_result(
             'chrome',
-             'Adder test', 'it should start at zero',
-             'pass', ''
+            'Adder test', 'it should start at zero',
+            'pass', ''
         )
         self.add_result(
             'chrome',
-             'Adder test', 'it should add to the sum',
-             'pass', ''
+            'Adder test', 'it should add to the sum',
+            'pass', ''
         )
         self.add_result(
             'chrome',
-             'Multiplier test', 'it should multiply',
-             'pass', ''
+            'Multiplier test', 'it should multiply',
+            'pass', ''
         )
 
         expected_report = dedent("""
@@ -715,13 +714,13 @@ class XUnitResultReporterTest(ResultReporterTestCase):
         # Some tests skipped
         self.add_result(
             'chrome',
-             'Adder test', 'it should start at zero',
-             'pass', ''
+            'Adder test', 'it should start at zero',
+            'pass', ''
         )
         self.add_result(
             'chrome',
-             'Adder test', 'it should add to the sum',
-             'skip', 'Desc'
+            'Adder test', 'it should add to the sum',
+            'skip', 'Desc'
         )
         self.add_result(
             'chrome',
@@ -762,20 +761,20 @@ class XUnitResultReporterTest(ResultReporterTestCase):
         # Add test results for the Chrome browser
         self.add_result(
             'chrome',
-             'Adder test', 'it should start at zero',
-             'pass', ''
+            'Adder test', 'it should start at zero',
+            'pass', ''
         )
         self.add_result(
             'chrome',
-             'Adder test', 'it should add to the sum',
-             'pass', ''
+            'Adder test', 'it should add to the sum',
+            'pass', ''
         )
 
         # Add test results for the Firefox browser
         self.add_result(
             'firefox',
-             'Adder test', 'it should start at zero',
-             'pass', ''
+            'Adder test', 'it should start at zero',
+            'pass', ''
         )
         self.add_result(
             'firefox',
@@ -804,25 +803,25 @@ class XUnitResultReporterTest(ResultReporterTestCase):
         # Add test results for the Chrome browser
         self.add_result(
             'chrome',
-             'Adder test', 'it should start at zero',
-             'pass', ''
+            'Adder test', 'it should start at zero',
+            'pass', ''
         )
         self.add_result(
             'chrome',
-             'Adder test', 'it should add to the sum',
-             'pass', ''
+            'Adder test', 'it should add to the sum',
+            'pass', ''
         )
 
         # Add test results for the Firefox browser
         self.add_result(
             'firefox',
-             'Adder test', 'it should start at zero',
-             'fail', 'Desc'
+            'Adder test', 'it should start at zero',
+            'fail', 'Desc'
         )
         self.add_result(
             'firefox',
-             'Adder test', 'it should add to the sum',
-             'pass', ''
+            'Adder test', 'it should add to the sum',
+            'pass', ''
         )
 
         expected_report = dedent("""

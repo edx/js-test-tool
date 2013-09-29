@@ -201,7 +201,7 @@ def main():
             )
 
         try:
-            # Generate the reports and write test results 
+            # Generate the reports and write test results
             all_passed = generate_reports(suite_runner)
 
         finally:
