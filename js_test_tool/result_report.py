@@ -13,10 +13,12 @@ LOGGER = logging.getLogger(__name__)
 
 # Set up the template environment
 TEMPLATE_LOADER = PackageLoader(__package__)
-TEMPLATE_ENV = Environment(loader=TEMPLATE_LOADER,
-                           trim_blocks=True,
-                           lstrip_blocks=True,
-                           extensions=['jinja2.ext.with_'])
+TEMPLATE_ENV = Environment(
+    loader=TEMPLATE_LOADER,
+    trim_blocks=True,
+    lstrip_blocks=True,
+    extensions=['jinja2.ext.with_']
+)
 
 class ResultData(object):
     """
@@ -92,26 +94,45 @@ class ResultData(object):
                   'num_error': NUM_ERROR,
                   'num_skipped': NUM_SKIPPED,
                   'num_passed': NUM_PASSED
+                  'num_tests': NUM_TESTS
             }
+
+        `NUM_TESTS` is the total number of tests (the sum
+        of failed, errored, skipped, and passed tests).
 
         If there are no test results for the browser,
         returns counts that are all 0.
+
+        If `browser_name` is `None`, returns aggregate
+        results for all browers.
         """
         stats = {
             'num_failed': 0, 'num_error': 0,
-            'num_skipped': 0, 'num_passed': 0
+            'num_skipped': 0, 'num_passed': 0,
+            'num_tests': 0
         }
 
-        for test_result in self._result_dict[browser_name]:
-            status = test_result.get('status')
-            stats_key = self.STATS_KEY_MAP.get(status)
+        # If no browser name specified, aggregate results
+        # across all browsers.
+        if browser_name is None:
+            browser_list = self.browsers()
 
-            if stats_key is not None:
-                stats[stats_key] += 1
+        # Otherwise, get results only for the specified browser
+        else:
+            browser_list = [browser_name]
 
-            else:
-                msg = "Invalid test result status: '{0}'".format(status)
-                LOGGER.warning(msg)
+        for browser in browser_list:
+            for test_result in self._result_dict[browser]:
+                status = test_result.get('status')
+                stats_key = self.STATS_KEY_MAP.get(status)
+
+                if stats_key is not None:
+                    stats[stats_key] += 1
+                    stats['num_tests'] += 1
+
+                else:
+                    msg = "Invalid test result status: '{0}'".format(status)
+                    LOGGER.warning(msg)
 
         return stats
 
@@ -167,11 +188,14 @@ class BaseResultReporter(object):
         pass
 
 
-class ConsoleResultReporter(BaseResultReporter):
+class TemplateResultReporter(BaseResultReporter):
     """
-    Generate a report that can be printed to the console.
+    Generate a report using a template.
     """
-    REPORT_TEMPLATE_NAME = 'console_report.txt'
+
+    # Subclasses override this to provide the name
+    # of the template used to generate the report
+    REPORT_TEMPLATE_NAME = None
 
     def generate_report(self, results_data):
         """
@@ -185,14 +209,23 @@ class ConsoleResultReporter(BaseResultReporter):
                     'stats': results_data.stats(browser_name)
                 } for browser_name in results_data.browsers()
             ],
+            'stats': results_data.stats(None),
             'all_passed': results_data.all_passed()
         }
+
         template = TEMPLATE_ENV.get_template(self.REPORT_TEMPLATE_NAME)
         return template.render(context_dict)
 
 
-class XUnitResultReporter(BaseResultReporter):
+class ConsoleResultReporter(TemplateResultReporter):
+    """
+    Generate a report that can be printed to the console.
+    """
+    REPORT_TEMPLATE_NAME = 'console_report.txt'
+
+
+class XUnitResultReporter(TemplateResultReporter):
     """
     Generate an XUnit XML report.
     """
-    pass
+    REPORT_TEMPLATE_NAME = 'xunit_report.txt'
