@@ -178,6 +178,19 @@ This will create coverage reports in two formats:
 * HTML
 
 
+XUnit Reports
+-------------
+
+``js-test-tool`` can generate XUnit-style XML reports for consumption
+by a CI system such as Jenkins.
+
+.. code:: bash
+
+    js-test-tool run js_test.yml --use-firefox --xunit-report report.xml
+
+will generate a report called ``report.xml``.
+
+
 Multiple Browsers
 ------------------
 
