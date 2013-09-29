@@ -89,7 +89,7 @@ This will create a YAML file (``js_test.yml``) that looks like:
     # jasmine_requirejs runner does not include files using <script> tags
     # by default, and so will ignore this directive.
     exclude_from_page:
-        - path/to/lib/exclude/*
+        - path/to/lib/exclude/.*
 
     # Regular expression used to guarantee that a *.js file
     # is included in the test runner page.
@@ -98,7 +98,7 @@ This will create a YAML file (``js_test.yml``) that looks like:
     # You can use this to exclude all files in a directory,
     # but make an exception for particular files.
     include_in_page:
-        - path/to/lib/exclude/exception_*.js
+        - path/to/lib/exclude/exception_.*\.js
 
 
 * All paths are specified relative
