@@ -538,21 +538,22 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
     def test_long_results(self):
 
         # Add many results, all of which pass
-        for i in range(47):
+        for i in range(167):
             self.add_result(
                 'chrome',
                 'Foo', 'Bar {0}'.format(i),
                 'pass', ''
             )
 
+        # ... lines should be wrapped
         expected_report = dedent("""
         =======================
         JavaScript test results
         =======================
         Browser: chrome
 
-        ....................
-        ....................
+        ................................................................................
+        ................................................................................
         .......
 
 
@@ -560,7 +561,7 @@ class ConsoleResultReporterTest(ResultReporterTestCase):
         Failed:  0
         Error:   0
         Skipped: 0
-        Passed:  47
+        Passed:  167
         =======================
         """)
 

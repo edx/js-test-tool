@@ -19,7 +19,7 @@ E
 {%- endmacro %}
 
 {% macro results(test_results) -%}
-{{ all_symbols(test_results)|wordwrap(20) }}
+{{ all_symbols(test_results)|wordwrap(80) }}
 
 {% for result_dict in test_results %}
 {% if result_dict.status in ["fail", "error", "skip"] %}
