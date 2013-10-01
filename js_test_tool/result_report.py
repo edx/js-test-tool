@@ -5,6 +5,7 @@ Generate report of test results.
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from jinja2 import Environment, PackageLoader
+from xml.sax.saxutils import escape, quoteattr
 
 
 import logging
@@ -187,14 +188,11 @@ class BaseResultReporter(object):
         pass
 
 
-class TemplateResultReporter(BaseResultReporter):
+class ConsoleResultReporter(BaseResultReporter):
     """
-    Generate a report using a template.
+    Generate a report that can be printed to the console.
     """
-
-    # Subclasses override this to provide the name
-    # of the template used to generate the report
-    REPORT_TEMPLATE_NAME = None
+    REPORT_TEMPLATE_NAME = 'console_report.txt'
 
     def generate_report(self, results_data):
         """
@@ -216,15 +214,48 @@ class TemplateResultReporter(BaseResultReporter):
         return template.render(context_dict)
 
 
-class ConsoleResultReporter(TemplateResultReporter):
-    """
-    Generate a report that can be printed to the console.
-    """
-    REPORT_TEMPLATE_NAME = 'console_report.txt'
-
-
-class XUnitResultReporter(TemplateResultReporter):
+class XUnitResultReporter(BaseResultReporter):
     """
     Generate an XUnit XML report.
     """
     REPORT_TEMPLATE_NAME = 'xunit_report.txt'
+
+    def generate_report(self, results_data):
+        """
+        See base class.
+        """
+        context_dict = {
+            'browser_results': [
+                {
+                    'browser_name': browser_name,
+                    'test_results': results_data.test_results(browser_name),
+                    'stats': results_data.stats(browser_name)
+                } for browser_name in results_data.browsers()
+            ],
+            'stats': results_data.stats(None),
+            'all_passed': results_data.all_passed()
+        }
+
+        template = TEMPLATE_ENV.get_template(self.REPORT_TEMPLATE_NAME)
+        return template.render(self._sanitize_context_dict(context_dict))
+
+    def _sanitize_context_dict(self, context):
+        """
+        Sanitize the strings in the context dict for XML.
+        """
+        for browser_dict in context.get('browser_results', []):
+            browser_dict['browser_name'] = self._sanitize_attr(browser_dict['browser_name'])
+
+            for result_dict in browser_dict.get('test_results', []):
+                result_dict['test_group'] = self._sanitize_attr(result_dict['test_group'])
+                result_dict['test_name'] = self._sanitize_attr(result_dict['test_name'])
+
+        return context
+
+    def _sanitize_attr(self, string):
+        """
+        Replace characters that can cause XML parse errors in attributes.
+        """
+        # Escape <, &, and > to corresponding entity references
+        # Escape quotes (for attributes)
+        return escape(string, {'"': '&quot;', "'": "&quot;"})

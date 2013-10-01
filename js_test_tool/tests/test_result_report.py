@@ -4,6 +4,7 @@ from js_test_tool.result_report \
 from js_test_tool.tests.helpers import assert_long_str_equal
 from StringIO import StringIO
 from textwrap import dedent
+from lxml import etree
 
 
 import logging
@@ -182,9 +183,15 @@ class ResultReporterTestCase(TestCase):
         """
         Assert that the console report matches `expected_report`.
         """
+        assert_long_str_equal(self.build_report(), expected_report, strip=True)
+
+    def build_report(self):
+        """
+        Build a report.
+        """
         output = StringIO()
         self.REPORTER_CLASS(output).write_report(self.result_data)
-        assert_long_str_equal(output.getvalue(), expected_report, strip=True)
+        return output.getvalue()
 
 
 class ConsoleResultReporterTest(ResultReporterTestCase):
@@ -841,3 +848,19 @@ class XUnitResultReporterTest(ResultReporterTestCase):
         """)
 
         self.assert_report(expected_report)
+
+    def test_invalid_xml_in_attribtes(self):
+
+        illegal_chars = '&<>"\''
+
+        # Include invalid XML characters
+        self.add_result(illegal_chars, illegal_chars, illegal_chars, 'pass', illegal_chars)
+
+        # Generate a report
+        report = self.build_report()
+
+        # Verify that we can parse it as XML
+        try:
+            etree.fromstring(report)
+        except etree.XMLSyntaxError:
+            self.fail("Could not parse report as XML:\n\n{}".format(report))
