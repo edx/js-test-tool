@@ -11,3 +11,6 @@ Feature: Report test suite results
         When I run js-test-tool on requirejs without coverage
         Then I see the test suite results
 
+    Scenario: XUnit reports
+        When I run js-test-tool and specify an XUnit report path
+        Then An XUnit report is generated

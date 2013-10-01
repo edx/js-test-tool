@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<testsuite name="javascript" errors="{{ stats.num_error }}" failures="{{ stats.num_failed }}" skipped="{{ stats.num_skipped }}" tests="{{ stats.num_tests }}">
+    {% for browser_dict in browser_results %}
+    {% for test_result in browser_dict.test_results %}
+    <testcase classname="[{{ browser_dict.browser_name }}] {{ test_result.test_group }}" name="{{ test_result.test_name }}">
+        {% if test_result.status == "fail" %}
+        <failure type="Failure" message=""><![CDATA[{{ test_result.detail }}]]></failure>
+        {% elif test_result.status == "error" %}
+        <error type="Error" message=""><![CDATA[{{ test_result.detail }}]]></error>
+        {% elif test_result.status == "skip" %}
+        <skipped/>
+        {% endif %}
+    </testcase>
+    {% endfor %}
+    {% endfor %}
+</testsuite>

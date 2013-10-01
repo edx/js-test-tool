@@ -5,8 +5,11 @@ from js_test_tool.suite import SuiteDescription, SuiteRenderer
 from js_test_tool.suite_server import SuitePageServer, TimeoutError
 from js_test_tool.coverage_report import HtmlCoverageReporter, XmlCoverageReporter
 from js_test_tool.browser import Browser
+from js_test_tool.result_report import ResultData, \
+    ConsoleResultReporter, XUnitResultReporter
 from textwrap import dedent
 import os.path
+import sys
 from jinja2 import Environment, PackageLoader
 
 import logging
@@ -30,15 +33,17 @@ class SuiteRunner(object):
     Run test suites and generate coverage reports.
     """
 
-    # Name of the template used to render the report
-    REPORT_TEMPLATE_NAME = 'console_report.txt'
-
-    def __init__(self, browser_list, suite_page_server, coverage_reporters):
+    def __init__(self, browser_list, suite_page_server,
+                 result_reporters, coverage_reporters):
         """
         Configure the suite runner to retrieve test suite pages
         from `suite_page_server` (`SuitePageServer` instance)
-        and generate coverage reports using `coverage_reporters`
-        (a list of `CoverageReporter` instances).
+
+        The runner will generate test result reports
+        using `result_reporters` (a list of `BaseResultReporter` subclasses).
+
+        The runner will generate coverage reports using
+        `coverage_reporters` (a list of `BaseCoverageReporter` subclasses).
 
         Uses each `Browser` instance in `browser_list` to load the test
         suite pages.
@@ -47,6 +52,7 @@ class SuiteRunner(object):
         # Store dependencies
         self._browser_list = browser_list
         self._suite_page_server = suite_page_server
+        self._result_reporters = result_reporters
         self._coverage_reporters = coverage_reporters
 
         # Will store the coverage data we get from the suite server
@@ -57,30 +63,26 @@ class SuiteRunner(object):
         Execute each available test suite page and record whether
         each test passed/failed.
 
-        Returns a tuple `(passed, report)` where `passed` is a boolean
-        indicating whether all tests passed and `report` is a unicode
-        string report of test results.
+        If configured, will write test results using reporters.
+
+        Returns a `ResultData` object containing the test results.
         """
 
         # Start the suite page server running on a local port
         self._suite_page_server.start()
 
-        # Create a dictionary to store context passed to the template
-        context_dict = {'browser_results': [],
-                        'all_passed': True}
+        # Create an object to hold results data for all browsers
+        results_data = ResultData()
 
         try:
 
             for browser in self._browser_list:
 
                 # Run the test suite with one of our browsers
-                browser_results = self._run_with_browser(browser)
-                context_dict['browser_results'].append(browser_results)
-
-                # Check whether any of the tests failed
-                stats = browser_results['stats']
-                if (stats['num_failed'] + stats['num_error']) > 0:
-                    context_dict['all_passed'] = False
+                results_data.add_results(
+                    browser.name(),
+                    self._run_with_browser(browser)
+                )
 
             # After all browsers have loaded their pages,
             # Block until all coverage data received
@@ -105,11 +107,11 @@ class SuiteRunner(object):
         finally:
             self._suite_page_server.stop()
 
-        # Render the console report
-        template = TEMPLATE_ENV.get_template(self.REPORT_TEMPLATE_NAME)
-        report_str = template.render(context_dict)
+        # Generate test result reports
+        for reporter in self._result_reporters:
+            reporter.write_report(results_data)
 
-        return (context_dict['all_passed'], report_str)
+        return results_data
 
     def write_coverage_reports(self):
         """
@@ -124,26 +126,22 @@ class SuiteRunner(object):
             for reporter in self._coverage_reporters:
                 reporter.write_report(self._report_coverage_data)
 
+    def result_reporters(self):
+        """
+        Return the list of test result reporters for this runner.
+        """
+        return self._result_reporters
+
+    def coverage_reporters(self):
+        """
+        Return the list of coverage reporters for this runner.
+        """
+        return self._coverage_reporters
+
     def _run_with_browser(self, browser):
         """
         Load all test suite pages in `browser` (a `Browser` instance)
-        and return a dictionary describing the results.
-
-        The returned dictionary has the following form:
-
-            {
-                'browser_name': BROWSER_NAME,
-
-                'test_results': [ {'test_group': TEST_GROUP,
-                                   'test_name': TEST_NAME,
-                                   'status': "pass" | "fail" | "skip" | "error",
-                                   'detail': DETAILS }, ...],
-
-                'stats': {'num_failed': NUM_FAILED,
-                          'num_error': NUM_ERROR,
-                          'num_skipped': NUM_SKIPPED,
-                          'num_passed': NUM_PASSED}
-            }
+        and returns a `ResultData` instance.
 
         If an error occurs when retrieving or parsing the page,
         raises a `BrowserError`.
@@ -155,62 +153,9 @@ class SuiteRunner(object):
         for url in self._suite_page_server.suite_url_list():
 
             # Use the browser to load the page and parse the results
-            suite_results = browser.get_page_results(url)
+            all_results.extend(browser.get_page_results(url))
 
-            # Store the results and keep loading pages
-            all_results.extend(suite_results)
-
-        # Calculate statistics
-        stats = self._result_stats(all_results)
-
-        # Construct the context dict
-        return {'browser_name': browser.name(),
-                'test_results': all_results,
-                'stats': stats}
-
-    def _result_stats(self, all_results):
-        """
-        Calculate totals for each status in `all_results`.
-
-        `all_results` is a list of result dictionaries.  See
-        `Browser.get_page_results()` for the format of the dictionary items.
-
-        Returns a dictionary of the form
-
-            {'num_failed': NUM_FAILED,
-             'num_error': NUM_ERROR,
-             'num_skipped': NUM_SKIPPED,
-             'num_passed': NUM_PASSED}
-        """
-        stats_dict = {'num_failed': 0,
-                      'num_error': 0,
-                      'num_skipped': 0,
-                      'num_passed': 0}
-
-        # For each test that we ran, across all test suites
-        for result_dict in all_results:
-
-            # Get the result status (assumed to be defined)
-            status = result_dict['status']
-
-            # Determine which value to increment
-            if status == 'fail':
-                key = 'num_failed'
-            elif status == 'error':
-                key = 'num_error'
-            elif status == 'skip':
-                key = 'num_skipped'
-            elif status == 'pass':
-                key = 'num_passed'
-            else:
-                msg = '{} is not a valid result status'.format(status)
-                raise ValueError(msg)
-
-            # Increment the appropriate count
-            stats_dict[key] += 1
-
-        # Return the stats we collected
-        return stats_dict
+        return all_results
 
 
 class SuiteRunnerFactory(object):
@@ -221,14 +166,16 @@ class SuiteRunnerFactory(object):
     # Supported browser names
     SUPPORTED_BROWSERS = ['chrome', 'firefox', 'phantomjs']
 
-    def __init__(self,
-                 desc_class=SuiteDescription,
-                 renderer_class=SuiteRenderer,
-                 server_class=SuitePageServer,
-                 html_coverage_class=HtmlCoverageReporter,
-                 xml_coverage_class=XmlCoverageReporter,
-                 browser_class=Browser,
-                 runner_class=SuiteRunner):
+    def __init__(
+        self, desc_class=SuiteDescription,
+        renderer_class=SuiteRenderer,
+        server_class=SuitePageServer,
+        console_result_class=ConsoleResultReporter,
+        xunit_result_class=XUnitResultReporter,
+        html_coverage_class=HtmlCoverageReporter,
+        xml_coverage_class=XmlCoverageReporter,
+        browser_class=Browser
+    ):
         """
         Configure the factory to use the provided classes.
         You should only ever override the defaults when testing.
@@ -236,14 +183,17 @@ class SuiteRunnerFactory(object):
         self._desc_class = desc_class
         self._renderer_class = renderer_class
         self._server_class = server_class
+        self._console_result_class = console_result_class
+        self._xunit_result_class = xunit_result_class
         self._html_coverage_class = html_coverage_class
         self._xml_coverage_class = xml_coverage_class
         self._browser_class = browser_class
-        self._runner_class = runner_class
 
-    def build_runner(self, suite_path_list, browser_names,
-                     coverage_xml_path, coverage_html_path,
-                     timeout_sec):
+    def build_runner(
+        self, suite_path_list, browser_names,
+        xunit_path, coverage_xml_path,
+        coverage_html_path, timeout_sec
+    ):
         """
         Configure `SuiteRunner` instances for each suite description.
         Each `SuiteRunner` will:
@@ -254,6 +204,9 @@ class SuiteRunnerFactory(object):
 
         * Run the test suites described in
           `suite_path_list` (list of paths to suite description files)
+
+        * Generate a console and XUnit report of test results.
+        The XUnit report will be written to `xunit_path` if specified.
 
         * Write coverage reports to `coverage_xml_path` (Cobertura XML format)
           and `coverage_html_path` (HTML).
@@ -285,6 +238,15 @@ class SuiteRunnerFactory(object):
 
         # Create a renderer
         renderer = self._renderer_class()
+
+        # Create the test result reporters
+        # Always create a console reporter
+        # Create the XUnit reporter only if a path is specified
+        result_reporters = [self._console_result_class(sys.stdout)]
+        if xunit_path is not None:
+            xunit_file = open(xunit_path, 'w')
+            xunit_reporter = self._xunit_result_class(xunit_file)
+            result_reporters.append(xunit_reporter)
 
         # Create the coverage reporters
         coverage_reporters = []
@@ -328,7 +290,10 @@ class SuiteRunnerFactory(object):
                     for name in browser_names]
 
         # Create a suite runner for each description
-        runner = self._runner_class(browsers, server, coverage_reporters)
+        runner = SuiteRunner(
+            browsers, server,
+            result_reporters, coverage_reporters
+        )
 
         # Return the list of suite runner and browsers
         return runner, browsers

@@ -22,6 +22,7 @@ COMMAND_HELP = dedent("""
         dev: Run the test suite in the default browser.
         """).strip()
 TEST_SUITE_HELP = "Test suite description file."
+XUNIT_REPORT_HELP = "Generated XUnit test result report (XML)."
 COVERAGE_XML_HELP = "Generated XML coverage report."
 COVERAGE_HTML_HELP = "Generated HTML coverage report."
 PHANTOMJS_HELP = "Run the tests using the PhantomJS browser."
@@ -43,6 +44,7 @@ def parse_args(argv):
         {
             'command': 'init' | 'run',
             'test_suite_paths': TEST_SUITE_PATHS,
+            'xunit_report': XUNIT_REPORT,
             'coverage_xml': COVERAGE_XML,
             'coverage_html': COVERAGE_HTML,
             'browser_names': BROWSER_NAMES,
@@ -54,6 +56,8 @@ def parse_args(argv):
 
     `TEST_SUITE_PATHS` is a list of paths to files describing the test
     suite to run (source files, spec files, dependencies, browser to use, etc.)
+
+    `XUNIT_REPORT` is the location to write the XUnit test results (XML).
 
     `COVERAGE_XML` is the name of the coverage XML report to generate.
     `COVERAGE_HTML` is the name of the coverage HTML report to generate.
@@ -80,6 +84,9 @@ def parse_args(argv):
     # Test suite description files
     parser.add_argument('test_suite_paths', type=str, nargs='+',
                         help=TEST_SUITE_HELP)
+
+    # XUnit report path
+    parser.add_argument('--xunit-report', type=str, help=XUNIT_REPORT_HELP)
 
     # Coverage output files
     parser.add_argument('--coverage-xml', type=str, help=COVERAGE_XML_HELP)
@@ -115,27 +122,24 @@ def parse_args(argv):
     return arg_dict
 
 
-def generate_reports(suite_runner, output_file):
+def generate_reports(suite_runner):
     """
     Use `suite_runner` (a `SuiteRunner` instance)
-    to generate test and coverage reports.  Write the test report
-    to `output_file` (an open file-like object).
+    to generate test and coverage reports.
 
     Returns a boolean indicating whether all the tests passed.
     """
 
-    # Generate the test results report
-    passed, test_report = suite_runner.run()
+    # Run the test suite and get the test results
+    # This will generate test reports
+    result_data = suite_runner.run()
 
     # Generate the coverage reports
     # (may do nothing if dependencies not installed
     # or report paths not specified)
     suite_runner.write_coverage_reports()
 
-    # Print test results to the output file (may be stdout)
-    output_file.write(test_report)
-
-    return passed
+    return result_data.all_passed()
 
 
 def create_default_suite(*file_name_list):
@@ -187,15 +191,18 @@ def main():
         # Configure a test suite runner
         factory = SuiteRunnerFactory()
         suite_runner, browser_list = \
-            factory.build_runner(args_dict.get('test_suite_paths'),
-                                 args_dict.get('browser_names'),
-                                 args_dict.get('coverage_xml'),
-                                 args_dict.get('coverage_html'),
-                                 args_dict.get('timeout_sec'))
+            factory.build_runner(
+                args_dict.get('test_suite_paths'),
+                args_dict.get('browser_names'),
+                args_dict.get('xunit_report'),
+                args_dict.get('coverage_xml'),
+                args_dict.get('coverage_html'),
+                args_dict.get('timeout_sec')
+            )
 
         try:
-            # Generate the reports and write test results to stdout
-            all_passed = generate_reports(suite_runner, sys.stdout)
+            # Generate the reports and write test results
+            all_passed = generate_reports(suite_runner)
 
         finally:
 

@@ -14,9 +14,12 @@ E
 {%- endif -%}
 {%- endmacro %}
 
-{% macro results(test_results) -%}
+{% macro all_symbols(test_results) -%}
 {% for result_dict in test_results %}{{ symbol(result_dict) }}{% endfor %}
+{%- endmacro %}
 
+{% macro results(test_results) -%}
+{{ all_symbols(test_results)|wordwrap(80) }}
 
 {% for result_dict in test_results %}
 {% if result_dict.status in ["fail", "error", "skip"] %}

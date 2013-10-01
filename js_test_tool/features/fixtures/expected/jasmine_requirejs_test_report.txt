@@ -2,7 +2,7 @@
 JavaScript test results
 =======================
 Browser: firefox
------------------------
+
 F..
 
 the test runner can load failing tests: should be a failing test [fail]
@@ -17,7 +17,7 @@ Passed:  2
 =======================
 =======================
 Browser: phantomjs
------------------------
+
 F..
 
 the test runner can load failing tests: should be a failing test [fail]

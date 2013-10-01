@@ -2,6 +2,7 @@ from unittest import TestCase
 import mock
 from textwrap import dedent
 import os.path
+import sys
 from js_test_tool.runner import SuiteRunner, SuiteRunnerFactory, \
     UnknownBrowserError
 from js_test_tool.browser import Browser
@@ -9,6 +10,7 @@ from js_test_tool.suite import SuiteDescription, SuiteRenderer
 from js_test_tool.suite_server import SuitePageServer, TimeoutError
 from js_test_tool.coverage import CoverageData
 from js_test_tool.coverage_report import HtmlCoverageReporter, XmlCoverageReporter
+from js_test_tool.result_report import ConsoleResultReporter, XUnitResultReporter
 from js_test_tool.tests.helpers import TempWorkspaceTestCase, assert_long_str_equal
 
 
@@ -19,6 +21,10 @@ class SuiteRunnerTest(TestCase):
         # Create mock dependencies
         self.mock_browser = mock.MagicMock(Browser)
         self.mock_page_server = mock.MagicMock(SuitePageServer)
+        self.mock_result_reporters = [
+            mock.MagicMock(ConsoleResultReporter),
+            mock.MagicMock(XUnitResultReporter)
+        ]
         self.mock_coverage_reporters = [
             mock.MagicMock(HtmlCoverageReporter),
             mock.MagicMock(XmlCoverageReporter)
@@ -39,6 +45,7 @@ class SuiteRunnerTest(TestCase):
         self.runner = SuiteRunner(
             [self.mock_browser],
             self.mock_page_server,
+            self.mock_result_reporters,
             self.mock_coverage_reporters
         )
 
@@ -68,209 +75,73 @@ class SuiteRunnerTest(TestCase):
 
         self.assertEqual(sorted(suite_urls), sorted(loaded_urls))
 
-    def test_all_results_pass(self):
+    def test_result_data(self):
 
-        # All tests pass
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should start at zero',
-                                 'pass', '')
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should add to the sum',
-                                 'pass', '')
-        self._add_browser_result(self.mock_browser,
-                                 'Multiplier test', 'it should multiply',
-                                 'pass', '')
+        other_browser = mock.MagicMock(Browser)
+        other_browser.name.return_value = 'firefox'
+        other_browser.get_page_results.return_value = []
+        self.runner = SuiteRunner(
+            [self.mock_browser, other_browser],
+            self.mock_page_server,
+            self.mock_result_reporters,
+            self.mock_coverage_reporters
+        )
 
-        # Run the tests
-        passed, report = self.runner.run()
+        # Add test results for the Chrome browser
+        self._add_browser_result(
+            self.mock_browser,
+            'Adder test', 'it should start at zero',
+            'pass', ''
+        )
+        self._add_browser_result(
+            self.mock_browser,
+            'Adder test', 'it should add to the sum',
+            'pass', ''
+        )
 
-        # Check that we get the expected report
-        expected_report = dedent("""
-        =======================
-        JavaScript test results
-        =======================
-        Browser: chrome
-        -----------------------
-        ...
+        # Add test results for the Firefox browser
+        self._add_browser_result(
+            other_browser,
+            'Adder test', 'it should start at zero',
+            'pass', ''
+        )
+        self._add_browser_result(
+            other_browser,
+            'Adder test', 'it should add to the sum',
+            'pass', ''
+        )
 
+        # Expect that we get the test results back
+        # in a `ResultData` object
+        result_data = self.runner.run()
 
-        -----------------------
-        Failed:  0
-        Error:   0
-        Skipped: 0
-        Passed:  3
-        =======================
-        """)
+        self.assertEqual(
+            result_data.browsers(),
+            ['chrome', 'firefox']
+        )
 
-        self.assertTrue(passed)
-        self._assert_reports_equal(report, expected_report)
+        expected_results = [
+            {
+                'test_group': 'Adder test',
+                'test_name': 'it should start at zero',
+                'status': 'pass', 'detail': ''
+            },
+            {
+                'test_group': 'Adder test',
+                'test_name': 'it should add to the sum',
+                'status': 'pass', 'detail': ''
+            },
+        ]
 
-    def test_some_results_fail(self):
+        self.assertEqual(
+            result_data.test_results('chrome'),
+            expected_results
+        )
 
-        # Some tests fail
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should start at zero',
-                                 'pass', '')
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should add to the sum',
-                                 'fail', 'Stack trace\nCan go here')
-        self._add_browser_result(self.mock_browser,
-                                 'Multiplier test', 'it should multiply',
-                                 'pass', '')
-
-        # Run the tests
-        passed, report = self.runner.run()
-
-        # Check that we get the expected report
-        expected_report = dedent("""
-        =======================
-        JavaScript test results
-        =======================
-        Browser: chrome
-        -----------------------
-        .F.
-
-        Adder test: it should add to the sum [fail]
-            Stack trace
-            Can go here
-
-
-        -----------------------
-        Failed:  1
-        Error:   0
-        Skipped: 0
-        Passed:  2
-        =======================
-        """)
-
-        self.assertFalse(passed)
-        self._assert_reports_equal(report, expected_report)
-
-    def test_all_results_fail(self):
-
-        # All tests fail
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should start at zero',
-                                 'fail', 'Desc')
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should add to the sum',
-                                 'fail', 'Desc')
-        self._add_browser_result(self.mock_browser,
-                                 'Multiplier test', 'it should multiply',
-                                 'fail', 'Desc')
-
-        # Run the tests
-        passed, report = self.runner.run()
-
-        # Check that we get the expected report
-        expected_report = dedent("""
-        =======================
-        JavaScript test results
-        =======================
-        Browser: chrome
-        -----------------------
-        FFF
-
-        Adder test: it should start at zero [fail]
-            Desc
-
-        Adder test: it should add to the sum [fail]
-            Desc
-
-        Multiplier test: it should multiply [fail]
-            Desc
-
-
-        -----------------------
-        Failed:  3
-        Error:   0
-        Skipped: 0
-        Passed:  0
-        =======================
-        """)
-
-        self.assertFalse(passed)
-        self._assert_reports_equal(report, expected_report)
-
-    def test_results_error(self):
-
-        # Some tests have error
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should start at zero',
-                                 'pass', '')
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should add to the sum',
-                                 'error', 'Desc')
-        self._add_browser_result(self.mock_browser,
-                                 'Multiplier test', 'it should multiply',
-                                 'pass', '')
-
-        # Run the tests
-        passed, report = self.runner.run()
-
-        # Check that we get the expected report
-        expected_report = dedent("""
-        =======================
-        JavaScript test results
-        =======================
-        Browser: chrome
-        -----------------------
-        .E.
-
-        Adder test: it should add to the sum [error]
-            Desc
-
-
-        -----------------------
-        Failed:  0
-        Error:   1
-        Skipped: 0
-        Passed:  2
-        =======================
-        """)
-
-        self.assertFalse(passed)
-        self._assert_reports_equal(report, expected_report)
-
-    def test_results_skip(self):
-
-        # Some tests skipped
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should start at zero',
-                                 'pass', '')
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should add to the sum',
-                                 'skip', 'Desc')
-        self._add_browser_result(self.mock_browser,
-                                 'Multiplier test', 'it should multiply',
-                                 'pass', '')
-
-        # Run the tests
-        passed, report = self.runner.run()
-
-        # Check that we get the expected report
-        expected_report = dedent("""
-        =======================
-        JavaScript test results
-        =======================
-        Browser: chrome
-        -----------------------
-        .S.
-
-        Adder test: it should add to the sum [skip]
-            Desc
-
-
-        -----------------------
-        Failed:  0
-        Error:   0
-        Skipped: 1
-        Passed:  2
-        =======================
-        """)
-
-        self.assertTrue(passed)
-        self._assert_reports_equal(report, expected_report)
+        self.assertEqual(
+            result_data.test_results('firefox'),
+            expected_results
+        )
 
     def test_multiple_suites(self):
 
@@ -281,188 +152,55 @@ class SuiteRunnerTest(TestCase):
         self._set_suite_urls(suite_urls)
 
         # Add test results
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should start at zero',
-                                 'pass', '')
+        self._add_browser_result(
+            self.mock_browser,
+            'Adder test', 'it should start at zero',
+            'pass', ''
+        )
 
         # Run the tests
-        passed, report = self.runner.run()
+        result_data = self.runner.run()
 
         # Because of the way we set up the browser mock, each page
         # loaded will report the same test result.  So we expect
         # that we get duplicate results, one for each URL.
-        expected_report = dedent("""
-        =======================
-        JavaScript test results
-        =======================
-        Browser: chrome
-        -----------------------
-        ..
+        self.assertEqual(result_data.browsers(), ['chrome'])
 
+        expected_results = [
+            {
+                'test_group': 'Adder test',
+                'test_name': 'it should start at zero',
+                'status': 'pass', 'detail': ''
+            },
+            {
+                'test_group': 'Adder test',
+                'test_name': 'it should start at zero',
+                'status': 'pass', 'detail': ''
+            },
+        ]
 
-        -----------------------
-        Failed:  0
-        Error:   0
-        Skipped: 0
-        Passed:  2
-        =======================
-        """)
-
-        self.assertTrue(passed)
-        self._assert_reports_equal(report, expected_report)
+        self.assertEqual(
+            result_data.test_results('chrome'),
+            expected_results
+        )
 
     def test_no_results(self):
 
         # Do not add any test results
         # Run the tests
-        passed, report = self.runner.run()
+        result_data = self.runner.run()
 
         # Expect that we pass by default
-        self.assertTrue(passed)
+        self.assertTrue(result_data.all_passed())
 
-        # Special message in the report
-        expected_report = dedent("""
-        =======================
-        JavaScript test results
-        =======================
-        Browser: chrome
-        -----------------------
-        Warning: No test results reported.
-        =======================
-        """)
+    def test_generate_result_reports(self):
 
-        self._assert_reports_equal(report, expected_report)
+        # Run the suite to generate test result reports
+        result_data = self.runner.run()
 
-    def test_multiple_browsers_all_pass(self):
-
-        # Configure multiple browsers
-        other_browser = mock.MagicMock(Browser)
-        other_browser.name.return_value = 'firefox'
-        other_browser.get_page_results.return_value = []
-        self.runner = SuiteRunner([self.mock_browser, other_browser],
-                                  self.mock_page_server,
-                                  self.mock_coverage_reporters)
-
-        # Add test results for the Chrome browser
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should start at zero',
-                                 'pass', '')
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should add to the sum',
-                                 'pass', '')
-
-        # Add test results for the Firefox browser
-        self._add_browser_result(other_browser,
-                                 'Adder test', 'it should start at zero',
-                                 'pass', '')
-        self._add_browser_result(other_browser,
-                                 'Adder test', 'it should add to the sum',
-                                 'pass', '')
-
-        # Run the tests
-        passed, report = self.runner.run()
-
-        # Because of the way we set up the browser mock, each page
-        # loaded will report the same test result.  So we expect
-        # that we get duplicate results, one for each URL.
-        expected_report = dedent("""
-        =======================
-        JavaScript test results
-        =======================
-        Browser: chrome
-        -----------------------
-        ..
-
-
-        -----------------------
-        Failed:  0
-        Error:   0
-        Skipped: 0
-        Passed:  2
-        =======================
-        =======================
-        Browser: firefox
-        -----------------------
-        ..
-
-
-        -----------------------
-        Failed:  0
-        Error:   0
-        Skipped: 0
-        Passed:  2
-        =======================
-        """)
-
-        self.assertTrue(passed)
-        self._assert_reports_equal(report, expected_report)
-
-    def test_multiple_browsers_some_fail(self):
-
-        # Configure multiple browsers
-        other_browser = mock.MagicMock(Browser)
-        other_browser.name.return_value = 'firefox'
-        other_browser.get_page_results.return_value = []
-        self.runner = SuiteRunner([self.mock_browser, other_browser],
-                                  self.mock_page_server,
-                                  self.mock_coverage_reporters)
-
-        # Add test results for the Chrome browser
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should start at zero',
-                                 'pass', '')
-        self._add_browser_result(self.mock_browser,
-                                 'Adder test', 'it should add to the sum',
-                                 'pass', '')
-
-        # Add test results for the Firefox browser
-        self._add_browser_result(other_browser,
-                                 'Adder test', 'it should start at zero',
-                                 'fail', 'Desc')
-        self._add_browser_result(other_browser,
-                                 'Adder test', 'it should add to the sum',
-                                 'pass', '')
-
-        # Run the tests
-        passed, report = self.runner.run()
-
-        # Because of the way we set up the browser mock, each page
-        # loaded will report the same test result.  So we expect
-        # that we get duplicate results, one for each URL.
-        expected_report = dedent("""
-        =======================
-        JavaScript test results
-        =======================
-        Browser: chrome
-        -----------------------
-        ..
-
-
-        -----------------------
-        Failed:  0
-        Error:   0
-        Skipped: 0
-        Passed:  2
-        =======================
-        =======================
-        Browser: firefox
-        -----------------------
-        F.
-
-        Adder test: it should start at zero [fail]
-            Desc
-
-
-        -----------------------
-        Failed:  1
-        Error:   0
-        Skipped: 0
-        Passed:  1
-        =======================
-        """)
-
-        self.assertFalse(passed)
-        self._assert_reports_equal(report, expected_report)
+        # Check that each of our reporters was called
+        for reporter in self.mock_result_reporters:
+            reporter.write_report.assert_called_once_with(result_data)
 
     def test_write_coverage_reports(self):
 
@@ -543,6 +281,8 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         self.mock_desc = mock.MagicMock(SuiteDescription)
         self.mock_renderer = mock.MagicMock(SuiteRenderer)
         self.mock_server = mock.MagicMock(SuitePageServer)
+        self.mock_console_result = mock.MagicMock(ConsoleResultReporter)
+        self.mock_xunit_result = mock.MagicMock(XUnitResultReporter)
         self.mock_html_coverage = mock.MagicMock(HtmlCoverageReporter)
         self.mock_xml_coverage = mock.MagicMock(XmlCoverageReporter)
         self.mock_browser = mock.MagicMock(Browser)
@@ -552,29 +292,23 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         self.mock_desc_class = mock.MagicMock(return_value=self.mock_desc)
         self.mock_renderer_class = mock.MagicMock(return_value=self.mock_renderer)
         self.mock_server_class = mock.MagicMock(return_value=self.mock_server)
+        self.mock_console_result_class = mock.MagicMock(return_value=self.mock_console_result)
+        self.mock_xunit_result_class = mock.MagicMock(return_value=self.mock_xunit_result)
         self.mock_html_coverage_class = mock.MagicMock(return_value=self.mock_html_coverage)
         self.mock_xml_coverage_class = mock.MagicMock(return_value=self.mock_xml_coverage)
         self.mock_browser_class = mock.MagicMock(return_value=self.mock_browser)
-        self.mock_runner_class = mock.MagicMock(return_value=self.mock_runner)
 
         # Create the factory
         self.factory = SuiteRunnerFactory(
             desc_class=self.mock_desc_class,
             renderer_class=self.mock_renderer_class,
             server_class=self.mock_server_class,
+            console_result_class=self.mock_console_result_class,
+            xunit_result_class=self.mock_xunit_result_class,
             html_coverage_class=self.mock_html_coverage_class,
             xml_coverage_class=self.mock_xml_coverage_class,
-            runner_class=self.mock_runner_class,
-            browser_class=self.mock_browser_class)
-
-    def test_build_runner(self):
-
-        # Build the runner
-        num_suites = 5
-        runner, _ = self._build_runner(num_suites)
-
-        # Expect that we get the suite runner instance
-        self.assertEqual(runner, self.mock_runner)
+            browser_class=self.mock_browser_class
+        )
 
     def test_configure_browsers(self):
 
@@ -594,11 +328,6 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         # Expect that the suite runner was configured with the correct browsers
         expected_browsers = [self.mock_browser] * len(browser_names)
         self.assertEqual(browsers, expected_browsers)
-
-        expected_reporters = [self.mock_xml_coverage, self.mock_html_coverage]
-        self.mock_runner_class.assert_called_with(expected_browsers,
-                                                  self.mock_server,
-                                                  expected_reporters)
 
     def test_configure_server(self):
 
@@ -638,8 +367,10 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         # Expect that all the root dirs are the temp directory
         # (where we created the description file)
         for root_dir in all_root_dirs:
-            self.assertEqual(os.path.realpath(root_dir),
-                             os.path.realpath(self.temp_dir))
+            self.assertEqual(
+                os.path.realpath(root_dir),
+                os.path.realpath(self.temp_dir)
+            )
 
     def test_configure_coverage(self):
 
@@ -648,12 +379,18 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         # factory makes to our mocks.
         html_path = 'coverage.html'
         xml_path = 'coverage.xml'
-        self._build_runner(1, coverage_html_path=html_path,
-                           coverage_xml_path=xml_path)
+        runner, _ = self._build_runner(
+            1, coverage_html_path=html_path,
+            coverage_xml_path=xml_path
+        )
 
         # Expect that the coverage reporters were configured correctly
         self.mock_html_coverage_class.assert_called_with(html_path)
         self.mock_xml_coverage_class.assert_called_with(xml_path)
+        self.assertEqual(
+            runner.coverage_reporters(),
+            [self.mock_xml_coverage, self.mock_html_coverage]
+        )
 
     def test_configure_jscover(self):
 
@@ -661,23 +398,58 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         # JSCover (used by the server to instrument
         # the JavaScript sources for coverage)
         with mock.patch.dict('os.environ', JSCOVER_JAR='jscover.jar'):
-            self._build_runner(1, coverage_xml_path='coverage.xml')
+            runner, _ = self._build_runner(1, coverage_xml_path='coverage.xml')
 
         # Expect that the server was configured with the JSCover JAR path
         _, kwargs = self.mock_server_class.call_args
         self.assertEqual(kwargs.get('jscover_path'), 'jscover.jar')
+        self.assertEqual(
+            runner.coverage_reporters(),
+            [self.mock_xml_coverage]
+        )
 
     def test_configure_coverage_but_no_report(self):
 
         # Build a runner with no coverage report
         # But DO configure the JSCover environment variable
         with mock.patch.dict('os.environ', JSCOVER_JAR='jscover.jar'):
-            self._build_runner(1, coverage_xml_path=None,
-                               coverage_html_path=None)
+            runner, _ = self._build_runner(
+                1, coverage_xml_path=None,
+                coverage_html_path=None
+            )
 
         # Expect that the server was NOT configured to use coverage
         _, kwargs = self.mock_server_class.call_args
         self.assertEqual(kwargs.get('jscover_path'), None)
+        self.assertEqual(runner.coverage_reporters(), [])
+
+    def test_configure_console_result(self):
+        runner, _ = self._build_runner(1)
+
+        # By default, only a console reporter is configured
+        self.assertEqual(
+            runner.result_reporters(),
+            [self.mock_console_result]
+        )
+
+        # The console reporter should be configured
+        # to send results to stdout
+        self.mock_console_result_class.assert_called_with(sys.stdout)
+
+    def test_configure_xunit_result(self):
+        runner, _ = self._build_runner(1, xunit_path='foo.txt')
+
+        # Should configure the runner to generate both
+        # console and xunit reports
+        self.assertEqual(
+            runner.result_reporters(),
+            [self.mock_console_result, self.mock_xunit_result]
+        )
+
+        # XUnit reporter should be configured with the right path
+        args, _ = self.mock_xunit_result_class.call_args
+        self.assertTrue(isinstance(args[0], file))
+        self.assertEqual(args[0].name, 'foo.txt')
 
     def test_invalid_browser_names(self):
 
@@ -697,6 +469,7 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         return ['suite_{}.yaml'.format(num) for num in range(num_suites)]
 
     def _build_runner(self, num_suites,
+                      xunit_path=None,
                       coverage_xml_path=None,
                       coverage_html_path=None,
                       browser_names=None,
@@ -706,6 +479,8 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
         using the `SuiteRunnerFactory`.
 
         `num_suites` is the number of suite descriptions to use.
+
+        `xunit_path` is the path to the XUnit (XML) test result file.
 
         `coverage_xml_path` and `coverage_html_path` are the paths
         to the coverage reports to be generated.
@@ -736,8 +511,8 @@ class SuiteRunnerFactoryTest(TempWorkspaceTestCase):
                 file_handle.write('test file')
 
         # Build the suite runner instances
-        return self.factory.build_runner(suite_path_list,
-                                         browser_names,
-                                         coverage_xml_path,
-                                         coverage_html_path,
-                                         timeout_sec)
+        return self.factory.build_runner(
+            suite_path_list, browser_names,
+            xunit_path, coverage_xml_path,
+            coverage_html_path, timeout_sec
+        )

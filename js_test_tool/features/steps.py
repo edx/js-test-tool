@@ -33,8 +33,9 @@ def coverage_path(runner="jasmine", format="xml", actual=False):
 @step(u'When I run js-test-tool on (Jasmine|requirejs) without coverage')
 def run_tool_with_no_coverage(step, runner):
     world.scenario["runner"] = runner
-    world.run_tool_with_args(['run', config_path(runner),
-                              '--timeout', '2'])
+    world.run_tool_with_args(
+        ['run', config_path(runner), '--timeout', '2']
+    )
 
 
 @step(u'When I run js-test-tool on (Jasmine|requirejs) with (XML|HTML) coverage')
@@ -140,3 +141,21 @@ def display_html_report_in_browser(step):
 
     # Verify that the Jasmine HTMLReporter ran
     assert_true(world.browser.is_element_present_by_id('HTMLReporter'))
+
+
+@step(u'When I run js-test-tool and specify an XUnit report path')
+def run_tool_with_xunit(step):
+    args = [
+        'run', config_path(),
+        '--xunit-report', 'xunit.xml'
+    ]
+
+    world.run_tool_with_args(args)
+
+
+@step(u'Then An XUnit report is generated')
+def then_an_xunit_report_is_generated(step):
+    world.assert_file_exists('xunit.xml')
+    world.compare_files_at_paths(
+        'xunit.xml', 'expected/jasmine_xunit.xml'
+    )

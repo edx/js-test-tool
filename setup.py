@@ -22,7 +22,7 @@ setup(
                  'Topic :: Software Development :: Quality Assurance'],
     packages=['js_test_tool'],
     package_data={'js_test_tool': ['templates/*', 'runner/*/*']},
-    install_requires=['setuptools'] + REQUIREMENTS,
+    install_requires=REQUIREMENTS,
     entry_points={
         'console_scripts': ['js-test-tool = js_test_tool.tool:main']
     }
