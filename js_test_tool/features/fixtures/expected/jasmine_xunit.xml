@@ -1,21 +1,21 @@
 <?xml version="1.0" ?>
 <testsuite name="javascript" errors="0" failures="2" skipped="0" tests="8">
-    <testcase classname="[firefox] Adder" name="should start at zero">
+    <testcase classname="JavaScript.firefox" name="Adder: should start at zero">
     </testcase>
-    <testcase classname="[firefox] Adder" name="should add to the sum">
+    <testcase classname="JavaScript.firefox" name="Adder: should add to the sum">
     </testcase>
-    <testcase classname="[firefox] Adder" name="should keep a running total">
+    <testcase classname="JavaScript.firefox" name="Adder: should keep a running total">
     </testcase>
-    <testcase classname="[firefox] Adder" name="should output to the DOM">
+    <testcase classname="JavaScript.firefox" name="Adder: should output to the DOM">
         <failure type="Failure" message=""><![CDATA[Expected '' to equal '3'.]]></failure>
     </testcase>
-    <testcase classname="[phantomjs] Adder" name="should start at zero">
+    <testcase classname="JavaScript.phantomjs" name="Adder: should start at zero">
     </testcase>
-    <testcase classname="[phantomjs] Adder" name="should add to the sum">
+    <testcase classname="JavaScript.phantomjs" name="Adder: should add to the sum">
     </testcase>
-    <testcase classname="[phantomjs] Adder" name="should keep a running total">
+    <testcase classname="JavaScript.phantomjs" name="Adder: should keep a running total">
     </testcase>
-    <testcase classname="[phantomjs] Adder" name="should output to the DOM">
+    <testcase classname="JavaScript.phantomjs" name="Adder: should output to the DOM">
         <failure type="Failure" message=""><![CDATA[Expected '' to equal '3'.]]></failure>
     </testcase>
 </testsuite>
