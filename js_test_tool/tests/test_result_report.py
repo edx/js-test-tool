@@ -601,11 +601,11 @@ class XUnitResultReporterTest(ResultReporterTestCase):
         expected_report = dedent("""
         <?xml version="1.0" ?>
         <testsuite name="javascript" errors="0" failures="0" skipped="0" tests="3">
-            <testcase classname="[chrome] Adder test" name="it should start at zero">
+            <testcase classname="JavaScript.chrome" name="Adder test: it should start at zero">
             </testcase>
-            <testcase classname="[chrome] Adder test" name="it should add to the sum">
+            <testcase classname="JavaScript.chrome" name="Adder test: it should add to the sum">
             </testcase>
-            <testcase classname="[chrome] Multiplier test" name="it should multiply">
+            <testcase classname="JavaScript.chrome" name="Multiplier test: it should multiply">
             </testcase>
         </testsuite>
         """)
@@ -634,13 +634,13 @@ class XUnitResultReporterTest(ResultReporterTestCase):
         expected_report = dedent("""
         <?xml version="1.0" ?>
         <testsuite name="javascript" errors="0" failures="1" skipped="0" tests="3">
-            <testcase classname="[chrome] Adder test" name="it should start at zero">
+            <testcase classname="JavaScript.chrome" name="Adder test: it should start at zero">
             </testcase>
-            <testcase classname="[chrome] Adder test" name="it should add to the sum">
+            <testcase classname="JavaScript.chrome" name="Adder test: it should add to the sum">
                 <failure type="Failure" message=""><![CDATA[Stack trace
         Can go here]]></failure>
             </testcase>
-            <testcase classname="[chrome] Multiplier test" name="it should multiply">
+            <testcase classname="JavaScript.chrome" name="Multiplier test: it should multiply">
             </testcase>
         </testsuite>
         """)
@@ -669,13 +669,13 @@ class XUnitResultReporterTest(ResultReporterTestCase):
         expected_report = dedent("""
         <?xml version="1.0" ?>
         <testsuite name="javascript" errors="0" failures="3" skipped="0" tests="3">
-            <testcase classname="[chrome] Adder test" name="it should start at zero">
+            <testcase classname="JavaScript.chrome" name="Adder test: it should start at zero">
                 <failure type="Failure" message=""><![CDATA[Desc]]></failure>
             </testcase>
-            <testcase classname="[chrome] Adder test" name="it should add to the sum">
+            <testcase classname="JavaScript.chrome" name="Adder test: it should add to the sum">
                 <failure type="Failure" message=""><![CDATA[Desc]]></failure>
             </testcase>
-            <testcase classname="[chrome] Multiplier test" name="it should multiply">
+            <testcase classname="JavaScript.chrome" name="Multiplier test: it should multiply">
                 <failure type="Failure" message=""><![CDATA[Desc]]></failure>
             </testcase>
         </testsuite>
@@ -705,12 +705,12 @@ class XUnitResultReporterTest(ResultReporterTestCase):
         expected_report = dedent("""
         <?xml version="1.0" ?>
         <testsuite name="javascript" errors="1" failures="0" skipped="0" tests="3">
-            <testcase classname="[chrome] Adder test" name="it should start at zero">
+            <testcase classname="JavaScript.chrome" name="Adder test: it should start at zero">
             </testcase>
-            <testcase classname="[chrome] Adder test" name="it should add to the sum">
+            <testcase classname="JavaScript.chrome" name="Adder test: it should add to the sum">
                 <error type="Error" message=""><![CDATA[Desc]]></error>
             </testcase>
-            <testcase classname="[chrome] Multiplier test" name="it should multiply">
+            <testcase classname="JavaScript.chrome" name="Multiplier test: it should multiply">
             </testcase>
         </testsuite>
         """)
@@ -739,12 +739,12 @@ class XUnitResultReporterTest(ResultReporterTestCase):
         expected_report = dedent("""
         <?xml version="1.0" ?>
         <testsuite name="javascript" errors="0" failures="0" skipped="1" tests="3">
-            <testcase classname="[chrome] Adder test" name="it should start at zero">
+            <testcase classname="JavaScript.chrome" name="Adder test: it should start at zero">
             </testcase>
-            <testcase classname="[chrome] Adder test" name="it should add to the sum">
+            <testcase classname="JavaScript.chrome" name="Adder test: it should add to the sum">
                 <skipped/>
             </testcase>
-            <testcase classname="[chrome] Multiplier test" name="it should multiply">
+            <testcase classname="JavaScript.chrome" name="Multiplier test: it should multiply">
             </testcase>
         </testsuite>
         """)
@@ -793,13 +793,13 @@ class XUnitResultReporterTest(ResultReporterTestCase):
         expected_report = dedent("""
         <?xml version="1.0" ?>
         <testsuite name="javascript" errors="0" failures="0" skipped="0" tests="4">
-            <testcase classname="[chrome] Adder test" name="it should start at zero">
+            <testcase classname="JavaScript.chrome" name="Adder test: it should start at zero">
             </testcase>
-            <testcase classname="[chrome] Adder test" name="it should add to the sum">
+            <testcase classname="JavaScript.chrome" name="Adder test: it should add to the sum">
             </testcase>
-            <testcase classname="[firefox] Adder test" name="it should start at zero">
+            <testcase classname="JavaScript.firefox" name="Adder test: it should start at zero">
             </testcase>
-            <testcase classname="[firefox] Adder test" name="it should add to the sum">
+            <testcase classname="JavaScript.firefox" name="Adder test: it should add to the sum">
             </testcase>
         </testsuite>
         """)
@@ -835,14 +835,14 @@ class XUnitResultReporterTest(ResultReporterTestCase):
         expected_report = dedent("""
         <?xml version="1.0" ?>
         <testsuite name="javascript" errors="0" failures="1" skipped="0" tests="4">
-            <testcase classname="[chrome] Adder test" name="it should start at zero">
+            <testcase classname="JavaScript.chrome" name="Adder test: it should start at zero">
             </testcase>
-            <testcase classname="[chrome] Adder test" name="it should add to the sum">
+            <testcase classname="JavaScript.chrome" name="Adder test: it should add to the sum">
             </testcase>
-            <testcase classname="[firefox] Adder test" name="it should start at zero">
+            <testcase classname="JavaScript.firefox" name="Adder test: it should start at zero">
                 <failure type="Failure" message=""><![CDATA[Desc]]></failure>
             </testcase>
-            <testcase classname="[firefox] Adder test" name="it should add to the sum">
+            <testcase classname="JavaScript.firefox" name="Adder test: it should add to the sum">
             </testcase>
         </testsuite>
         """)
