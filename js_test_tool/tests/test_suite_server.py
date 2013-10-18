@@ -13,7 +13,7 @@ import json
 from js_test_tool.suite import SuiteDescription, SuiteRenderer
 from js_test_tool.suite_server import SuitePageServer, SuitePageHandler, \
     TimeoutError, DuplicateSuiteNameError
-from js_test_tool.coverage import SrcInstrumenter
+from js_test_tool.coverage import SrcInstrumenter, SrcInstrumenterError
 
 
 class SuitePageServerTest(TempWorkspaceTestCase):
@@ -344,7 +344,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         self.assertEqual(resp.status_code, 406)
 
     def test_serve_iso_encoded_dependency(self):
-        
+
         # Configure the suite description to contain dependency files
         # that are ISO encoded
         dependencies = ['1.js', '2.js', '3.js', '4.js']
@@ -615,6 +615,41 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
         # since these are not source files
         self.assertFalse(instr_mock.instrumented_src.called)
 
+    @mock.patch('js_test_tool.suite_server.SrcInstrumenter')
+    def test_instrumenter_fails_gracefully(self, instrumenter_cls):
+
+        # Configure the instrumenter class to return a mock
+        instr_mock = mock.MagicMock(SrcInstrumenter)
+        instrumenter_cls.return_value = instr_mock
+
+        # Configure the mock to raise an exception
+        instr_mock.instrumented_src.side_effect = SrcInstrumenterError
+
+        # Create a mock description with one source file
+        mock_desc = self._mock_suite_desc('test-suite-0', os.getcwd(), ['src.js'])
+
+        # Create the uninstrumented version of the source file
+        expected_page = 'uninstrumented source'
+        with open('src.js', 'w') as src_file:
+            src_file.write(expected_page)
+
+        # Create a suite page server for those descriptions
+        server = SuitePageServer(
+            [mock_desc], mock.MagicMock(SuiteRenderer),
+            jscover_path=self.JSCOVER_PATH
+        )
+
+        # Start the server
+        server.start()
+        self.addCleanup(server.stop)
+
+        # Even though the instrumenter failed,
+        # we should STILL be able to get the uninstrumented
+        # version of the source file
+        url = server.root_url() + "suite/test-suite-0/include/src.js"
+        response = requests.get(url, timeout=0.1)
+        self.assertEqual(response.text, expected_page)
+
     def test_collects_POST_coverage_info(self):
 
         # Start the page server
@@ -734,6 +769,8 @@ class SuiteServerCoverageTest(TempWorkspaceTestCase):
             mock_desc.spec_paths.return_value = spec_paths
         else:
             mock_desc.spec_paths.return_value = []
+
+        mock_desc.fixture_paths.return_value = []
 
         return mock_desc
 
