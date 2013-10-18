@@ -574,7 +574,14 @@ class InstrumentedSrcPageHandler(BasePageHandler):
 
             # Send the instrumented source (delegating to JSCover)
             contents = self._send_instrumented_src(suite_name, rel_path)
-            return self.safe_str_buffer(contents)
+
+            # If we couldn't load the contents, return None
+            # so later handlers can serve the uninstrumented
+            # version of the source.
+            if contents is None:
+                return None
+            else:
+                return self.safe_str_buffer(contents)
 
         # If not a source file, do not handle it.
         # Expect the non-instrumenting page handler to serve
