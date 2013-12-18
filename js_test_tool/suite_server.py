@@ -91,7 +91,7 @@ class SuitePageServer(ThreadingMixIn, HTTPServer):
         self.src_instr_dict = {}
 
         # Using port 0 assigns us an unused port
-        address = ('127.0.0.1', 0)
+        address = ('0.0.0.0', 0)
         HTTPServer.__init__(self, address, SuitePageRequestHandler)
 
     def start(self):

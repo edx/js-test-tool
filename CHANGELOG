@@ -1,3 +1,6 @@
+v0.1.5
+* Start the server on port 0.0.0.0 so this can be run on Vagrant
+
 v0.1.4
 * When JSCover fails, serve uninstrumented sources.
 
