@@ -61,7 +61,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
     def test_root_url(self):
 
         # Check that the root URL has the right form
-        url_regex = re.compile('^http://127.0.0.1:[0-9]+/$')
+        url_regex = re.compile('^http://0.0.0.0:[0-9]+/$')
         url = self.server.root_url()
         result = url_regex.match(url)
         self.assertIsNot(result, None,
