@@ -110,7 +110,7 @@ class SuiteDevRunnerFactory(object):
         self._server_class = server_class
         self._runner_class = runner_class
 
-    def build_runner(self, test_suite_path):
+    def build_runner(self, test_suite_path, port):
         """
         Configure a `SuiteDevRunner` to serve the test
         suite described by the file at `test_suite_path`.
@@ -129,7 +129,7 @@ class SuiteDevRunnerFactory(object):
 
         # Create the suite page server
         server = self._server_class([desc], renderer,
-                                    jscover_path=None)
+                                    jscover_path=None, port=port)
 
         # Create the dev test runner
         return self._runner_class(server)

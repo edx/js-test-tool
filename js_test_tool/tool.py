@@ -25,6 +25,7 @@ TEST_SUITE_HELP = "Test suite description file."
 XUNIT_REPORT_HELP = "Generated XUnit test result report (XML)."
 COVERAGE_XML_HELP = "Generated XML coverage report."
 COVERAGE_HTML_HELP = "Generated HTML coverage report."
+PORT_HELP = "The port to run the server on (dev only)."
 PHANTOMJS_HELP = "Run the tests using the PhantomJS browser."
 CHROME_HELP = "Run the tests using the Chrome browser."
 FIREFOX_HELP = "Run the tests using the Firefox browser."
@@ -47,6 +48,7 @@ def parse_args(argv):
             'xunit_report': XUNIT_REPORT,
             'coverage_xml': COVERAGE_XML,
             'coverage_html': COVERAGE_HTML,
+            'port': PORT,
             'browser_names': BROWSER_NAMES,
             'timeout_sec': TIMEOUT_SEC
         }
@@ -91,6 +93,9 @@ def parse_args(argv):
     # Coverage output files
     parser.add_argument('--coverage-xml', type=str, help=COVERAGE_XML_HELP)
     parser.add_argument('--coverage-html', type=str, help=COVERAGE_HTML_HELP)
+
+    # Server port; default of 0 indicates an arbitrary unused port
+    parser.add_argument('-p', '--port', type=int, default=0, help=PORT_HELP)
 
     # Browsers
     for (browser_arg, browser_name, browser_help) in BROWSER_ARGS:
@@ -178,10 +183,11 @@ def main():
 
         # Arg validation guarantees that there is exactly 1 path
         test_suite_path = args_dict.get('test_suite_paths')[0]
+        port = args_dict['port']
 
         # Build a dev-mode runner using a factory
         factory = SuiteDevRunnerFactory()
-        suite_dev_runner = factory.build_runner(test_suite_path)
+        suite_dev_runner = factory.build_runner(test_suite_path, port)
 
         # Run in dev mode (serve pages until user terminates)
         suite_dev_runner.run()
