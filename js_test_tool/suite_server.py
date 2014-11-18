@@ -68,7 +68,7 @@ class SuitePageServer(ThreadingMixIn, HTTPServer):
     # other processes to write to it asynchronously.
     coverage_data = None
 
-    def __init__(self, suite_desc_list, suite_renderer, jscover_path=None):
+    def __init__(self, suite_desc_list, suite_renderer, jscover_path=None, port=0):
         """
         Initialize the server to serve test runner pages
         and dependencies described by `suite_desc_list`
@@ -90,8 +90,7 @@ class SuitePageServer(ThreadingMixIn, HTTPServer):
         # (One for each suite description)
         self.src_instr_dict = {}
 
-        # Using port 0 assigns us an unused port
-        address = ('0.0.0.0', 0)
+        address = ('0.0.0.0', port)
         HTTPServer.__init__(self, address, SuitePageRequestHandler)
 
     def start(self):

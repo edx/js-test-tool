@@ -91,7 +91,7 @@ class SuiteDevRunnerFactoryTest(TempWorkspaceTestCase):
             suite_file.write('test file')
 
         # Build the runner instance
-        runner = self.factory.build_runner('test_suite.yml')
+        runner = self.factory.build_runner('test_suite.yml', port=42)
 
         # Should get a runner
         self.assertTrue(isinstance(runner, SuiteDevRunner))
@@ -118,4 +118,4 @@ class SuiteDevRunnerFactoryTest(TempWorkspaceTestCase):
         # and suite description
         self.mock_server_class.assert_called_with([self.mock_desc],
                                                   self.mock_renderer,
-                                                  jscover_path=None)
+                                                  jscover_path=None, port=42)

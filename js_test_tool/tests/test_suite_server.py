@@ -45,9 +45,11 @@ class SuitePageServerTest(TempWorkspaceTestCase):
         # Create a mock suite renderer
         self.suite_renderer = mock.MagicMock(SuiteRenderer)
 
+        self.port = 54321
+
         # Create the server
         self.server = SuitePageServer(
-            self.suite_desc_list, self.suite_renderer
+            self.suite_desc_list, self.suite_renderer, port=self.port
         )
 
         # Start the server
@@ -61,7 +63,7 @@ class SuitePageServerTest(TempWorkspaceTestCase):
     def test_root_url(self):
 
         # Check that the root URL has the right form
-        url_regex = re.compile('^http://0.0.0.0:[0-9]+/$')
+        url_regex = re.compile('^http://0.0.0.0:{}/$'.format(self.port))
         url = self.server.root_url()
         result = url_regex.match(url)
         self.assertIsNot(result, None,
