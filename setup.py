@@ -15,7 +15,7 @@ setup(
     classifiers=['Development Status :: 3 - Alpha',
                  'Environment :: Console',
                  'Intended Audience :: Developers',
-                 'License :: OSI Approved :: GNU Affero General Public License v3',
+                 'License :: OSI Approved :: Apache Software License',
                  'Operating System :: OS Independent',
                  'Programming Language :: Python',
                  'Topic :: Software Development :: Testing',
