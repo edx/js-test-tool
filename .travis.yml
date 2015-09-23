@@ -6,9 +6,9 @@ python:
 before_install:
   - "export DISPLAY=:99.0"
   - "sh -e /etc/init.d/xvfb start"
-install: 
-  - "pip install -r requirements.txt --use-mirrors"
-  - "pip install -r test-requirements.txt --use-mirrors"
+install:
+  - "pip install -r requirements.txt"
+  - "pip install -r test-requirements.txt"
   - ./scripts/acceptance_reqs.sh
   - "pip install coveralls"
   - "python setup.py install"
