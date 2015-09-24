@@ -3,19 +3,21 @@
 # Install dependencies for acceptance tests
 # Run from the repo root
 
+set -e
+
 LETTUCE_FIXTURES_DIR=js_test_tool/features/fixtures
 JS_LIB_DIR=$LETTUCE_FIXTURES_DIR/jasmine/lib
 JSCOVER_DIR=$LETTUCE_FIXTURES_DIR/jscover
 
-JSCOVER_URL=http://softlayer-dal.dl.sourceforge.net/project/jscover/JSCover-1.0.14.zip
+JSCOVER_URL="http://downloads.sourceforge.net/project/jscover/JSCover-1.0.14.zip"
 JQUERY_URL=http://code.jquery.com/jquery-1.10.1.min.js
-JASMINE_JQUERY_URL=https://raw.github.com/velesin/jasmine-jquery/master/lib/jasmine-jquery.js 
+JASMINE_JQUERY_URL=https://raw.github.com/velesin/jasmine-jquery/master/lib/jasmine-jquery.js
 
 mkdir -p $JSCOVER_DIR
 
 if [ ! -f $JSCOVER_DIR/target/dist/JSCover-all.jar ];
 then
-    curl $JSCOVER_URL > $JSCOVER_DIR/jscover.zip
+    curl -L $JSCOVER_URL > $JSCOVER_DIR/jscover.zip
     unzip $JSCOVER_DIR/jscover.zip target/dist/JSCover-all.jar -d $JSCOVER_DIR
 fi
 
