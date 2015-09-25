@@ -1,12 +1,19 @@
+sudo: false
 language: python
 python:
   - "2.7"
+
+# Cache the pip directory. "cache: pip" doesn't work due to install override. See https://github.com/travis-ci/travis-ci/issues/3239.
+cache:
+  - directories:
+    - $HOME/.cache/pip
+
 before_install:
   - "export DISPLAY=:99.0"
   - "sh -e /etc/init.d/xvfb start"
-install: 
-  - "pip install -r requirements.txt --use-mirrors"
-  - "pip install -r test-requirements.txt --use-mirrors"
+install:
+  - "pip install -r requirements.txt"
+  - "pip install -r test-requirements.txt"
   - ./scripts/acceptance_reqs.sh
   - "pip install coveralls"
   - "python setup.py install"
@@ -16,3 +23,6 @@ script:
 after_success:
   - "coverage combine"
   - coveralls
+branches:
+  only:
+    - master
