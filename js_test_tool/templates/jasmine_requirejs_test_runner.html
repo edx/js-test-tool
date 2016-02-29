@@ -48,7 +48,7 @@ var specRequire = require.config({
 
 {% set report_type = "html" if dev_mode else "json" %}
 runnerRequire(["jquery", "jasmine", "jasmine-{{ report_type }}", "boot", "jasmine-jquery"],
-function($, jasmine) {
+function($) {
   var jasmineEnv = jasmine.getEnv();
   jasmineEnv.updateInterval = 1000;
 
