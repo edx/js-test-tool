@@ -28,6 +28,9 @@ var runnerRequire = require.config({
         "jasmine-html": {
             "deps": ["jasmine"]
         },
+        "boot": {
+            "deps": ["jasmine"]
+        },
         "jasmine-json": {
             "deps": ["jasmine"]
         },
@@ -44,7 +47,7 @@ var specRequire = require.config({
 });
 
 {% set report_type = "html" if dev_mode else "json" %}
-runnerRequire(["jquery", "jasmine", "jasmine-jquery", "jasmine-{{ report_type }}"],
+runnerRequire(["jquery", "jasmine", "jasmine-jquery", "jasmine-{{ report_type }}", "boot"],
 function($, jasmine) {
   var jasmineEnv = jasmine.getEnv();
   jasmineEnv.updateInterval = 1000;
