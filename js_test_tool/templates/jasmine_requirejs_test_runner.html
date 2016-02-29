@@ -47,65 +47,6 @@ var specRequire = require.config({
 });
 
 {% set report_type = "html" if dev_mode else "json" %}
-runnerRequire(["jquery", "jasmine", "jasmine-{{ report_type }}", "boot", "jasmine-jquery"],
-function($) {
-  var jasmineEnv = jasmine.getEnv();
-  jasmineEnv.updateInterval = 1000;
-
-  {% if dev_mode -%}
-  var reporter = new jasmine.HtmlReporter();
-  {% else -%}
-  var reporter = new jasmine.JsonReporter("{{ results_div_id }}", "{{ suite_name }}");
-  {% endif -%}
-  jasmineEnv.addReporter(reporter);
-
-  jasmineEnv.specFilter = function(spec) {
-    return reporter.specFilter(spec);
-  };
-
-  // Load fixtures if using jasmine-jquery
-  jasmine.getFixtures().fixturesPath = "/suite/{{ suite_name }}/include/";
-
-  if (!window.js_test_tool) {
-    window.js_test_tool = {};
-    window.js_test_tool.reportError = function(err) {
-      var resultDiv = document.getElementById("{{ results_div_id }}");
-      var errDiv = document.getElementById("{{ error_div_id }}");
-
-      // If an error <div> is defined (e.g. not in dev mode)
-      // then write the error to that <div>
-      // so the Browser can report it
-      if (errDiv) {
-        errDiv.innerHTML = err.toString()
-        if ('stack' in err) {
-          errDiv.innerHTML += "\n" + err.stack
-        }
-
-        // Signal to the browser that we're done
-        // to avoid blocking until timeout
-        resultsDiv.className = "done";
-      }
-
-      // Re-throw the error (e.g. for dev mode)
-      else {
-        throw err;
-      }
-    }
-  }
-
-  // allow our main context to load jasmine easily
-  define("jasmine", jasmine);
-  // load the tests
-  specRequire(["main"], function(main) {
-    try {
-      jasmine.getEnv().execute();
-    }
-    catch(err) {
-      window.js_test_tool.reportError(err);
-    }
-  })
-
-});
   </script>
 
 </head>
