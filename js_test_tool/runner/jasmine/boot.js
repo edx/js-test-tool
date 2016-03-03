@@ -7,7 +7,7 @@
 
  [jasmine-gem]: http://github.com/pivotal/jasmine-gem
  */
-
+var boot;
 (function() {
 
   /**
@@ -105,26 +105,16 @@
   window.clearInterval = window.clearInterval;
 
   /**
-   * ## Execution
-   *
-   * Replace the browser window's `onload`, ensure it's called, and then run all of the loaded specs. This includes initializing the `HtmlReporter` instance and then executing the loaded Jasmine environment. All of this will happen after all of the specs are loaded.
-   */
-  var currentWindowOnload = window.onload;
-
-  window.onload = function() {
-    if (currentWindowOnload) {
-      currentWindowOnload();
-    }
-    htmlReporter.initialize();
-    env.execute();
-  };
-
-  /**
    * Helper function for readability above.
    */
   function extend(destination, source) {
     for (var property in source) destination[property] = source[property];
     return destination;
   }
+
+  boot = {
+    env: env,
+    htmlReporter: htmlReporter
+  };
 
 }());
