@@ -20,6 +20,8 @@ window.alert = function(){return;};
   <script type="text/javascript" src="/runner/jasmine/jasmine-json.js"></script>
   {% endif %}
   <script type="text/javascript" src="/runner/jasmine/boot.js"></script>
+  <script type="text/javascript" src="/runner/jasmine_requirejs/jquery.js"></script>
+  <script type="text/javascript" src="/runner/jasmine_requirejs/jasmine-jquery.js"></script>
 
 
   {% for lib_path in lib_path_list %}
@@ -40,7 +42,25 @@ if (jasmine.getFixtures) {
   {% for spec_path in spec_path_list %}
   <script type="text/javascript" src="/suite/{{ suite_name }}/include/{{ spec_path }}"></script>
   {% endfor %}
+  <script type="text/javascript">
+      (function() {
 
+         var currentWindowOnload = window.onload;
+          window.onload = function() {
+              if (currentWindowOnload) {
+                  currentWindowOnload();
+              }
+
+              execJasmine();
+          };
+
+          function execJasmine() {
+             boot.htmlReporter.initialize();
+             boot.env.execute();
+          }
+
+      })();
+  </script>
 </head>
 
 <body>
