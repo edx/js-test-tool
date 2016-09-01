@@ -6,3 +6,4 @@ oeps: {}
 owner: edx/testeng
 tags: [tools]
 track-pulls: true
+obsolete: true
