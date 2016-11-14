@@ -43,7 +43,7 @@ This will create a YAML file (``js_test.yml``) that looks like:
     test_suite_name: test_suite
 
     # Currently, the only supported test runner is Jasmine
-    # See http://pivotal.github.io/jasmine/
+    # See https://jasmine.github.io/
     # for the Jasmine documentation.
     test_runner: jasmine
 
